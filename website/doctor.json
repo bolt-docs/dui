@@ -1,0 +1,60 @@
+{
+  "$schema": "https://boltdocs.vercel.app/schemas/doctor-config.schema.json",
+  "checks": {
+    "metadata": {
+      "enabled": true,
+      "titleMin": 3,
+      "titleMax": 60,
+      "descriptionMin": 20,
+      "required": ["title", "description"],
+      "optional": [],
+      "validateDates": false
+    },
+    "links": {
+      "internal": true,
+      "external": false,
+      "timeout": 10000,
+      "concurrency": 10,
+      "ignore": ["light.svg", "dark.svg", "public/"]
+    },
+    "i18n": {
+      "enabled": true
+    },
+    "performance": {
+      "enabled": true,
+      "budgets": {
+        "maxJSBundleSize": "300kb",
+        "maxCSSBundleSize": "50kb",
+        "maxPageHTMLSize": "100kb",
+        "maxImagesKB": 800,
+        "maxBuildTime": 45000,
+        "maxFontCount": 4
+      }
+    }
+  },
+  "fix": {
+    "confirmChanges": false,
+    "backupFiles": false,
+    "backupPath": ".boltdocs/backups"
+  },
+  "reporting": {
+    "format": "pretty",
+    "outputFile": ".boltdocs/reports/doctor.json",
+    "failOnError": false,
+    "maxWarnings": -1
+  },
+  "severity": {
+    "missingTranslation": "warning",
+    "brokenLink": "high",
+    "brokenAnchor": "warning",
+    "largeFile": "warning",
+    "orphanedPage": "low",
+    "duplicateTitle": "off",
+    "shortMetadata": "low",
+    "missingMetadata": "warning",
+    "malformedFrontmatter": "high",
+    "invalidFrontmatter": "high",
+    "budgetExceeded": "warning"
+  },
+  "exclude": []
+}

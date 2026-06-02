@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.turbo/
+.boltdocs/
+coverage/
+.env*
+*.log
+.DS_Store
+package-lock.json
+yarn.lock
+.agents/
