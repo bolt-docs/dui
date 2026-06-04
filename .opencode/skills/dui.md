@@ -1,27 +1,27 @@
 ---
 name: dui
-description: Biblioteca de Terminal UI para Node.js (@bdocs/dui). Úsala cuando el proyecto importe de '@bdocs/dui' o cuando necesites crear CLIs con output coloreado, cajas, tablas, spinners, progress bars, prompts interactivos, etc.
+description: Terminal UI library for Node.js (@bdocs/dui). Use when the project imports from '@bdocs/dui' or when building CLIs with colored output, boxes, tables, spinners, progress bars, interactive prompts, etc.
 ---
 
 # DUI — Terminal UI Library for Node.js
 
-`@bdocs/dui` es una librería **zero-dependency** (excepto `string-width`) para construir CLIs con output enriquecido. Soporta colores ANSI true-color, cajas con bordes, tablas, spinners animados, progress bars, prompts interactivos, y más.
+`@bdocs/dui` is a **zero-dependency** (except `string-width`) library for building rich CLI output. It supports ANSI true-color, bordered boxes, tables, animated spinners, progress bars, interactive prompts, and more.
 
-**Stack técnico:** TypeScript, ESM only, Vitest, tsdown, Biome, Turborepo, pnpm.
+**Tech stack:** TypeScript, ESM only, Vitest, tsdown, Biome, Turborepo, pnpm.
 
-## Instalación
+## Installation
 
 ```bash
 pnpm add @bdocs/dui
-# o
+# or
 npm install @bdocs/dui
-# o
+# or
 yarn add @bdocs/dui
 ```
 
-## Importación
+## Imports
 
-Todos los módulos se importan desde `@bdocs/dui`:
+All modules are imported from `@bdocs/dui`:
 
 ```typescript
 import {
@@ -34,32 +34,32 @@ import {
 } from '@bdocs/dui'
 ```
 
-## Configuración global
+## Global configuration
 
 ```typescript
 import { configure, getConfig, resetConfig } from '@bdocs/dui'
 
-// Una vez al inicio del CLI
+// Call once at CLI entry point
 configure({
-  prefix: 'mi-herramienta',  // default: 'dui'
-  theme: { /* DuiTheme opcional */ }
+  prefix: 'my-tool',  // default: 'dui'
+  theme: { /* DuiTheme optional */ }
 })
 ```
 
-## Sistema de colores
+## Color system
 
-### API chainable (estilo chalk)
+### Chainable API (chalk-like)
 
 ```typescript
 import { colors } from '@bdocs/dui'
 
-colors.red('texto')
-colors.bold.underline.blue('importante')
-colors.bgYellow.black('advertencia')
-colors.dim('secundario')
-colors.green.bold('✓ éxito')
+colors.red('text')
+colors.bold.underline.blue('important')
+colors.bgYellow.black('warning')
+colors.dim('secondary')
+colors.green.bold('✓ success')
 
-// Colores disponibles:
+// Available colors:
 // fg: black, red, green, yellow, blue, magenta, cyan, white, gray
 //      bright-red, bright-green, bright-yellow, bright-blue
 //      bright-magenta, bright-cyan, bright-white
@@ -69,7 +69,7 @@ colors.green.bold('✓ éxito')
 // styles: bold, dim, italic, underline, inverse, hidden, strikethrough
 ```
 
-### Color directo por nombre
+### Direct color by name
 
 ```typescript
 import { colorMap } from '@bdocs/dui'
@@ -78,24 +78,24 @@ colorMap.red('error')
 colorMap.green('ok')
 ```
 
-### Color true-color (hex, rgb, oklch)
+### True-color (hex, rgb, oklch)
 
 ```typescript
 import { colorize, parseColor, interpolateColor, applyStyle } from '@bdocs/dui'
 
-colorize('hola', '#ff6600', 'fg')        // foreground
-colorize('hola', '#ff6600', 'bg')        // background
+colorize('hello', '#ff6600', 'fg')        // foreground
+colorize('hello', '#ff6600', 'bg')        // background
 
-applyStyle('texto', '#ff6600', '#1a1a2e', ['bold', 'underline'])
+applyStyle('text', '#ff6600', '#1a1a2e', ['bold', 'underline'])
 
 parseColor('#ff6600')       // → { r: 255, g: 102, b: 0 }
 parseColor('rgb(255, 102, 0)')
 parseColor('oklch(0.6 0.15 30)')
 
-interpolateColor('#ff0000', '#0000ff', 0.5)  // → color a medio camino
+interpolateColor('#ff0000', '#0000ff', 0.5)  // → halfway color
 ```
 
-### ANSI sequences directas
+### Raw ANSI sequences
 
 ```typescript
 import { toAnsiFg, toAnsiBg, toAnsiFgBg } from '@bdocs/dui'
@@ -104,53 +104,53 @@ toAnsiFg('#ff6600')   // → '\x1b[38;2;255;102;0m'
 toAnsiBg('#1a1a2e')   // → '\x1b[48;2;26;26;46m'
 ```
 
-### Control de color
+### Color control
 
 ```typescript
 import { isColorSupported, setColorSupported } from '@bdocs/dui'
 
-isColorSupported  // boolean, respeta NO_COLOR y TTY
-setColorSupported(false)  // forzar desactivado (útil en tests)
+isColorSupported  // boolean, respects NO_COLOR and TTY
+setColorSupported(false)  // force disable (useful in tests)
 ```
 
-## Logger semántico
+## Semantic logger
 
 ```typescript
 import { info, warn, error, success, debug } from '@bdocs/dui'
 
-info('Procesando archivos...')
-success('¡Operación completada!')
-warn('Deprecado: usa la nueva API')
-error('No se encontró el archivo', err)  // err se loggea después
-debug('Valor de x:', { color: { fg: '#888' } })  // solo con DEBUG o BOLTDOCS_DEBUG env
+info('Processing files...')
+success('Operation completed!')
+warn('Deprecated: use the new API')
+error('File not found', err)  // err is logged after
+debug('Value of x:', { color: { fg: '#888' } })  // only with DEBUG or BOLTDOCS_DEBUG env
 
-// Con overrides de color por llamada
-success('Hecho', { color: '#00ff00' })
+// With per-call color override
+success('Done', { color: '#00ff00' })
 ```
 
-### Logger con prefijo personalizado
+### Custom prefix logger
 
 ```typescript
 import { createLogger } from '@bdocs/dui'
 
 const log = createLogger('build')
-log.info('Compilando...')
-log.error('Falló')
+log.info('Compiling...')
+log.error('Failed')
 ```
 
-## Box (cajas con bordes)
+## Box (bordered boxes)
 
-Tres estilos: `"single"` (┏━┓), `"double"` (╔═╗), `"round"` (╭─╮).
+Three styles: `"single"` (┏━┓), `"double"` (╔═╗), `"round"` (╭─╮).
 
 ```typescript
 import { box, double, single, round } from '@bdocs/dui'
 
-// Uso básico
-console.log(double(['Línea 1', 'Línea 2']))
+// Basic usage
+console.log(double(['Line 1', 'Line 2']))
 
-// Con título y opciones
-console.log(single(['Contenido'], {
-  title: 'Título',
+// With title and options
+console.log(single(['Content'], {
+  title: 'Title',
   padding: 2,
   color: '#ff6600',
   colors: {
@@ -159,8 +159,8 @@ console.log(single(['Contenido'], {
   }
 }))
 
-// Responsive: usa terminalWidth() con máximo 80
-const result = round(['Texto con word-wrap automático'])
+// Responsive: uses terminalWidth() capped at 80
+const result = round(['Text with auto word-wrap'])
 ```
 
 ## Divider
@@ -168,59 +168,59 @@ const result = round(['Texto con word-wrap automático'])
 ```typescript
 import { divider, dividerLog } from '@bdocs/dui'
 
-divider()                    // → '────' (hasta 72 chars o terminalWidth)
-divider('═', 40)             // 40 chars de ═
-divider('─', 30, { color: '#888' })  // con color
-dividerLog()                 // imprime directamente
+divider()                    // → '────' (up to 72 chars or terminalWidth)
+divider('═', 40)             // 40 chars of ═
+divider('─', 30, { color: '#888' })  // with color
+dividerLog()                 // prints directly
 ```
 
-## Listas
+## Lists
 
 ```typescript
 import { bullet, ordered, tasks } from '@bdocs/dui'
 
 // Bullet list
-console.log(bullet(['Primero', 'Segundo', 'Tercero']))
-//   • Primero
-//   • Segundo
+console.log(bullet(['First', 'Second', 'Third']))
+//   • First
+//   • Second
 
 // Ordered list
-console.log(ordered(['Paso 1', 'Paso 2']))
-//   1. Paso 1
-//   2. Paso 2
+console.log(ordered(['Step 1', 'Step 2']))
+//   1. Step 1
+//   2. Step 2
 
 // Task list (checklist)
 console.log(tasks([
-  { label: 'Instalar dependencias', done: true },
-  { label: 'Configurar ESLint', done: false },
+  { label: 'Install dependencies', done: true },
+  { label: 'Configure ESLint', done: false },
 ]))
-//   ✔ Instalar dependencias
-//   ✘ Configurar ESLint
+//   ✔ Install dependencies
+//   ✘ Configure ESLint
 
-// Con colores personalizados
+// With custom colors
 bullet(['Item'], { colors: { bullet: '#ff6600' } })
 ```
 
-## Tabla
+## Table
 
 ```typescript
 import { table } from '@bdocs/dui'
 
-const headers = ['Nombre', 'Edad', 'Ciudad']
+const headers = ['Name', 'Age', 'City']
 const rows = [
-  ['Ana', '28', 'Madrid'],
-  ['Juan', '35', 'Barcelona'],
+  ['Alice', '28', 'Madrid'],
+  ['Bob', '35', 'Barcelona'],
 ]
 
 console.log(table(headers, rows))
 // ┏━━━━━━━━┳━━━━━━┳━━━━━━━━━━┓
-// ┃ Nombre ┃ Edad ┃ Ciudad   ┃
+// ┃ Name   ┃ Age  ┃ City     ┃
 // ┣━━━━━━━━╋━━━━━━╋━━━━━━━━━━┫
-// ┃ Ana    ┃ 28   ┃ Madrid   ┃
-// ┃ Juan   ┃ 35   ┃ Barcelona┃
+// ┃ Alice  ┃ 28   ┃ Madrid   ┃
+// ┃ Bob    ┃ 35   ┃ Barcelona┃
 // ┗━━━━━━━━┻━━━━━━┻━━━━━━━━━━┛
 
-// Con opciones
+// With options
 console.log(table(headers, rows, {
   style: 'double',         // 'single' | 'double' | 'round' | 'none'
   headerSeparator: true,
@@ -237,33 +237,33 @@ console.log(table(headers, rows, {
 }))
 ```
 
-## Spinner animado
+## Animated spinner
 
 ```typescript
 import { createSpinner } from '@bdocs/dui'
 
-const spinner = createSpinner('Descargando...')
+const spinner = createSpinner('Downloading...')
 
 spinner.start()
 
-// Actualizar mensaje
-spinner.update('Procesando...')
+// Update message
+spinner.update('Processing...')
 
-// Detener con estado
-spinner.stop('success', '¡Descarga completada!')
-spinner.stop('fail', 'Error de conexión')
-spinner.stop('warn', 'Advertencia')
-spinner.stop('info', 'Información')
+// Stop with status
+spinner.stop('success', 'Download complete!')
+spinner.stop('fail', 'Connection error')
+spinner.stop('warn', 'Warning')
+spinner.stop('info', 'Information')
 
-// Con opciones
-const s = createSpinner('Cargando', {
+// With options
+const s = createSpinner('Loading', {
   prefix: 'build',
-  frames: ['◜', '◝', '◞', '◟'],  // frames personalizados
+  frames: ['◜', '◝', '◞', '◟'],  // custom frames
   colors: { frame: '#ff6600', success: '#00ff00' }
 })
 
-// TTY: animación inline con ocultación de cursor
-// non-TTY: muestra "... " estático
+// TTY: inline animation with cursor hidden
+// non-TTY: shows "... " static
 ```
 
 ## Progress Bar
@@ -272,20 +272,20 @@ const s = createSpinner('Cargando', {
 import { createProgressBar } from '@bdocs/dui'
 
 const bar = createProgressBar({
-  width: 30,           // ancho de la barra
+  width: 30,           // bar width
   barChar: '█',
   emptyChar: '░',
   prefix: '[build]',
-  suffix: 'archivos',
+  suffix: 'files',
 })
 
-bar.start(100)          // total opcional (default 100)
-bar.update(50, 'Compilando...')  // current, mensaje opcional
+bar.start(100)          // optional total (default 100)
+bar.update(50, 'Compiling...')  // current, optional message
 bar.update(100)
-bar.stop('¡Listo!')     // mensaje final opcional
+bar.stop('Done!')      // optional final message
 
-// TTY: renderiza inline con actualización cada 100ms
-// non-TTY: imprime una línea por cada update
+// TTY: renders inline with updates every 100ms
+// non-TTY: prints one line per update
 ```
 
 ## Animation engine (keyframes)
@@ -307,30 +307,30 @@ const anim = animate({
   },
 })
 
-// Detener
+// Stop
 anim.stop()
 
-// Callback al completar (cuando no es loop)
-anim.then(() => console.log('Animación terminada'))
+// Completion callback (non-looping only)
+anim.then(() => console.log('Animation done'))
 
-// Lerp para interpolar números
+// Lerp for number interpolation
 lerp(0, 100, 0.5) // → 50
 ```
 
-## Prompts interactivos
+## Interactive prompts
 
 ### Confirm
 
 ```typescript
 import { confirm } from '@bdocs/dui'
 
-const respuesta = await confirm('¿Quieres continuar?')
-// → [dui] ¿Quieres continuar? (Y/n):
-// Si default = true → "(Y/n)", default = false → "(y/N)"
-// SIGINT → resuelve con default
+const answer = await confirm('Do you want to continue?')
+// → [dui] Do you want to continue? (Y/n):
+// default = true → "(Y/n)", default = false → "(y/N)"
+// SIGINT → resolves with default
 
-const si = await confirm('¿Seguro?', true)  // default true
-const no = await confirm('¿Seguro?', false) // default false
+const yes = await confirm('Are you sure?', true)  // default true
+const no = await confirm('Are you sure?', false) // default false
 ```
 
 ### Input
@@ -338,11 +338,11 @@ const no = await confirm('¿Seguro?', false) // default false
 ```typescript
 import { input } from '@bdocs/dui'
 
-const nombre = await input('¿Cómo te llamas?')
+const name = await input('What is your name?')
 const email = await input('Email', {
   default: 'user@example.com',
-  placeholder: 'tu@email.com',
-  validate: (v) => v.includes('@') ? true : 'Email inválido',
+  placeholder: 'your@email.com',
+  validate: (v) => v.includes('@') ? true : 'Invalid email',
   colors: {
     message: '#ff0',
     value: '#fff',
@@ -350,9 +350,9 @@ const email = await input('Email', {
     error: '#f00',
   }
 })
-// Atajos: ← → home end, backspace delete, Ctrl+U borrar línea, Ctrl+K borrar hasta el final
-// Escape → reject con Error, Ctrl+C → process.exit(1)
-// Non-TTY → usa readline.question con validación
+// Shortcuts: ← → home end, backspace delete, Ctrl+U clear line, Ctrl+K delete to end
+// Escape → reject with Error, Ctrl+C → process.exit(1)
+// Non-TTY → uses readline.question with validation
 ```
 
 ### Select
@@ -360,13 +360,13 @@ const email = await input('Email', {
 ```typescript
 import { select } from '@bdocs/dui'
 
-const color = await select('Elige un color', {
+const color = await select('Pick a color', {
   choices: [
-    { label: 'Rojo', value: '#ff0000' },
-    { label: 'Verde', value: '#00ff00' },
-    { label: 'Azul (desactivado)', value: '#0000ff', disabled: true },
+    { label: 'Red', value: '#ff0000' },
+    { label: 'Green', value: '#00ff00' },
+    { label: 'Blue (disabled)', value: '#0000ff', disabled: true },
   ],
-  pageSize: 5,  // items visibles antes de scroll
+  pageSize: 5,  // visible items before scroll
   colors: {
     pointer: '#0ff',
     selected: '#0ff',
@@ -374,8 +374,8 @@ const color = await select('Elige un color', {
     message: '#ff0',
   }
 })
-// ↑↓ navegar, Enter seleccionar, Escape → reject, Ctrl+C → exit
-// Non-TTY → lista numerada, input por número
+// ↑↓ navigate, Enter select, Escape → reject, Ctrl+C → exit
+// Non-TTY → numbered list, input by number
 ```
 
 ### Multiselect
@@ -383,14 +383,14 @@ const color = await select('Elige un color', {
 ```typescript
 import { multiselect } from '@bdocs/dui'
 
-const seleccionados = await multiselect('¿Qué opciones?', {
+const selected = await multiselect('Which options?', {
   choices: [
-    { label: 'Opción A', value: 'a', checked: true },
-    { label: 'Opción B', value: 'b' },
-    { label: 'Opción C (desactivada)', value: 'c', disabled: true },
+    { label: 'Option A', value: 'a', checked: true },
+    { label: 'Option B', value: 'b' },
+    { label: 'Option C (disabled)', value: 'c', disabled: true },
   ],
   pageSize: 10,
-  required: true,  // evita submit vacío
+  required: true,  // prevents empty submit
   colors: {
     pointer: '#0ff',
     selected: '#0ff',
@@ -399,7 +399,7 @@ const seleccionados = await multiselect('¿Qué opciones?', {
     message: '#ff0',
   }
 })
-// Space: toggle, Enter: confirmar, required evita submit sin selección
+// Space: toggle, Enter: confirm, required prevents empty submission
 ```
 
 ### Tree
@@ -407,7 +407,7 @@ const seleccionados = await multiselect('¿Qué opciones?', {
 ```typescript
 import { tree } from '@bdocs/dui'
 
-const resultado = await tree('Navega y selecciona', {
+const result = await tree('Navigate and select', {
   tree: [
     {
       label: 'src',
@@ -425,7 +425,7 @@ const resultado = await tree('Navega y selecciona', {
     { label: 'README.md', value: 'README.md' },
   ],
   pageSize: 10,
-  initialExpanded: true,  // expandir todo inicialmente
+  initialExpanded: true,  // expand all initially
   colors: {
     pointer: '#0ff',
     selected: '#0ff',
@@ -434,7 +434,7 @@ const resultado = await tree('Navega y selecciona', {
     branch: '#888',
   }
 })
-// ← → expandir/colapsar, ← en leaf → colapsa ancestro, Enter seleccionar leaf
+// ← → expand/collapse, ← on leaf → collapse ancestor, Enter select leaf
 // Space: toggle expand, Escape → reject, Ctrl+C → exit
 ```
 
@@ -444,23 +444,23 @@ const resultado = await tree('Navega y selecciona', {
 import { steps } from '@bdocs/dui'
 
 console.log(steps([
-  { label: 'Instalando dependencias', status: 'success' },
-  { label: 'Compilando...', status: 'running', details: 'src/index.ts → dist/' },
-  { label: 'Ejecutando tests', status: 'pending' },
-  { label: 'Publicando', status: 'error', details: 'Error de autenticación' },
+  { label: 'Installing dependencies', status: 'success' },
+  { label: 'Compiling...', status: 'running', details: 'src/index.ts → dist/' },
+  { label: 'Running tests', status: 'pending' },
+  { label: 'Publishing', status: 'error', details: 'Auth error' },
 ]))
-//   ✔  Instalando dependencias
+//   ✔  Installing dependencies
 //   │
-//   ●  Compilando...
+//   ●  Compiling...
 //   │  └─ src/index.ts → dist/
 //   │
-//   ○  Ejecutando tests
+//   ○  Running tests
 //   │
-//   ✖  Publicando
-//      └─ Error de autenticación
+//   ✖  Publishing
+//      └─ Auth error
 ```
 
-## Utilidades de texto
+## Text utilities
 
 ```typescript
 import {
@@ -470,44 +470,44 @@ import {
   renderLine, renderStatic
 } from '@bdocs/dui'
 
-// Limpiar ANSI
-stripAnsi('\x1b[31mHola\x1b[0m')  // → 'Hola'
+// Strip ANSI codes
+stripAnsi('\x1b[31mHello\x1b[0m')  // → 'Hello'
 
-// Longitud visible (sin códigos ANSI)
-visibleLength('\x1b[31mHola\x1b[0m')  // → 4
+// Visible length (without ANSI codes)
+visibleLength('\x1b[31mHello\x1b[0m')  // → 5
 
-// Ancho de terminal
-terminalWidth()  // → número de columnas
+// Terminal width
+terminalWidth()  // → column count
 
-// Padding ANSI-safe
-padCenter('hola', 10)    // '   hola   '
-padRight('hola', 10)     // 'hola      '
-fitWidth('hola', 10)     // 'hola      '
+// ANSI-safe padding
+padCenter('hello', 10)    // '  hello   '
+padRight('hello', 10)     // 'hello     '
+fitWidth('hello', 10)     // 'hello     '
 
-// Word-wrap que preserva ANSI
-wrapAnsiWord(texto, 40)
+// ANSI-preserving word-wrap
+wrapAnsiWord(text, 40)
 
-// Tokenizer para ANSI (útil para implementar wrap propio)
-tokenizeAnsi(texto)
+// Tokenizer for ANSI (useful for custom wrap)
+tokenizeAnsi(text)
 // → [{ type: 'word' | 'space' | 'ansi' | 'newline', value, width }]
 
-// Renderizado inline (sobrescribe línea actual)
-renderLine('Cargando...')           // stdout
+// Inline render (overwrites current line)
+renderLine('Loading...')           // stdout
 renderLine('Error!', process.stderr)  // stderr
 
-// Renderizado final (con newline)
-renderStatic('¡Listo!')
+// Final render (with newline)
+renderStatic('Done!')
 ```
 
-## Sistema de temas
+## Theme system
 
-### DuiTheme completo
+### Full DuiTheme
 
 ```typescript
 import type { ColorStyle, DuiTheme } from '@bdocs/dui'
 
 const theme: DuiTheme = {
-  // Colores globales (fallback para componentes)
+  // Global colors (fallback for components)
   success: '#00ff00',
   error: '#ff0000',
   warning: '#ffff00',
@@ -544,7 +544,7 @@ const theme: DuiTheme = {
     info: '#00f',
   },
 
-  // Listas
+  // Lists
   list: {
     bullet: '#888',
     number: '#888',
@@ -606,102 +606,102 @@ const theme: DuiTheme = {
 
 ```typescript
 type ColorStyle = string | { fg?: string; bg?: string }
-// string → color de foreground (hex, rgb(), oklch())
-// { fg: '#ff0', bg: '#333' } → foreground y background
+// string → foreground color (hex, rgb(), oklch())
+// { fg: '#ff0', bg: '#333' } → foreground and background
 ```
 
-### Resolución de colores
+### Color resolution order
 
-El orden de resolución de un slot de color es:
-1. Override pasado directamente en la llamada (ej: `info('msg', { color: '#f00' })`)
-2. Tema del componente (ej: `theme.logger.error`)
-3. Color global (ej: `theme.error`)
-4. Default del slot (ej: `logger.error` → red)
+The resolution order for a color slot is:
+1. Override passed directly in the call (e.g. `info('msg', { color: '#f00' })`)
+2. Component theme (e.g. `theme.logger.error`)
+3. Global color (e.g. `theme.error`)
+4. Slot default (e.g. `logger.error` → red)
 
-## Buenas prácticas
+## Best practices
 
-### 1. Configurar al inicio
+### 1. Configure at startup
 
 ```typescript
 import { configure } from '@bdocs/dui'
 
-// En tu CLI entry point
+// In your CLI entry point
 configure({
-  prefix: 'mi-cli',
+  prefix: 'my-cli',
   theme: myTheme,
 })
 ```
 
-### 2. Detectar TTY vs non-TTY
+### 2. TTY vs non-TTY detection
 
-DUI maneja automáticamente TTY vs non-TTY:
-- **Spinner:** TTY → animación inline; non-TTY → `...` estático
-- **Progress:** TTY → actualización inline; non-TTY → nueva línea cada update
-- **Prompts:** TTY → interactivo raw mode; non-TTY → readline.question
+DUI handles TTY vs non-TTY automatically:
+- **Spinner:** TTY → inline animation; non-TTY → static `...`
+- **Progress:** TTY → inline update; non-TTY → new line per update
+- **Prompts:** TTY → interactive raw mode; non-TTY → readline.question
 
-### 3. Respetar NO_COLOR
+### 3. Respect NO_COLOR
 
-DUI respeta `NO_COLOR` y desactiva colores si stdout no es TTY. Usa `setColorSupported()` en tests para forzar.
+DUI respects `NO_COLOR` and disables colors if stdout is not TTY. Use `setColorSupported()` in tests to force.
 
-### 4. Usar temas para consistencia
+### 4. Use themes for consistency
 
-Define un tema global y evita pasar `colors` en cada llamada. Usa overrides solo cuando necesites excepciones.
+Define a global theme and avoid passing `colors` on every call. Use overrides only for exceptions.
 
-### 5. Manejo de errores en prompts
+### 5. Error handling in prompts
 
-Todos los prompts (`input`, `select`, `multiselect`, `tree`) rechazan con `Error('Cancelled')` en Escape. Maneja con try/catch:
+All prompts (`input`, `select`, `multiselect`, `tree`) reject with `Error('Cancelled')` on Escape. Handle with try/catch:
 
 ```typescript
 try {
-  const result = await select('Opción:', { choices })
-  // usar result
+  const result = await select('Option:', { choices })
+  // use result
 } catch {
-  // usuario canceló
+  // user cancelled
 }
 ```
 
-### 6. Usar formatLog para logging manual
+### 6. Use formatLog for manual logging
 
 ```typescript
 import { formatLog } from '@bdocs/dui'
 
-console.log(formatLog('mensaje personalizado', 'info'))
-console.log(formatLog('crítico', 'error'))
+console.log(formatLog('custom message', 'info'))
+console.log(formatLog('critical', 'error'))
 ```
 
 ### 7. Tests
 
-Correr tests:
+Run tests:
 ```bash
 pnpm --filter @bdocs/dui test
-pnpm --filter @bdocs/dui test:coverage  # con cobertura
+pnpm --filter @bdocs/dui test:coverage  # with coverage
 ```
 
-Lint y format:
+Lint and format:
 ```bash
 pnpm exec biome lint --write .
 pnpm exec biome format --write .
 ```
 
-### 8. Archivos clave del proyecto
+### 8. Key project files
 
-| Ruta | Propósito |
+| Path | Purpose |
 |---|---|
-| `packages/dui/src/index.ts` | Barrel / API pública |
-| `packages/dui/src/config.ts` | Config global (prefix, theme) |
-| `packages/dui/src/color.ts` | Motor de colores ANSI |
-| `packages/dui/src/theme.ts` | Sistema de temas |
-| `packages/dui/src/logger.ts` | Logger semántico |
-| `packages/dui/src/box.ts` | Cajas con bordes |
-| `packages/dui/src/table.ts` | Tablas |
-| `packages/dui/src/spinner.ts` | Spinner animado |
-| `packages/dui/src/progress.ts` | Barra de progreso |
-| `packages/dui/src/animation.ts` | Motor de keyframes |
+| `packages/dui/src/index.ts` | Barrel / Public API |
+| `packages/dui/src/config.ts` | Global config (prefix, theme) |
+| `packages/dui/src/color.ts` | ANSI color engine |
+| `packages/dui/src/theme.ts` | Theme system |
+| `packages/dui/src/logger.ts` | Semantic logger |
+| `packages/dui/src/box.ts` | Bordered boxes |
+| `packages/dui/src/table.ts` | Tables |
+| `packages/dui/src/spinner.ts` | Animated spinner |
+| `packages/dui/src/progress.ts` | Progress bar |
+| `packages/dui/src/animation.ts` | Keyframe engine |
 | `packages/dui/src/prompt.ts` | Confirm prompt |
-| `packages/dui/src/input.ts` | Input interactivo |
-| `packages/dui/src/select.ts` | Select interactivo |
-| `packages/dui/src/multiselect.ts` | Multiselect interactivo |
+| `packages/dui/src/input.ts` | Interactive input |
+| `packages/dui/src/select.ts` | Interactive select |
+| `packages/dui/src/multiselect.ts` | Interactive multiselect |
 | `packages/dui/src/tree.ts` | Tree navigation |
-| `packages/dui/src/steps.ts` | Indicadores de pasos |
-| `packages/dui/src/utils.ts` | Utilidades (wrap, strip, render) |
-| `packages/dui/src/divider.ts` | Divisores |
+| `packages/dui/src/steps.ts` | Step indicators |
+| `packages/dui/src/utils.ts` | Utilities (wrap, strip, render) |
+| `packages/dui/src/divider.ts` | Dividers |
