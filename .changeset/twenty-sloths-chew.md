@@ -17,7 +17,3 @@ feat: interactive prompt components — Input, Select, Multiselect, Tree
 - **fix**: confirm prompt tests — removed module-level `vi.mock("node:readline")`
   that polluted the vitest process; set `isTTY` correctly so 4 previously broken
   tests now pass
-- **Docs**: EN and ES documentation for all new prompts; updated `API_NUEVA.md`,
-  `README.md`, `IMPROVEMENTS.md`
-- **Coverage**: all prompt components at >97% lines, 100% functions
-- **Build**: 73.75 kB (61.25 kB min), typecheck ✅, 204 tests passing
