@@ -1,0 +1,158 @@
+---
+title: Animation
+sidebarPosition: 8
+description: Keyframe animation engine for terminal — pulse, loading dots, and custom motion.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+```ts
+import { animate, lerp } from '@bdocs/dui'
+```
+
+The animation engine lets you create frame-based terminal animations using keyframes. It powers the spinner internally and can be used for progress bars, pulsing text, loading indicators, and any time-based visual effect.
+
+---
+
+## animate
+
+```ts
+animate(config: {
+  keyframes: Keyframe[]
+  duration: number
+  loop?: boolean
+  easing?: Easing
+  onFrame: (frame: ResolvedFrame) => void
+}): AnimationHandle
+```
+
+Run a keyframe animation. Calls `onFrame` at ~60fps with interpolated values.
+
+### Configuration
+
+<Field name="keyframes" type="Keyframe[]">Animation keyframes sorted by offset.</Field>
+<Field name="duration" type="number">Total duration in milliseconds.</Field>
+<Field name="loop" type="boolean" default="false">Restart when reaching the end.</Field>
+<Field name="easing" type="Easing" default="'linear'">Easing function for interpolation.</Field>
+<Field name="onFrame" type="(frame) => void">Called each frame with interpolated values.</Field>
+
+### Keyframe
+
+```ts
+interface Keyframe {
+  offset: number       // position 0.0 – 1.0
+  content?: string     // text (snaps, does not interpolate)
+  fg?: ColorInput      // foreground color (interpolates)
+  bg?: ColorInput      // background color (interpolates)
+}
+```
+
+Missing `offset: 0` or `offset: 1` keyframes are auto-filled from the nearest keyframe.
+
+### Easing
+
+| Value | Effect |
+|-------|--------|
+| `'linear'` | Constant speed |
+| `'ease-in'` | Starts slow, speeds up |
+| `'ease-out'` | Starts fast, slows down |
+| `'ease-in-out'` | Smooth acceleration and deceleration |
+| `(t) => number` | Custom function |
+
+### AnimationHandle
+
+<Field name="stop" type="() => void">Stop the animation immediately.</Field>
+<Field name="then" type="(cb) => void">Register a callback for when a non-looping animation finishes.</Field>
+
+---
+
+## lerp
+
+```ts
+lerp(a: number, b: number, t: number): number
+```
+
+Linear interpolation between two numbers. Used internally by the animation engine.
+
+```ts
+lerp(0, 100, 0.5)  // 50
+lerp(10, 20, 0.3)  // 13
+```
+
+---
+
+## Examples
+
+### Color pulse
+
+Pulse a loading indicator between two colors:
+
+```ts
+import { animate, colorize } from '@bdocs/dui'
+import readline from 'node:readline'
+
+const pulse = animate({
+  keyframes: [
+    { offset: 0,   fg: '#666666' },
+    { offset: 0.5, fg: '#ffffff' },
+    { offset: 1,   fg: '#666666' },
+  ],
+  duration: 800,
+  loop: true,
+  onFrame: (frame) => {
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize('● Loading...', frame.fg!))
+  },
+})
+
+// Stop after 5 seconds
+setTimeout(() => pulse.stop(), 5000)
+```
+
+### Loading dots
+
+Cycle through loading dot states:
+
+```ts
+animate({
+  keyframes: [
+    { offset: 0,    content: 'Loading  ', fg: '#888' },
+    { offset: 0.25, content: 'Loading. ', fg: '#aaa' },
+    { offset: 0.5,  content: 'Loading..', fg: '#ccc' },
+    { offset: 0.75, content: 'Loading...', fg: '#fff' },
+    { offset: 1,    content: 'Loading  ', fg: '#888' },
+  ],
+  duration: 1200,
+  loop: true,
+  onFrame: (frame) => {
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize(frame.content, frame.fg!))
+  },
+})
+```
+
+### Progress color transition
+
+Transition the color of a progress bar from red to green as it fills:
+
+```ts
+let pct = 0
+const colors = animate({
+  keyframes: [
+    { offset: 0, fg: '#ef4444' },  // red
+    { offset: 0.5, fg: '#eab308' }, // yellow
+    { offset: 1, fg: '#22c55e' },   // green
+  ],
+  duration: 3000,
+  onFrame: (frame) => {
+    pct = Math.min(100, pct + 1)
+    const filled = '█'.repeat(Math.floor(pct / 2))
+    const empty = '░'.repeat(50 - filled.length)
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize(filled, frame.fg!) + empty + ` ${Math.round(pct)}%`)
+  },
+})
+```

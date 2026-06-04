@@ -1,0 +1,76 @@
+---
+title: Steps
+sidebarPosition: 14
+description: Pipeline timeline display for multi-step processes.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+```ts
+import { steps } from '@bdocs/dui'
+```
+
+## steps
+
+```ts
+steps(items: StepItem[]): string
+```
+
+<Field name="items" type="StepItem[]">Array of steps to render in order.</Field>
+
+Renders a pipeline timeline with step status indicators.
+
+```ts
+steps([
+  { label: 'Validate', status: 'success' },
+  { label: 'Build', status: 'running' },
+  { label: 'Deploy', status: 'pending' },
+])
+```
+
+<TerminalPreview command="node steps.js">
+{`\x1b[32m✔\x1b[0m \x1b[1mValidate\x1b[0m
+\x1b[36m●\x1b[0m \x1b[1mBuild\x1b[0m
+\x1b[2m○\x1b[0m \x1b[2mDeploy\x1b[0m`}
+</TerminalPreview>
+
+### StepItem
+
+<Field name="label" type="string">Display text for the step.</Field>
+<Field name="status" type="'pending' | 'running' | 'success' | 'error'">Current status of the step.</Field>
+<Field name="details" type="string">Optional detail line shown below the step.</Field>
+
+Each status gets a distinct visual indicator:
+
+| Status | Indicator |
+|--------|-----------|
+| `success` | ✔ (green) |
+| `running` | ● (cyan) |
+| `pending` | ○ (dim) |
+| `error` | ✖ (red) |
+
+<Callout variant="note">
+  Steps are connected with vertical `│` lines. Running labels are bold; pending labels are dim.
+</Callout>
+
+### StepsOptions
+
+Override colors per status across all steps:
+
+```ts
+steps(items, {
+  colors: {
+    success: '#22c55e',
+    error:   '#ef4444',
+    running: '#22d3ee',
+    pending: '#6b7280',
+  },
+})
+```
+
+<Field name="colors.success" type="ColorStyle" default="theme.steps.success">Color for completed steps.</Field>
+<Field name="colors.error" type="ColorStyle" default="theme.steps.error">Color for failed steps.</Field>
+<Field name="colors.running" type="ColorStyle" default="theme.steps.running">Color for in-progress steps.</Field>
+<Field name="colors.pending" type="ColorStyle" default="theme.steps.pending">Color for pending steps.</Field>
+<Field name="colors.detail" type="ColorStyle" default="theme.steps.detail">Color for optional detail lines.</Field>
+<Field name="colors.connector" type="ColorStyle" default="theme.steps.connector">Color for vertical connector lines.</Field>

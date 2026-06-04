@@ -1,42 +1,34 @@
+import type { DuiTheme } from "./theme";
+
 export interface DuiConfig {
-  /** Prefix shown in every log line, e.g. `[boltdocs]`. Default: `'dui'`. */
-  prefix: string
-  /** Title text in the dev-server box. Default: `'dev server'`. */
-  devServerTitle: string
-  /** Title text in the preview-server box. Default: `'preview server'`. */
-  previewServerTitle: string
-  /** Command shown in the update-available notification. Default: `'npm install boltdocs@latest'`. */
-  updateCommand: string
+	prefix: string;
+	theme?: DuiTheme;
 }
 
-const _config: DuiConfig = {
-  prefix: 'dui',
-  devServerTitle: 'dev server',
-  previewServerTitle: 'preview server',
-  updateCommand: 'npm install boltdocs@latest',
-}
+const DEFAULT_CONFIG: DuiConfig = {
+	prefix: "dui",
+};
 
-/**
- * Override one or more dui configuration values.
- * Call this once at the entry point of your CLI before anything else runs.
- *
- * @example
- * ```ts
- * import { configure } from '@bdocs/dui'
- *
- * configure({
- *   prefix: 'boltdocs',
- *   devServerTitle: 'boltdocs dev server',
- *   previewServerTitle: 'boltdocs preview server',
- *   updateCommand: 'pnpm add boltdocs@latest',
- * })
- * ```
- */
+let _config: DuiConfig = { ...DEFAULT_CONFIG };
+
+const VALID_KEYS: (keyof DuiConfig)[] = ["prefix", "theme"];
+
 export function configure(opts: Partial<DuiConfig>): void {
-  Object.assign(_config, opts)
+	for (const key of Object.keys(opts)) {
+		if (!VALID_KEYS.includes(key as keyof DuiConfig)) {
+			console.warn(`[dui] Unknown config key: "${key}". Valid keys: ${VALID_KEYS.join(", ")}`);
+		}
+	}
+	if (opts.prefix !== undefined && opts.prefix.trim() === "") {
+		throw new Error("Prefix cannot be empty");
+	}
+	Object.assign(_config, opts);
 }
 
-/** Returns a read-only snapshot of the current configuration. */
 export function getConfig(): Readonly<DuiConfig> {
-  return _config
+	return _config;
+}
+
+export function resetConfig(): void {
+	_config = { ...DEFAULT_CONFIG };
 }

@@ -1,5 +1,5 @@
-import { DocsLayout } from 'boltdocs/client'
+import TerminalLayout from '../components/TerminalLayout'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <DocsLayout>{children}</DocsLayout>
+  return <TerminalLayout>{children}</TerminalLayout>
 }

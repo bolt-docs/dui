@@ -1,0 +1,89 @@
+---
+title: Logger
+sidebarPosition: 2
+description: info, warn, error, success, debug — consistent [prefix]-prefixed output.
+---
+
+```ts
+import { info, warn, error, success, debug } from '@bdocs/dui'
+```
+
+Each function accepts an optional options object as the last argument:
+
+```ts
+info(msg, { prefix?: string, color?: ColorInput })
+warn(msg, { prefix?: string, color?: ColorInput })
+error(msg, err?, { prefix?: string, color?: ColorInput })
+success(msg, { prefix?: string, color?: ColorInput })
+debug(msg, { prefix?: string, color?: ColorInput })
+```
+
+| Function | Default Color | Stream | Gate |
+|----------|--------------|--------|------|
+| `info(msg)` | none | stdout | no |
+| `warn(msg)` | yellow | stdout | no |
+| `error(msg, err?)` | red | stderr | no |
+| `success(msg)` | green | stdout | no |
+| `debug(msg)` | dim | stdout | `DEBUG` |
+
+<Callout variant="info">
+  `debug()` only prints when `DEBUG` or `BOLTDOCS_DEBUG` is set.
+</Callout>
+
+### examples
+
+```ts
+info('Starting build...')
+success('Build completed!')
+warn('Deprecated API used')
+error('Failed to connect')
+debug('Verbose trace') // only shown with DEBUG=1
+```
+
+<TerminalPreview command="node demo.js">
+{`\x1b[1m[dui]\x1b[0m Starting build...
+\x1b[32m\x1b[1m[dui] Build completed!\x1b[0m
+\x1b[33m\x1b[1m[dui] Deprecated API used\x1b[0m
+\x1b[31m\x1b[1m[dui] Failed to connect\x1b[0m`}
+</TerminalPreview>
+
+Pass a `color` option to override the default color for any logger call:
+
+```ts
+import { info, success } from '@bdocs/dui'
+
+info('Custom blue message', { color: '#00aaff' })
+success('Green is the default, but we can override', { color: '#ff8800' })
+```
+
+<TerminalPreview command="node colors.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255mCustom blue message\x1b[39m
+\x1b[1m[dui]\x1b[0m \x1b[38;2;255;136;0mGreen is the default, but we can override\x1b[39m`}
+</TerminalPreview>
+
+The `error` function accepts an optional error object that will be printed after the message:
+
+```ts
+error('Something broke', err)
+// [mytool] Something broke
+// [mytool]   ↳ Error: Something broke
+//       at main (file.ts:10)
+```
+
+## createLogger
+
+```ts
+createLogger(prefix: string): LoggerInstance
+```
+
+Creates an isolated logger instance with a custom prefix. Useful for sub-modules or plugins where you want a different prefix from the global `configure({ prefix })` setting.
+
+```ts
+import { createLogger } from '@bdocs/dui'
+
+const log = createLogger('myapp')
+log.info('Running installer...')
+log.success('Installation complete!')
+```
+
+All methods (`info`, `warn`, `error`, `success`, `debug`) behave exactly like the global logger functions but output with the custom `[prefix]`.

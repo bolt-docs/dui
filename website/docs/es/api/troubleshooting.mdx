@@ -1,0 +1,189 @@
+---
+title: Solución de Problemas
+sidebarPosition: 15
+description: Problemas comunes, mensajes de error y soluciones al usar DUI.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+## Colores
+
+### Los colores no se muestran
+
+Si la salida de la terminal aparece sin colores ANSI:
+
+- La variable de entorno `NO_COLOR` está activada — desactívala para re-habilitar los colores.
+- La salida está siendo redirigida o pipeada (no es TTY). Los colores se desactivan automáticamente cuando `stdout` no es un TTY.
+- El runtime no soporta true color. DUI detecta esto y usa colores ANSI de 16 colores cuando es posible.
+
+### "Unsupported color format" (Formato de color no soportado)
+
+`parseColor()` y `colorize()` solo aceptan formatos específicos:
+
+```
+✓ hex:      #ff6600, #f60, #ff660080
+✓ rgb:      rgb(255, 102, 0)
+✓ rgba:     rgba(255, 102, 0, 0.5)
+✓ oklch:    oklch(60% 0.15 250)
+✗ hsl, hwb, colores CSS nombrados — aún no soportados
+```
+
+### Hex inválido
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora lanza un error claro.</Callout>
+
+Antes un hex como `#GGG` producía `NaN` silenciosamente. Ahora lanza: `Invalid hex color: "#GGG"`.
+
+### applyStyle estilo desconocido
+
+Nombres de estilo desconocidos en `applyStyle()` se ignoran silenciosamente — no producen efecto pero no causan error. Usa solo: `bold`, `dim`, `italic`, `underline`, `inverse`, `hidden`, `strikethrough`.
+
+---
+
+## Box
+
+### "Cannot read properties of undefined"
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora usa `"double"` como fallback.</Callout>
+
+Pasar un `style` inválido (ej. `style: 'none'`) antes causaba un crash. Ahora usa el estilo `"double"` por defecto.
+
+### El título aparece truncado
+
+Si el título es más largo que el ancho de la caja menos 4 caracteres, se trunca automáticamente con `"..."`. Mantén los títulos cortos o aumenta el ancho de la caja.
+
+### La caja se ve vacía
+
+Pasar un array `lines` vacío renderiza una caja vacía. Esto es válido — proporciona al menos una línea de contenido.
+
+---
+
+## Logger
+
+### debug() no muestra nada
+
+`debug()` solo muestra salida cuando `DEBUG` o `BOLTDOCS_DEBUG` está configurado en el entorno:
+
+```bash
+DEBUG=1 node tu-cli.js
+```
+
+### error() falla con objetos circulares
+
+El argumento opcional de `error()` se muestra via `console.error`. Pasar referencias circulares u objetos muy grandes puede causar problemas. Pasa solo datos serializables.
+
+---
+
+## Divider
+
+### RangeError: Invalid count value
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora se ajusta a mínimo 1.</Callout>
+
+Pasar un valor negativo o cero para `len` antes causaba crash. Ahora se ajusta con `Math.max(1, len)`.
+
+---
+
+## Spinner & Progress
+
+### El cursor se queda oculto después de salir
+
+Tanto `createSpinner` como `createProgressBar` ocultan el cursor de la terminal mientras están activos. Si el proceso termina sin llamar a `stop()`, el cursor permanece oculto.
+
+<Callout variant="warning">
+  Siempre envuelve el uso de spinner/progress en try/catch/finally y llama a `stop()` en el bloque `finally`.
+</Callout>
+
+```ts
+const spinner = createSpinner('Trabajando...')
+spinner.start()
+try {
+  // hacer trabajo
+} finally {
+  spinner.stop('success', '¡Listo!')
+}
+```
+
+### Sin animación — solo texto estático
+
+En entornos no TTY (CI, pipes, archivos de log), los spinners y progress bars se degradan gracefulmente a salida línea por línea. Este comportamiento es esperado.
+
+### La barra de progreso se queda en 0%
+
+Si `total` se configura como `0` o un valor negativo, el porcentaje siempre es `0`. Siempre usa un entero positivo para total.
+
+---
+
+## Table
+
+### La tabla excede el ancho de la terminal
+
+Si hay demasiadas columnas, la tabla puede desbordar el ancho de la terminal. Reduce el número de columnas o aumenta el ancho de la terminal.
+
+### Las celdas faltantes se renderizan vacías
+
+Si una fila tiene menos celdas que los encabezados, las celdas faltantes se renderizan como strings vacíos. Esto es por diseño.
+
+---
+
+## Prompt
+
+### confirm() se cuelga o lanza error
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora resuelve con default en non-TTY.</Callout>
+
+Si `stdin` o `stdout` no están disponibles (no TTY, proceso headless), `confirm()` ahora resuelve con el valor por defecto en vez de lanzar un error.
+
+### Valor por defecto inesperado
+
+Si el usuario presiona Enter sin escribir, el prompt resuelve a `defaultVal ?? false`. Pasa `default: true` para cambiar esto.
+
+---
+
+## Steps
+
+### Icono vacío mostrado
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora usa icono `"pending"` por defecto.</Callout>
+
+Un valor de `status` desconocido antes producía un icono vacío. Ahora usa el indicador de `"pending"` como fallback.
+
+---
+
+## Animation
+
+### animate() no hace nada
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora advierte si keyframes está vacío.</Callout>
+
+Un array `keyframes` vacío ahora muestra una advertencia: `[dui] animate() called with empty keyframes array`.
+
+---
+
+## Configuración
+
+### configure() no tiene efecto
+
+`configure()` fusiona con la configuración existente. Si se llama después de que otros módulos ya hayan leído la configuración, esos módulos pueden usar valores antiguos. Llama a `configure()` una vez al inicio de tu CLI.
+
+### Claves mal escritas se ignoran silenciosamente
+
+<Callout variant="info">✅ Solucionado en v0.1.x — ahora advierte sobre keys desconocidas.</Callout>
+
+Claves inválidas en `configure()` ahora muestran una advertencia: `[dui] Unknown config key: "xyz"`. Las keys válidas se listan.
+
+---
+
+## Entorno
+
+### Colores desactivados en CI
+
+La mayoría de los sistemas CI configuran `CI=true` lo que **no** desactiva los colores por sí mismo. Sin embargo, algunos sistemas CI configuran `NO_COLOR` o redirigen la salida. Revisa las variables de entorno de tu CI.
+
+### terminalWidth() devuelve 80
+
+Cuando `process.stdout.columns` no está disponible (no TTY, pipe), DUI usa `80` columnas como valor por defecto. Esto es normal.
+
+---
+
+> Los problemas marcados con ✅ ya están solucionados en la versión actual. Si encuentras un problema no listado aquí, por favor abre un issue en GitHub.

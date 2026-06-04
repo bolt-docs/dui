@@ -5,6 +5,7 @@ dist/
 coverage/
 .env*
 *.log
+*.tgz
 .DS_Store
 package-lock.json
 yarn.lock

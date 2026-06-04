@@ -1,0 +1,57 @@
+---
+title: Tabla
+sidebarPosition: 12
+description: Tablas con caracteres de dibujo.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { table } from '@bdocs/dui'
+```
+
+## table
+
+```ts
+table(headers: string[], rows: string[][], options?: TableOptions): string
+```
+
+<Field name="headers" type="string[]">Etiquetas de encabezado de columna. Renderizadas en negrita.</Field>
+<Field name="rows" type="string[][]">Filas de datos como arrays de valores de celda.</Field>
+
+Renderiza una tabla usando caracteres de dibujo.
+
+```ts
+const result = table([
+  ['Nombre', 'Versión', 'Estado'],
+  ['boltdocs', '2.8.0', '✅'],
+  ['dui', '0.1.2', '✅'],
+])
+console.log(result)
+```
+
+<TerminalPreview command="node table.js">
+{`┌─────────┬─────────┬──────┐
+│ \x1b[1mName\x1b[0m    │ \x1b[1mVersion\x1b[0m │ \x1b[1mStatus\x1b[0m │
+├─────────┼─────────┼──────┤
+│ boltdocs │ 2.8.0   │ ✅   │
+│ dui      │ 0.1.2   │ ✅   │
+└─────────┴─────────┴──────┘`}
+</TerminalPreview>
+
+### Opciones
+
+<Field name="style" type="'single' | 'double' | 'round' | 'none'" default="'single'">Estilo del borde. `'none'` usa espacios de 2.</Field>
+<Field name="width" type="number" default="auto">Ancho de la tabla. Por defecto al ancho de la terminal.</Field>
+<Field name="columns" type="TableColumnOptions[]">Configuración de alineación por columna.</Field>
+<Field name="headerSeparator" type="boolean" default="true">Dibujar una línea separadora después de la fila de encabezado.</Field>
+<Field name="padding" type="number" default="1">Padding interno de celda.</Field>
+<Field name="color" type="ColorInput">Color del borde para el contorno de la tabla y separador de encabezado. Acepta hex, rgb, rgba, oklch o color nombrado.</Field>
+
+### TableColumnOptions
+
+<Field name="align" type="'left' | 'center' | 'right'" default="'left'">Alineación de texto para esta columna.</Field>
+
+<Callout variant="info">
+  Los anchos de columna se auto-calculan desde el contenido, luego se reducen proporcionalmente si el total excede el ancho disponible.
+</Callout>

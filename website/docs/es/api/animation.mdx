@@ -1,0 +1,158 @@
+---
+title: Animación
+sidebarPosition: 8
+description: Motor de animación por keyframes para terminal — pulso, puntos de carga y movimiento personalizado.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { animate, lerp } from '@bdocs/dui'
+```
+
+El motor de animación te permite crear animaciones basadas en fotogramas para la terminal usando keyframes. Potencia el spinner internamente y puede usarse para barras de progreso, texto pulsante, indicadores de carga y cualquier efecto visual basado en tiempo.
+
+---
+
+## animate
+
+```ts
+animate(config: {
+  keyframes: Keyframe[]
+  duration: number
+  loop?: boolean
+  easing?: Easing
+  onFrame: (frame: ResolvedFrame) => void
+}): AnimationHandle
+```
+
+Ejecuta una animación por keyframes. Llama a `onFrame` a ~60fps con valores interpolados.
+
+### Configuración
+
+<Field name="keyframes" type="Keyframe[]">Keyframes de animación ordenados por offset.</Field>
+<Field name="duration" type="number">Duración total en milisegundos.</Field>
+<Field name="loop" type="boolean" default="false">Reiniciar al llegar al final.</Field>
+<Field name="easing" type="Easing" default="'linear'">Función de easing para la interpolación.</Field>
+<Field name="onFrame" type="(frame) => void">Se llama cada fotograma con valores interpolados.</Field>
+
+### Keyframe
+
+```ts
+interface Keyframe {
+  offset: number       // posición 0.0 – 1.0
+  content?: string     // texto (cambia instantáneamente, no interpola)
+  fg?: ColorInput      // color de frente (interpola)
+  bg?: ColorInput      // color de fondo (interpola)
+}
+```
+
+Los keyframes faltantes `offset: 0` o `offset: 1` se auto-rellenan desde el keyframe más cercano.
+
+### Easing
+
+| Valor | Efecto |
+|-------|--------|
+| `'linear'` | Velocidad constante |
+| `'ease-in'` | Comienza lento, acelera |
+| `'ease-out'` | Comienza rápido, desacelera |
+| `'ease-in-out'` | Aceleración y desaceleración suave |
+| `(t) => number` | Función personalizada |
+
+### AnimationHandle
+
+<Field name="stop" type="() => void">Detener la animación inmediatamente.</Field>
+<Field name="then" type="(cb) => void">Registrar un callback para cuando una animación no-looping termina.</Field>
+
+---
+
+## lerp
+
+```ts
+lerp(a: number, b: number, t: number): number
+```
+
+Interpolación lineal entre dos números. Se usa internamente por el motor de animación.
+
+```ts
+lerp(0, 100, 0.5)  // 50
+lerp(10, 20, 0.3)  // 13
+```
+
+---
+
+## Ejemplos
+
+### Pulso de color
+
+Pulsa un indicador de carga entre dos colores:
+
+```ts
+import { animate, colorize } from '@bdocs/dui'
+import readline from 'node:readline'
+
+const pulse = animate({
+  keyframes: [
+    { offset: 0,   fg: '#666666' },
+    { offset: 0.5, fg: '#ffffff' },
+    { offset: 1,   fg: '#666666' },
+  ],
+  duration: 800,
+  loop: true,
+  onFrame: (frame) => {
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize('● Cargando...', frame.fg!))
+  },
+})
+
+// Detener después de 5 segundos
+setTimeout(() => pulse.stop(), 5000)
+```
+
+### Puntos de carga
+
+Cicla entre estados de puntos de carga:
+
+```ts
+animate({
+  keyframes: [
+    { offset: 0,    content: 'Cargando  ', fg: '#888' },
+    { offset: 0.25, content: 'Cargando. ', fg: '#aaa' },
+    { offset: 0.5,  content: 'Cargando..', fg: '#ccc' },
+    { offset: 0.75, content: 'Cargando...', fg: '#fff' },
+    { offset: 1,    content: 'Cargando  ', fg: '#888' },
+  ],
+  duration: 1200,
+  loop: true,
+  onFrame: (frame) => {
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize(frame.content, frame.fg!))
+  },
+})
+```
+
+### Transición de color de progreso
+
+Transiciona el color de una barra de progreso de rojo a verde mientras se llena:
+
+```ts
+let pct = 0
+const colors = animate({
+  keyframes: [
+    { offset: 0, fg: '#ef4444' },  // rojo
+    { offset: 0.5, fg: '#eab308' }, // amarillo
+    { offset: 1, fg: '#22c55e' },   // verde
+  ],
+  duration: 3000,
+  onFrame: (frame) => {
+    pct = Math.min(100, pct + 1)
+    const filled = '█'.repeat(Math.floor(pct / 2))
+    const empty = '░'.repeat(50 - filled.length)
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize(filled, frame.fg!) + empty + ` ${Math.round(pct)}%`)
+  },
+})
+```

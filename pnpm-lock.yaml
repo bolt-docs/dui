@@ -52,8 +52,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.2(vite@8.0.16(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))
       boltdocs:
-        specifier: ^2.8.1
-        version: 2.8.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0)
+        specifier: file:boltdocs-2.8.3.tgz
+        version: file:docs/boltdocs-2.8.3.tgz(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0)
       tailwindcss:
         specifier: ^4.3.0
         version: 4.3.0
@@ -66,9 +66,6 @@ importers:
 
   packages/dui:
     dependencies:
-      picocolors:
-        specifier: ^1.1.0
-        version: 1.1.1
       string-width:
         specifier: ^7.2.0
         version: 7.2.0
@@ -180,8 +177,8 @@ packages:
   '@bdocs/dui@0.1.2':
     resolution: {integrity: sha512-XspBHig3tlNlse5FHxR82oMeJLgYmvtGGP6GrAoOBzxpU5qrZ/HL9MdP4haSPVnnPANBkUfeMtYYw75lZc3Eow==}
 
-  '@bdocs/ssg@0.1.0':
-    resolution: {integrity: sha512-doeMonKNO2kVLz1l4hdiOrPz6elo+smR9lInLzXPQPVSddhXTiJQYPVJ1Qkq7OlP1Ns2dWzp8WF8vrSdy+Kw2Q==}
+  '@bdocs/ssg@0.1.1':
+    resolution: {integrity: sha512-su2BOmLNSAb6MEgX3+Ut8GUSggRVxKadn8IDWrr+VRx79wnkE/+npGvtjTMnHro1cVyMIRDjyiGexTh6DVqDow==}
     hasBin: true
     peerDependencies:
       beasties: ^0.4.2
@@ -1887,8 +1884,9 @@ packages:
   birpc@4.0.0:
     resolution: {integrity: sha512-LShSxJP0KTmd101b6DRyGBj57LZxSDYWKitQNW/mi8GRMvZb078Uf9+pveax1DrVL89vm7mWe+TovdI/UDOuPw==}
 
-  boltdocs@2.8.1:
-    resolution: {integrity: sha512-fSyASo/y6oqBjjJHXXOK+1j2yl/H5nKF8Ae1HFC9S/c21LD9IVm89s72SJHtMS3ywUSXBmnSYwO2GvztvsJi7w==}
+  boltdocs@file:docs/boltdocs-2.8.3.tgz:
+    resolution: {integrity: sha512-wK+gXioujYrOh4sIwCs190/U8JQa5TBuILKoQeHDXwBtgDqek1VrWMSD4XijkRfORBYJI0e0hKeNxcs6WKDkaA==, tarball: file:docs/boltdocs-2.8.3.tgz}
+    version: 2.8.3
     hasBin: true
     peerDependencies:
       react: 19.0.0
@@ -3894,7 +3892,7 @@ snapshots:
       picocolors: 1.1.1
       string-width: 7.2.0
 
-  '@bdocs/ssg@0.1.0(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))':
+  '@bdocs/ssg@0.1.1(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))':
     dependencies:
       '@bdocs/dui': 0.1.2
       fs-extra: 11.3.5
@@ -5415,10 +5413,10 @@ snapshots:
 
   birpc@4.0.0: {}
 
-  boltdocs@2.8.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0):
+  boltdocs@file:docs/boltdocs-2.8.3.tgz(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0):
     dependencies:
       '@bdocs/dui': 0.1.2
-      '@bdocs/ssg': 0.1.0(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))
+      '@bdocs/ssg': 0.1.1(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))
       '@mdx-js/rollup': 3.1.1(rollup@4.61.0)
       '@tailwindcss/vite': 4.3.0(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))
       '@vitejs/plugin-react': 6.0.1(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))

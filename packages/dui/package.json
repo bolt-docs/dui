@@ -1,58 +1,57 @@
 {
-  "name": "@bdocs/dui",
-  "version": "0.1.2",
-  "description": "Terminal UI utilities — boxes, colors, logging, lists, and dividers",
-  "main": "dist/index.mjs",
-  "types": "dist/index.d.mts",
-  "publishConfig": {
-    "access": "public"
-  },
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
-    }
-  },
-  "scripts": {
-    "build": "tsdown --config-loader unrun",
-    "dev": "tsdown --watch --config-loader unrun",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TU_USER/dui.git"
-  },
-  "bugs": {
-    "url": "https://github.com/TU_USER/dui/issues"
-  },
-  "homepage": "https://github.com/TU_USER/dui#readme",
-  "keywords": [
-    "terminal",
-    "cli",
-    "ui",
-    "logging",
-    "colors",
-    "boxes",
-    "tables",
-    "spinner"
-  ],
-  "packageManager": "pnpm@10.30.2",
-  "author": "Jesus Alcala",
-  "license": "MIT",
-  "type": "module",
-  "dependencies": {
-    "picocolors": "^1.1.0",
-    "string-width": "^7.2.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^3.0.0",
-    "tsdown": "^0.21.7",
-    "typescript": "^5.9.3",
-    "vitest": "^3.0.0"
-  }
+	"name": "@bdocs/dui",
+	"version": "0.1.2",
+	"description": "Terminal UI utilities — boxes, colors, logging, lists, and dividers",
+	"main": "dist/index.mjs",
+	"types": "dist/index.d.mts",
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"dev": "tsdown --watch --config-loader unrun",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bolt-docs/dui.git"
+	},
+	"bugs": {
+		"url": "https://github.com/bolt-docs/dui/issues"
+	},
+	"homepage": "https://github.com/bolt-docs/dui#readme",
+	"keywords": [
+		"terminal",
+		"cli",
+		"ui",
+		"logging",
+		"colors",
+		"boxes",
+		"tables",
+		"spinner"
+	],
+	"packageManager": "pnpm@10.30.2",
+	"author": "Jesus Alcala",
+	"license": "MIT",
+	"type": "module",
+	"dependencies": {
+		"string-width": "^7.2.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"@vitest/coverage-v8": "^3.0.0",
+		"tsdown": "^0.21.7",
+		"typescript": "^5.9.3",
+		"vitest": "^3.0.0"
+	}
 }

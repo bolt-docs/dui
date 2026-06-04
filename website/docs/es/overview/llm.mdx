@@ -1,0 +1,88 @@
+---
+title: LLMs
+sidebarPosition: 3
+description: Instrucciones estructuradas y contexto de API para alimentar a LLMs (como Claude, ChatGPT o Gemini) para generar código DUI correcto.
+---
+
+Copia y pega el bloque siguiente en cualquier LLM (Claude, ChatGPT, Gemini) para obtener código DUI correcto.
+
+> Eres un desarrollador CLI experto usando DUI (Toolkit de UI para terminal para Node.js).
+>
+> **Reglas:**
+> - Importa todo desde `@bdocs/dui` — nunca desde archivos individuales
+> - Las funciones que devuelven strings deben envolverse en `console.log()`: `box()`, `table()`, `steps()`, `double()`, `single()`, `round()`
+> - `dividerLog()` imprime directamente — NO lo envuelvas en `console.log()`
+> - Llama a `configure()` una vez en el punto de entrada
+> - El prefijo se configura mediante `configure({ prefix: 'mytool' })`
+>
+> Funciones disponibles: `configure`, `getConfig`, `resetConfig`, `info`, `warn`, `error`, `success`, `debug`, `createLogger`, `formatLog`, `divider`, `dividerLog`, `box`, `double`, `single`, `round`, `table`, `steps`, `bullet`, `ordered`, `tasks`, `createSpinner`, `confirm`, `colors`, `colorMap`, `padCenter`, `padRight`, `fitWidth`, `terminalWidth`, `stripAnsi`, `visibleLength`, `wrapAnsiWord`
+>
+> Consulta la [Referencia API](/docs/api) para las firmas de tipos completas.
+
+---
+
+## Ejemplos de Prompts Comunes
+
+Aquí hay algunos prompts típicos que puedes usar con tu asistente AI:
+
+### Ejemplo 1: Crear un Asistente de Configuración
+**Prompt:**
+> "Usa la librería DUI para crear un asistente de configuración limpio para CLI. Debe configurar el prefijo de la herramienta como 'deployer', mostrar un box redondeado titulado 'Setup Wizard', listar tres puntos de lo que hará, pedir confirmación al usuario, y ejecutar un spinner por 2 segundos, terminando con un log de éxito."
+
+**Salida Esperada AI:**
+```ts
+import { configure, round, bullet, confirm, createSpinner, success, error } from '@bdocs/dui'
+
+configure({ prefix: 'deployer' })
+
+async function runWizard() {
+  console.log(round([
+    'Este asistente configurará tu despliegue a producción:',
+    '  1. Validar archivos de entorno',
+    '  2. Crear bundle de producción',
+    '  3. Sincronizar con servidor remoto'
+  ], { title: 'Setup Wizard' }))
+
+  const proceed = await confirm('¿Deseas continuar con el despliegue?')
+  if (!proceed) {
+    error('Despliegue cancelado por el usuario.')
+    process.exit(0)
+  }
+
+  const spinner = createSpinner('Sincronizando archivos a producción...')
+  spinner.start()
+
+  setTimeout(() => {
+    spinner.stop('success', 'Archivos sincronizados exitosamente!')
+    success('Despliegue completado!')
+  }, 2000)
+}
+
+runWizard()
+```
+
+### Ejemplo 2: Renderizar Progreso Multi-paso y Tablas
+**Prompt:**
+> "Usando DUI, escribe un script que muestre una línea de tiempo multi-paso mostrando un pipeline de build (Validación Hecha, Build Ejecutándose, Despliegue Pendiente), seguido de una tabla formateada mostrando los tamaños de archivo de los activos generados (ej. index.js, vendor.js)."
+
+**Salida Esperada AI:**
+```ts
+import { steps, table } from '@bdocs/dui'
+
+const pipeline = steps([
+  { label: 'Validación', status: 'success' },
+  { label: 'Build de Activos', status: 'running' },
+  { label: 'Desplegar a Vercel', status: 'pending' }
+])
+console.log(pipeline)
+
+const assetTable = table(
+  ['Nombre del Activo', 'Tamaño', 'Tipo'],
+  [
+    ['dist/index.mjs', '12.4 kB', 'ESM'],
+    ['dist/index.css', '8.5 kB', 'CSS'],
+    ['dist/chunks/vendor.js', '142.1 kB', 'JS']
+  ]
+)
+console.log(assetTable)
+```

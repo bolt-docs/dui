@@ -1,21 +1,21 @@
 {
-  "name": "dui-monorepo",
-  "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev --parallel",
-    "test": "turbo run test",
-    "release": "pnpm build && pnpm changeset publish",
-    "version-packages": "changeset version",
-    "format": "pnpm exec biome format --write .",
-    "lint": "pnpm exec biome lint --write ."
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.4.9",
-    "@changesets/changelog-github": "^0.6.0",
-    "@changesets/cli": "^2.30.0",
-    "turbo": "^2.5.0",
-    "typescript": "^5.9.3"
-  },
-  "packageManager": "pnpm@10.30.2"
+	"name": "dui-monorepo",
+	"private": true,
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev --parallel",
+		"test": "turbo run test",
+		"release": "pnpm build && pnpm changeset publish",
+		"version-packages": "changeset version",
+		"format": "pnpm exec biome format --write .",
+		"lint": "pnpm exec biome lint --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.9",
+		"@changesets/changelog-github": "^0.6.0",
+		"@changesets/cli": "^2.30.0",
+		"turbo": "^2.5.0",
+		"typescript": "^5.9.3"
+	},
+	"packageManager": "pnpm@10.30.2"
 }

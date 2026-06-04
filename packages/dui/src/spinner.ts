@@ -1,89 +1,121 @@
-import readline from 'node:readline'
-import { colors } from './colors'
-import { getConfig } from './config'
+import readline from "node:readline";
+import { colors } from "./color";
+import { getConfig } from "./config";
+import { resolveColor } from "./theme";
+import type { ColorStyle } from "./theme";
+import { animate } from "./animation";
+import type { AnimationHandle } from "./animation";
 
 export interface SpinnerOptions {
-  prefix?: string
+	prefix?: string;
+	frames?: string[];
+	colors?: {
+		frame?: ColorStyle;
+		success?: ColorStyle;
+		fail?: ColorStyle;
+		warn?: ColorStyle;
+		info?: ColorStyle;
+	};
 }
 
 export interface Spinner {
-  start: () => void
-  update: (newMessage: string) => void
-  stop: (
-    status?: 'success' | 'fail' | 'warn' | 'info',
-    finalMessage?: string,
-  ) => void
+	start: () => void;
+	update: (newMessage: string) => void;
+	stop: (
+		status?: "success" | "fail" | "warn" | "info",
+		finalMessage?: string,
+	) => void;
 }
 
+const DEFAULT_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 export function createSpinner(message: string, opts?: SpinnerOptions): Spinner {
-  let timer: NodeJS.Timeout | null = null
-  let frameIndex = 0
-  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-  const prefix = opts?.prefix ?? getConfig().prefix
-  const formattedPrefix = colors.bold(`[${prefix}]`)
-  const isTTY = process.stdout.isTTY
+	const frames = opts?.frames ?? DEFAULT_FRAMES;
+	const prefix = opts?.prefix ?? getConfig().prefix;
+	const formattedPrefix = colors.bold(`[${prefix}]`);
+	const isTTY = process.stdout.isTTY;
+	const theme = getConfig().theme;
+	const colorsOverride = opts?.colors;
 
-  const start = () => {
-    if (isTTY) {
-      process.stdout.write('\u001b[?25l') // Hide cursor
+	let anim: AnimationHandle | null = null;
+	let currentMessage = message;
 
-      const render = () => {
-        const frame = colors.cyan(frames[frameIndex])
-        frameIndex = (frameIndex + 1) % frames.length
+	const { apply: frameStyle } = resolveColor("spinner.frame", theme, colorsOverride?.frame);
+	const { apply: successStyle } = resolveColor("spinner.success", theme, colorsOverride?.success);
+	const { apply: failStyle } = resolveColor("spinner.fail", theme, colorsOverride?.fail);
+	const { apply: warnStyle } = resolveColor("spinner.warn", theme, colorsOverride?.warn);
+	const { apply: infoStyle } = resolveColor("spinner.info", theme, colorsOverride?.info);
 
-        readline.clearLine(process.stdout, 0)
-        readline.cursorTo(process.stdout, 0)
-        process.stdout.write(`${formattedPrefix} ${frame} ${message}`)
-      }
-      render()
-      timer = setInterval(render, 80)
-    } else {
-      process.stdout.write(`${formattedPrefix} ... ${message}\n`)
-    }
-  }
+	const renderLine = (frame: string) => {
+		readline.clearLine(process.stdout, 0);
+		readline.cursorTo(process.stdout, 0);
+		process.stdout.write(`${formattedPrefix} ${frameStyle(frame)} ${currentMessage}`);
+	};
 
-  const update = (newMessage: string) => {
-    message = newMessage
-    if (!isTTY) {
-      process.stdout.write(`${formattedPrefix} ... ${message}\n`)
-    }
-  }
+	const start = () => {
+		if (isTTY) {
+			process.stdout.write("\u001b[?25l");
 
-  const stop = (
-    status: 'success' | 'fail' | 'warn' | 'info' = 'success',
-    finalMessage?: string,
-  ) => {
-    const text = finalMessage ?? message
-    let symbol = ''
-    switch (status) {
-      case 'success':
-        symbol = colors.green('✔')
-        break
-      case 'fail':
-        symbol = colors.red('✖')
-        break
-      case 'warn':
-        symbol = colors.yellow('⚠')
-        break
-      case 'info':
-        symbol = colors.blue('ℹ')
-        break
-    }
+			const keyframes = frames.map((char, i) => ({
+				offset: i / frames.length,
+				content: char,
+			}));
 
-    if (timer) {
-      clearInterval(timer)
-      timer = null
-    }
+			anim = animate({
+				keyframes,
+				duration: 80 * frames.length,
+				loop: true,
+				onFrame: (resolved) => {
+					renderLine(resolved.content);
+				},
+			});
+		} else {
+			process.stdout.write(`${formattedPrefix} ... ${currentMessage}\n`);
+		}
+	};
 
-    if (isTTY) {
-      readline.clearLine(process.stdout, 0)
-      readline.cursorTo(process.stdout, 0)
-      process.stdout.write(`${formattedPrefix} ${symbol} ${text}\n`)
-      process.stdout.write('\u001b[?25h') // Show cursor
-    } else {
-      process.stdout.write(`${formattedPrefix} ${symbol} ${text}\n`)
-    }
-  }
+	const update = (newMessage: string) => {
+		currentMessage = newMessage;
+		if (!isTTY) {
+			process.stdout.write(`${formattedPrefix} ... ${currentMessage}\n`);
+		}
+	};
 
-  return { start, update, stop }
+	const stop = (
+		status: "success" | "fail" | "warn" | "info" = "success",
+		finalMessage?: string,
+	) => {
+		const text = finalMessage ?? currentMessage;
+		let symbol = "";
+		switch (status) {
+			case "success":
+				symbol = successStyle("✔");
+				break;
+			case "fail":
+				symbol = failStyle("✖");
+				break;
+			case "warn":
+				symbol = warnStyle("⚠");
+				break;
+			case "info":
+				symbol = infoStyle("ℹ");
+				break;
+		}
+
+		if (anim) {
+			anim.stop();
+			anim = null;
+		}
+
+		if (isTTY) {
+			readline.clearLine(process.stdout, 0);
+			readline.cursorTo(process.stdout, 0);
+			process.stdout.write(`${formattedPrefix} ${symbol} ${text}\n`);
+			process.stdout.write("\u001b[?25h");
+		} else {
+			process.stdout.write(`${formattedPrefix} ${symbol} ${text}\n`);
+		}
+	};
+
+	return { start, update, stop };
 }

@@ -1,0 +1,84 @@
+---
+title: Progreso
+sidebarPosition: 9
+description: Barra de progreso animada con colores temáticos y soporte TTY/no-TTY.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { createProgressBar } from '@bdocs/dui'
+```
+
+## createProgressBar
+
+```ts
+createProgressBar(opts?: ProgressBarOptions): ProgressBar
+```
+
+Crea una barra de progreso animada. En terminales TTY se renderiza en línea con actualizaciones suaves. En entornos no-TTY (CI, logs) escribe una nueva línea por actualización.
+
+### Uso
+
+```ts
+const bar = createProgressBar({ width: 30 })
+
+bar.start(100)         // pasos totales
+bar.update(50, 'compilando...')  // actual + mensaje
+bar.stop('listo!')     // finalizar
+
+console.log(bar.percentage)  // 50
+```
+
+<TerminalPreview command="node progress.js">
+{`\x1b[38;2;34;211;238m█████████████████░░░░░░░░░░░\x1b[0m  60% | descargando...`}
+</TerminalPreview>
+
+### Opciones
+
+<Field name="width" type="number" default="30">Ancho de la barra en caracteres.</Field>
+<Field name="barChar" type="string" default="'█'">Carácter para la porción llena.</Field>
+<Field name="emptyChar" type="string" default="'░'">Carácter para la porción restante.</Field>
+<Field name="prefix" type="string">Texto antes de la barra.</Field>
+<Field name="suffix" type="string">Texto después del porcentaje.</Field>
+<Field name="color" type="ColorStyle" default="theme.progress.bar">Color de la barra llena. Acepta hex, rgb, oklch o un objeto de tema.</Field>
+
+### API
+
+<Field name="start" type="(total?: number) => void">Iniciar la barra de progreso. Opcionalmente establece los pasos totales.</Field>
+<Field name="update" type="(current: number, message?: string) => void">Actualizar el progreso actual y mensaje de estado opcional.</Field>
+<Field name="stop" type="(message?: string) => void">Completar la barra de progreso y restaurar el cursor.</Field>
+<Field name="percentage" type="number">Progreso actual como valor 0–100 (solo lectura).</Field>
+
+### Tematización
+
+Usa el slot `progress.bar` del tema para estilo global:
+
+```ts
+configure({
+  theme: {
+    progress: {
+      bar: { fg: '#22c55e', bg: '#052e16' },
+    },
+  },
+})
+```
+
+O pasa el color por llamada:
+
+```ts
+createProgressBar({
+  color: '#ff8800',
+})
+```
+
+### Caracteres personalizados
+
+```ts
+createProgressBar({
+  width: 20,
+  barChar: '#',
+  emptyChar: '-',
+  color: '#60a5fa',
+})
+```

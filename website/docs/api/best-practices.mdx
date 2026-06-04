@@ -1,0 +1,233 @@
+---
+title: Best Practices
+sidebarPosition: 100
+description: Recommended patterns, common pitfalls, and guidelines for using @bdocs/dui effectively.
+---
+
+---
+
+## Colors & Styling
+
+### ✅ Use chainable API over manual composition
+
+```ts
+// ✅ Recommended
+colors.red.bold('urgent')
+
+// ⚠️ Works but less readable
+colors.bold(colors.red('urgent'))
+```
+
+The chainable API (`colors.red.bold('text')`) is more readable, especially with 3+ styles:
+
+```ts
+// ✅ Clean
+colors.blue.bgYellow.underline.italic('notice')
+
+// ⚠️ Nested hell
+colors.italic(colors.underline(colors.bgYellow(colors.blue('notice'))))
+```
+
+### ✅ Use variadic arguments for mixed styles
+
+```ts
+// ✅ Clear intent
+colors.red('Step 1:', colors.bold('compile'), colors.green('OK'))
+
+// ⚠️ Equivalent but more verbose
+colors.red('Step 1: ' + colors.bold('compile') + ' ' + colors.green('OK'))
+```
+
+Each argument is styled independently and joined with space automatically.
+
+### ✅ Nesting styles works automatically
+
+```ts
+// ✅ Composes perfectly
+colors.red('hello ' + colors.blue('world') + '!')
+```
+
+Our color engine uses individual close codes and automatically re-opens parent styles when inner styles close. For example, the inner blue close code `\x1b[39m` is replaced with `\x1b[39m\x1b[31m` to restore the outer red style automatically.
+
+You can also use multi-arguments for clean layout formatting:
+
+```ts
+colors.red('a', colors.blue('b'), 'c')
+```
+
+### ✅ Prefer `colors.*` named functions over `colorize`
+
+```ts
+// ✅ Readable and concise
+colors.red('error')
+colors.bgGreen('success')
+
+// ✅ Only use colorize when you need a custom hex/rgb/oklch color
+colorize('custom', '#ff6600')
+```
+
+Named colors are self-documenting and require less typing.
+
+### ✅ Understand individual close codes
+
+Every style now closes with its specific ANSI code instead of a blanket `\x1b[0m` reset:
+
+| Style | Close Code |
+|-------|-----------|
+| bold / dim | `\x1b[22m` |
+| italic | `\x1b[23m` |
+| underline | `\x1b[24m` |
+| inverse | `\x1b[27m` |
+| hidden | `\x1b[28m` |
+| strikethrough | `\x1b[29m` |
+| foreground | `\x1b[39m` |
+| background | `\x1b[49m` |
+
+This means nested styles of **different types** compose perfectly:
+
+```ts
+colors.red('hello ' + colors.bold('world') + '!')
+// → \x1b[31mhello \x1b[1mworld\x1b[22m!\x1b[39m
+//                        ^ bold off  ^ red continues
+```
+
+---
+
+## Output Utilities
+
+### ✅ Combine `renderLine` + `renderStatic`
+
+```ts
+// ✅ Clean dynamic output
+renderLine(colors.cyan('Loading...'))
+// ... after operation:
+renderStatic(colors.green('Done!'))
+```
+
+`renderLine` overwrites the current line (uses `readline.cursorTo` + `clearLine` when `stream.isTTY`). `renderStatic` writes text + newline.
+
+### ❌ Don't mix `console.log` with `renderLine`
+
+```ts
+// ❌ Breaks the line layout
+console.log('status')
+renderLine(colors.cyan('progress: 50%'))
+
+// ✅ Use renderStatic for finalizing, renderLine for updates
+renderLine(colors.cyan('progress: 50%'))
+// ... later:
+renderStatic(colors.green('complete'))
+```
+
+### ✅ Use with animations
+
+```ts
+import { animate } from '@bdocs/dui'
+
+animate({
+  keyframes: [
+    { offset: 0,   content: '●', fg: '#666' },
+    { offset: 0.5, content: '●', fg: '#fff' },
+    { offset: 1,   content: '●', fg: '#666' },
+  ],
+  duration: 800,
+  loop: true,
+  onFrame: (frame) => {
+    renderLine(colors.cyan(`${frame.content} Loading...`))
+  },
+}).then(() => renderStatic(colors.green('Done!')))
+```
+
+---
+
+## Environment & Testing
+
+### ✅ Respect `NO_COLOR` and TTY detection
+
+The engine automatically checks `process.stdout.isTTY` and the `NO_COLOR` environment variable. `colors.*` functions return plain text when colors are not supported — no manual checks needed:
+
+```ts
+// These automatically degrade in non-TTY environments:
+console.log(colors.red('error'))
+console.log(colors.bold('header'))
+```
+
+### ❌ Don't forget `setColorSupported` in tests
+
+Test environments (vitest, jest) don't have a real TTY, so `isColorSupported` is `false` by default. Use `setColorSupported(true)` in `beforeAll`:
+
+```ts
+import { setColorSupported, colors } from '@bdocs/dui'
+
+beforeAll(() => {
+  setColorSupported(true)
+})
+
+it('applies red color', () => {
+  const result = colors.red('hello')
+  expect(result).toMatch(/\x1b\[31m/)
+})
+```
+
+### ✅ Use `colorMap` for dynamic style access
+
+When you need to look up a color by name at runtime:
+
+```ts
+const severity = 'error'
+colorMap[severity]('Something broke')
+// equivalent to colors.red('Something broke')
+```
+
+---
+
+## Theme System
+
+### ✅ Use semantic theme slots over hardcoded colors
+
+```ts
+// ✅ Flexible: change theme once, affects everywhere
+configure({
+  theme: {
+    success: '#22c55e',
+    error: '#ef4444',
+  },
+})
+
+// ❌ Hard to maintain
+const SUCCESS = '#22c55e'
+const ERROR = '#ef4444'
+```
+
+### ✅ Override per-call when needed
+
+```ts
+// Theme default + per-call override
+success('Deploy OK')
+success('Deploy OK', { color: '#00ff88' })
+```
+
+Per-call overrides take precedence over theme, which takes precedence over the default color.
+
+---
+
+## Logger
+
+### ✅ Use semantic log levels
+
+```ts
+info('Starting build...')
+success('Build completed!')
+warn('Deprecated API used')
+error('Failed to connect', err)
+```
+
+Don't use `console.log` for structured output — the logger adds consistent `[prefix]` formatting, theme colors, and debug-only visibility.
+
+### ✅ Use debug for verbose output
+
+```ts
+debug('Verbose trace')  // only shown with DEBUG or BOLTDOCS_DEBUG env
+```
+
+Debug messages are hidden by default, keeping output clean for end users.

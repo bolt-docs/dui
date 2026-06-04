@@ -1,12 +1,12 @@
-import { defineConfig } from 'tsdown'
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ['src/index.ts'],
-  format: ['esm'],
-  dts: true,
-  clean: true,
-  tsconfig: './tsconfig.json',
-  deps: {
-    neverBundle: ['picocolors', 'string-width'],
-  },
-})
+	entry: ["src/index.ts"],
+	format: ["esm"],
+	dts: true,
+	clean: true,
+	tsconfig: "./tsconfig.json",
+	deps: {
+		neverBundle: ["string-width"],
+	},
+});

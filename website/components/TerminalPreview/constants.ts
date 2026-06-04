@@ -1,0 +1,18 @@
+export const TERMINAL_COLORS: Record<string, string> = {
+	black: "var(--color-terminal-black)",
+	red: "var(--color-terminal-red)",
+	green: "var(--color-terminal-green)",
+	yellow: "var(--color-terminal-yellow)",
+	blue: "var(--color-terminal-blue)",
+	magenta: "var(--color-terminal-magenta)",
+	cyan: "var(--color-terminal-cyan)",
+	white: "var(--color-terminal-white)",
+	gray: "var(--color-terminal-gray)",
+	"bright-red": "var(--color-terminal-bright-red)",
+	"bright-green": "var(--color-terminal-bright-green)",
+	"bright-yellow": "var(--color-terminal-bright-yellow)",
+	"bright-blue": "var(--color-terminal-bright-blue)",
+	"bright-magenta": "var(--color-terminal-bright-magenta)",
+	"bright-cyan": "var(--color-terminal-bright-cyan)",
+	"bright-white": "var(--color-terminal-bright-white)",
+};

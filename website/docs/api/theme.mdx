@@ -1,0 +1,129 @@
+---
+title: Theme
+sidebarPosition: 6
+description: Custom color themes for every DUI component.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+```ts
+import { configure } from '@bdocs/dui'
+```
+
+## configure
+
+```ts
+configure(opts: { prefix: string; theme?: DuiTheme })
+```
+
+Define a global color theme. Every component picks up these colors automatically — no need to pass them manually each time.
+
+```ts
+configure({
+  prefix: 'build',
+  theme: {
+    success: '#22c55e',
+    error:   '#ef4444',
+    warning: '#eab308',
+    info:    '#3b82f6',
+    muted:   '#6b7280',
+    accent:  '#22d3ee',
+  },
+})
+
+success('Build passed')   // green
+error('Build failed')     // red
+```
+
+<TerminalPreview command="node themed.js">
+{`\x1b[1m[build]\x1b[0m \x1b[38;2;34;197;94mBuild passed\x1b[0m
+\x1b[1m[build]\x1b[0m \x1b[38;2;239;68;68mBuild failed\x1b[0m`}
+</TerminalPreview>
+
+### Global slots
+
+These apply to every component unless a more specific override exists:
+
+<Field name="success" type="ColorStyle" default="green">Success states — checkmarks, log output, step completion.</Field>
+<Field name="error" type="ColorStyle" default="red">Error states — crosses, failure messages.</Field>
+<Field name="warning" type="ColorStyle" default="yellow">Warning states.</Field>
+<Field name="info" type="ColorStyle" default="blue">Informational elements.</Field>
+<Field name="muted" type="ColorStyle" default="gray">Secondary text, hints, dim details.</Field>
+<Field name="accent" type="ColorStyle" default="cyan">Accent color for highlights and decorative elements.</Field>
+
+### ColorStyle
+
+Each slot accepts either a plain string (foreground only) or an object with both foreground and background:
+
+```ts
+// Foreground only
+success: '#22c55e'
+
+// Foreground + background
+error: { fg: '#ff3333', bg: '#330000' }
+```
+
+### Component slots
+
+Override colors for individual components. Falls back to global slots if not set.
+
+```ts
+configure({
+  theme: {
+    // Global fallback
+    success: '#22c55e',
+
+    // Logger-specific override
+    logger: {
+      success: '#00cc66',
+    },
+
+    // Box colors
+    box: {
+      border: '#334155',
+      title:  '#ffffff',
+      arrow:  '#22d3ee',
+      url:    '#60a5fa',
+      hint:   { fg: '#94a3b8', bg: '#1e293b' },
+    },
+  },
+})
+```
+
+#### Full slot table
+
+| Component | Slots | Global fallback |
+|-----------|-------|----------------|
+| **logger** | `info`, `warn`, `error`, `success`, `debug` | `info`, `warning`, `error`, `success`, `muted` |
+| **box** | `border`, `title`, `arrow`, `url`, `hint`, `label`, `value` | `muted`, `accent`, `accent`, `info`, `muted`, `accent`, `accent` |
+| **spinner** | `frame`, `success`, `fail`, `warn`, `info` | `accent`, `success`, `error`, `warning`, `info` |
+| **list** | `bullet`, `number`, `check`, `cross` | `muted`, `muted`, `success`, `error` |
+| **steps** | `success`, `error`, `running`, `pending`, `detail`, `connector` | `success`, `error`, `info`, `muted`, `muted`, `muted` |
+| **divider** | `line` | `muted` |
+| **prompt** | `message`, `suffix` | `warning`, `muted` |
+| **table** | `header`, `border` | — (bold), `muted` |
+| **progress** | `bar` | `accent` |
+
+### Resolution order
+
+When rendering, DUI resolves colors in this order:
+
+1. **Per-call** — explicit `colors` option passed to the function
+2. **Component theme** — `theme.logger.success`, `theme.box.arrow`, etc.
+3. **Global theme** — `theme.success`, `theme.warning`, etc.
+4. **Default** — hardcoded fallback (green for success, red for error, etc.)
+
+Per-call overrides take full precedence:
+
+```ts
+// Uses theme logger.success
+success('Deployed')
+
+// Overrides with custom color (this call only)
+success('Deployed', { color: '#ff8800' })
+```
+
+<TerminalPreview command="node override.js">
+{`\x1b[38;2;0;204;102m[dui] Deployed (theme)\x1b[0m
+\x1b[38;2;255;136;0m[dui] Deployed (override)\x1b[0m`}
+</TerminalPreview>

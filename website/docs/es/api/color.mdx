@@ -1,0 +1,294 @@
+---
+title: Colores
+sidebarPosition: 7
+description: Motor de color — colores nombrados, true color (hex/rgb/rgba/oklch), frente y fondo.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { colors, colorize, parseColor, interpolateColor, toAnsiFg, toAnsiBg, toAnsiFgBg, applyStyle, setColorSupported, renderLine, renderStatic } from '@bdocs/dui'
+```
+
+El motor de color reemplaza `picocolors` por completo. Soporta 16 colores ANSI nombrados, true color 24-bit (hex, rgb, rgba, oklch), pintado separado de frente/fondo, y una API encadenable al estilo de chalk con códigos de cierre individuales para soporte correcto de estilos anidados.
+
+---
+
+## colors
+
+Colores nombrados y estilos de texto. Soporta tanto composición tradicional como API encadenable (como chalk).
+
+### API encadenable
+
+```ts
+colors.red.bold('urgente')                    // encadenable
+colors.blue.bgYellow.underline('aviso')       // multi-cadena
+colors.bold.dim.italic('secundario')           // cualquier combinación
+```
+
+Cada acceso a propiedad acumula un estilo y retorna una nueva función invocable. Encadena todos los que quieras.
+
+### Composición por función (retrocompatible)
+
+```ts
+colors.red('Error')                // frente rojo
+colors.green('Éxito')             // frente verde
+colors.bgRed('Fondo rojo')        // fondo rojo
+colors.bold(colors.cyan('Info'))   // componible
+colors.dim('Secundario')
+colors.underline('Enlace')
+```
+
+<TerminalPreview command="node colors.js">
+{`\x1b[31mError\x1b[39m
+\x1b[32mÉxito\x1b[39m
+\x1b[41mFondo rojo\x1b[49m
+\x1b[1m\x1b[36mInfo\x1b[39m\x1b[22m
+\x1b[2mSecundario\x1b[22m`}
+</TerminalPreview>
+
+### Estilos anidados
+
+El anidamiento funciona correctamente porque cada estilo cierra con su código ANSI individual en vez de un reset total `\x1b[0m`:
+
+```ts
+colors.red('hola ' + colors.bold('mundo') + '!')
+// → \x1b[31mhola \x1b[1mmundo\x1b[22m!\x1b[39m
+//               ^ rojo  ^ rojo+bold ^ rojo  ^ default
+```
+
+| Estilo | Código Apertura | Código Cierre |
+|-------|-----------------|---------------|
+| bold / dim | `\x1b[1m` / `\x1b[2m` | `\x1b[22m` |
+| italic | `\x1b[3m` | `\x1b[23m` |
+| underline | `\x1b[4m` | `\x1b[24m` |
+| inverse | `\x1b[7m` | `\x1b[27m` |
+| hidden | `\x1b[8m` | `\x1b[28m` |
+| strikethrough | `\x1b[9m` | `\x1b[29m` |
+| color frente | `\x1b[{30-97}m` | `\x1b[39m` |
+| color fondo | `\x1b[{40-107}m` | `\x1b[49m` |
+
+Cuando anidas estilos del **mismo tipo** (ej: `red` dentro de `blue`), el motor detecta el código de cierre interno y re-abre el estilo exterior automáticamente:
+
+```ts
+colors.red('hola ' + colors.blue('mundo') + '!')
+// → \x1b[31mhola \x1b[34mmundo\x1b[39m\x1b[31m!\x1b[39m
+//                                    ^ cierra azul
+//                                    ^ re-abre rojo  → "!" es rojo
+```
+
+### Variádico / Multi-argumento
+
+Pasa múltiples argumentos — cada uno se estila independientemente y se une con espacio:
+
+```ts
+colors.red('hola', 'mundo', '!')
+colors.red.bold('Paso 1:', colors.green('OK'))
+```
+
+### Colores disponibles
+
+| Frente | Fondo | Código |
+|------------|-----------|------|
+| `colors.black` | `colors.bgBlack` | `\x1b[30m` / `\x1b[40m` |
+| `colors.red` | `colors.bgRed` | `\x1b[31m` / `\x1b[41m` |
+| `colors.green` | `colors.bgGreen` | `\x1b[32m` / `\x1b[42m` |
+| `colors.yellow` | `colors.bgYellow` | `\x1b[33m` / `\x1b[43m` |
+| `colors.blue` | `colors.bgBlue` | `\x1b[34m` / `\x1b[44m` |
+| `colors.magenta` | `colors.bgMagenta` | `\x1b[35m` / `\x1b[45m` |
+| `colors.cyan` | `colors.bgCyan` | `\x1b[36m` / `\x1b[46m` |
+| `colors.white` | `colors.bgWhite` | `\x1b[37m` / `\x1b[47m` |
+| `colors.gray` | `colors.bgGray` | `\x1b[90m` / `\x1b[100m` |
+
+Más `bright-red`, `bright-green`, `bright-yellow`, `bright-blue`, `bright-magenta`, `bright-cyan`, `bright-white` y sus variantes `bg*`.
+
+### Estilos de texto
+
+`colors.bold`, `colors.dim`, `colors.italic`, `colors.underline`, `colors.inverse`, `colors.hidden`, `colors.strikethrough`
+
+### colorMap
+
+Mapa indexado por string para acceso dinámico a colores:
+
+```ts
+const level = 'error'
+colorMap[level]('Algo se rompió')
+// equivalente a colors.red('Algo se rompió')
+```
+
+---
+
+## setColorSupported
+
+```ts
+setColorSupported(value: boolean): void
+```
+
+Fuerza el soporte de color activado o desactivado. Útil en entornos de test donde `process.stdout.isTTY` no está disponible:
+
+```ts
+import { setColorSupported } from '@bdocs/dui'
+
+setColorSupported(true)   // habilitar salida ANSI
+setColorSupported(false)  // deshabilitar salida ANSI
+```
+
+---
+
+## colorize
+
+```ts
+colorize(text: string, color: ColorInput, target?: 'fg' | 'bg'): string
+```
+
+Pinta texto con true color (24-bit). Soporta formatos hex, rgb, rgba y oklch.
+
+### Frente
+
+```ts
+colorize('Naranja', '#ff8800')
+colorize('RGB Personalizado', 'rgb(100, 200, 50)')
+colorize('OKLCH', 'oklch(65% 0.2 30)')
+```
+
+<TerminalPreview command="node colorize-fg.js">
+{`\x1b[38;2;255;136;0mNaranja\x1b[39m
+\x1b[38;2;100;200;50mRGB Personalizado\x1b[39m
+\x1b[38;2;189;113;40mOKLCH\x1b[39m`}
+</TerminalPreview>
+
+### Fondo
+
+Pasa `'bg'` como tercer argumento:
+
+```ts
+colorize('Fondo azul', '#3355ff', 'bg')
+colorize('OKLCH bg', 'oklch(60% 0.2 280)', 'bg')
+```
+
+<TerminalPreview command="node colorize-bg.js">
+{`\x1b[48;2;51;85;255mFondo azul\x1b[49m
+\x1b[48;2;99;112;175mOKLCH bg\x1b[49m`}
+</TerminalPreview>
+
+Frente + fondo combinados con `applyStyle`:
+
+```ts
+applyStyle('Blanco sobre rojo', '#ffffff', '#cc3333')
+```
+
+<TerminalPreview command="node colorize-both.js">
+{`\x1b[38;2;255;255;255;48;2;204;51;51mBlanco sobre rojo\x1b[39;49m`}
+</TerminalPreview>
+
+### Formatos soportados
+
+| Formato | Ejemplo |
+|--------|---------|
+| Hex 3-dígitos | `#f60` |
+| Hex 6-dígitos | `#ff6600` |
+| Hex 8-dígitos (con alpha) | `#ff660080` |
+| RGB | `rgb(255, 102, 0)` |
+| RGBA | `rgba(255, 102, 0, 0.5)` |
+| OKLCH | `oklch(60% 0.15 250)` |
+| OKLCH con alpha | `oklch(60% 0.15 250 / 0.8)` |
+
+---
+
+## parseColor
+
+```ts
+parseColor(input: ColorInput): { r: number; g: number; b: number; a?: number }
+```
+
+Parsea cualquier formato de color soportado a sus componentes RGB:
+
+```ts
+parseColor('#ff6600')             // { r: 255, g: 102, b: 0 }
+parseColor('rgb(255, 0, 0)')     // { r: 255, g: 0, b: 0 }
+parseColor('rgba(255,0,0,0.5)') // { r: 255, g: 0, b: 0, a: 0.5 }
+parseColor('oklch(60% 0.15 250)') // { r: 57, g: 110, b: 188 }
+```
+
+Lanza un error si el formato no es reconocido.
+
+---
+
+## interpolateColor
+
+```ts
+interpolateColor(a: ColorInput, b: ColorInput, t: number): string
+```
+
+Mezcla entre dos colores. Devuelve un string hex. Usado internamente por el motor de animación.
+
+```ts
+interpolateColor('#ff0000', '#00ff00', 0)    // '#ff0000'
+interpolateColor('#ff0000', '#00ff00', 0.5)  // '#808000'
+interpolateColor('#ff0000', '#00ff00', 1)    // '#00ff00'
+```
+
+---
+
+## toAnsiFg / toAnsiBg / toAnsiFgBg
+
+Genera secuencias de escape ANSI crudas para uso de bajo nivel:
+
+```ts
+toAnsiFg('#ff0000')      // '\x1b[38;2;255;0;0m'
+toAnsiBg('#00ff00')      // '\x1b[48;2;0;255;0m'
+toAnsiFgBg('#fff', '#000') // '\x1b[38;2;255;255;255;48;2;0;0;0m'
+```
+
+---
+
+## applyStyle
+
+```ts
+applyStyle(text: string, fg?: ColorInput, bg?: ColorInput, styles?: string[]): string
+```
+
+Aplica frente, fondo y estilos de texto en una sola llamada:
+
+```ts
+applyStyle('Naranja negrita', '#ff8800', undefined, ['bold'])
+applyStyle('Blanco sobre negro', '#ffffff', '#000000')
+applyStyle('Verde negrita subrayado', '#22c55e', undefined, ['bold', 'underline'])
+```
+
+<TerminalPreview command="node apply-style.js">
+{`\x1b[1;38;2;255;136;0mNaranja negrita\x1b[22;39m
+\x1b[38;2;255;255;255;48;2;0;0;0mBlanco sobre negro\x1b[39;49m
+\x1b[1;4;38;2;34;197;94mVerde negrita subrayado\x1b[22;24;39m`}
+</TerminalPreview>
+
+---
+
+## renderLine / renderStatic
+
+Utilidades de salida para renderizado dinámico en terminal (spinners, barras de progreso, etc.).
+
+```ts
+renderLine(text: string, stream?: NodeJS.WriteStream): void
+renderStatic(text: string, stream?: NodeJS.WriteStream): void
+```
+
+`renderLine` sobrescribe la línea actual usando `readline.cursorTo` + `clearLine` (cuando `stream.isTTY` es true). `renderStatic` escribe texto + nueva línea, para finalizar una secuencia de salida dinámica.
+
+```ts
+import { renderLine, renderStatic, colors } from '@bdocs/dui'
+
+let i = 0
+const timer = setInterval(() => {
+  const bar = '█'.repeat(i) + '░'.repeat(20 - i)
+  renderLine(colors.cyan(`Progreso: ${bar} ${i * 5}%`))
+  if (++i > 20) {
+    clearInterval(timer)
+    renderStatic(colors.green('¡Listo!'))
+  }
+}, 100)
+```
+
+---
+
+Para guías de uso, errores comunes y recomendaciones, consulta la página de [Mejores Prácticas](/docs/es/api/best-practices).

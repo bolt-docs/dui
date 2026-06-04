@@ -1,186 +1,163 @@
-import { colors } from './colors'
-import { padCenter, fitWidth, terminalWidth, visibleLength } from './utils'
-import { getConfig } from './config'
+import { fitWidth, terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
+import { getConfig } from "./config";
+import { resolveColor } from "./theme";
+import type { ColorStyle } from "./theme";
 
-export type BoxBorderStyle = 'single' | 'double' | 'round'
+export type BoxBorderStyle = "single" | "double" | "round";
 
 interface BorderChars {
-  tl: string
-  tr: string
-  bl: string
-  br: string
-  h: string
-  v: string
+	tl: string;
+	tr: string;
+	bl: string;
+	br: string;
+	h: string;
+	v: string;
 }
 
 const BORDERS: Record<BoxBorderStyle, BorderChars> = {
-  single: { tl: '┏', tr: '┓', bl: '┗', br: '┛', h: '━', v: '┃' },
-  double: { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' },
-  round: { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
-}
+	single: { tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃" },
+	double: { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" },
+	round: { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
+};
 
 export interface BoxOptions {
-  title?: string
-  width?: number
-  style?: BoxBorderStyle
-  padding?: number
+	title?: string;
+	width?: number;
+	style?: BoxBorderStyle;
+	padding?: number;
+	color?: ColorStyle;
+	colors?: {
+		border?: ColorStyle;
+		title?: ColorStyle;
+		arrow?: ColorStyle;
+		url?: ColorStyle;
+		hint?: ColorStyle;
+		label?: ColorStyle;
+		value?: ColorStyle;
+	};
 }
 
-/** Truncates `s` to `max` visible characters, appending '…' if needed. */
 function truncate(s: string, max: number): string {
-  return visibleLength(s) > max ? s.slice(0, max - 1) + '…' : s
+	return visibleLength(s) > max ? s.slice(0, max - 1) + "…" : s;
 }
 
 function buildBoxBase(
-  lines: string[],
-  opts: {
-    title?: string
-    width: number
-    style: BoxBorderStyle
-    padLine: (line: string, innerWidth: number) => string
-    addVerticalSpacers?: boolean
-  },
+	lines: string[],
+	opts: {
+		title?: string;
+		width: number;
+		style: BoxBorderStyle;
+		padLine: (line: string, innerWidth: number) => string;
+		addVerticalSpacers?: boolean;
+		color?: ColorStyle;
+		colors?: BoxOptions["colors"];
+		theme?: ReturnType<typeof getConfig>["theme"];
+	},
 ): string {
-  const b = BORDERS[opts.style]
-  const result: string[] = []
+	const b = BORDERS[opts.style] ?? BORDERS.double;
+	const result: string[] = [];
+	const { apply: titleStyle } = resolveColor(
+		"box.title",
+		opts.theme,
+		opts.colors?.title,
+	);
+	const { apply: borderStyle } = resolveColor(
+		"box.border",
+		opts.theme,
+		opts.colors?.border || opts.color,
+	);
 
-  if (opts.title) {
-    const title = truncate(opts.title, opts.width - 4)
-    const titleLen = visibleLength(title)
-    const remaining = Math.max(0, opts.width - titleLen - 3)
-    result.push(
-      b.tl + b.h + ` ${colors.bold(title)} ` + b.h.repeat(remaining) + b.tr,
-    )
-    if (opts.addVerticalSpacers) {
-      result.push(`${b.v}${' '.repeat(opts.width)}${b.v}`)
-    }
-  } else {
-    result.push(b.tl + b.h.repeat(opts.width) + b.tr)
-  }
+	if (opts.title) {
+		const title = truncate(opts.title, opts.width - 4);
+		const titleLen = visibleLength(title);
+		const remaining = Math.max(0, opts.width - titleLen - 3);
+		result.push(
+			borderStyle(b.tl + b.h) +
+				` ${titleStyle(title)} ` +
+				borderStyle(b.h.repeat(remaining) + b.tr),
+		);
+		if (opts.addVerticalSpacers) {
+			result.push(borderStyle(b.v) + " ".repeat(opts.width) + borderStyle(b.v));
+		}
+	} else {
+		result.push(borderStyle(b.tl + b.h.repeat(opts.width) + b.tr));
+	}
 
-  for (const line of lines) {
-    const content = opts.padLine(line, opts.width)
-    result.push(`${b.v}${content}${b.v}`)
-  }
+	for (const line of lines) {
+		const content = opts.padLine(line, opts.width);
+		result.push(borderStyle(b.v) + content + borderStyle(b.v));
+	}
 
-  if (opts.title && opts.addVerticalSpacers) {
-    result.push(`${b.v}${' '.repeat(opts.width)}${b.v}`)
-  }
+	if (opts.title && opts.addVerticalSpacers) {
+		result.push(borderStyle(b.v) + " ".repeat(opts.width) + borderStyle(b.v));
+	}
 
-  result.push(b.bl + b.h.repeat(opts.width) + b.br)
-  return result.join('\n')
-}
-
-function buildServerBox(title: string, lines: string[], W: number): string {
-  const str = buildBoxBase(lines, {
-    title,
-    width: W,
-    style: 'double',
-    addVerticalSpacers: true,
-    padLine: (line, innerWidth) => {
-      if (line.length === 0) {
-        return ' '.repeat(innerWidth)
-      }
-      const padding = innerWidth - 1 - visibleLength(line)
-      return ` ${line}${' '.repeat(Math.max(0, padding))}`
-    },
-  })
-  return '\n' + str + '\n'
+	result.push(borderStyle(b.bl + b.h.repeat(opts.width) + b.br));
+	return result.join("\n");
 }
 
 export function box(lines: string[], opts?: BoxOptions): string {
-  const style = opts?.style ?? 'double'
-  const padding = opts?.padding ?? 1
-  const maxContent = lines.reduce((m, l) => Math.max(m, visibleLength(l)), 0)
-  const titleLen = opts?.title ? visibleLength(opts.title) + 2 : 0
-  const minWidth = Math.max(maxContent + padding * 2, titleLen + 2, 20)
-  const termWidth = Math.min(terminalWidth(), 80)
-  const width = opts?.width
-    ? Math.min(opts.width, termWidth)
-    : Math.min(minWidth, termWidth)
+	const style = opts?.style ?? "double";
+	const padding = opts?.padding ?? 1;
+	const theme = getConfig().theme;
+	const colorsOverride = opts?.colors;
 
-  return buildBoxBase(lines, {
-    title: opts?.title,
-    width,
-    style,
-    addVerticalSpacers: true,
-    padLine: (line, innerWidth) => {
-      const innerPad = ' '.repeat(padding)
-      return fitWidth(innerPad + line + innerPad, innerWidth)
-    },
-  })
+	const termWidth = Math.min(terminalWidth(), 80);
+	const maxInnerWidth = opts?.width
+		? Math.min(opts.width, termWidth)
+		: termWidth;
+	const maxContentWidth = Math.max(4, maxInnerWidth - padding * 2);
+
+	const wrappedLines: string[] = [];
+	for (const line of lines) {
+		const subLines = line.split("\n");
+		for (const subLine of subLines) {
+			wrappedLines.push(...wrapAnsiWord(subLine, maxContentWidth));
+		}
+	}
+
+	const maxContent = wrappedLines.reduce(
+		(m, l) => Math.max(m, visibleLength(l)),
+		0,
+	);
+	const titleLen = opts?.title ? visibleLength(opts.title) + 2 : 0;
+	const minInnerWidth = Math.max(maxContent + padding * 2, titleLen + 2, 20);
+	const width = opts?.width
+		? Math.min(opts.width, termWidth)
+		: Math.min(minInnerWidth, termWidth);
+
+	return buildBoxBase(wrappedLines, {
+		title: opts?.title,
+		width,
+		style,
+		addVerticalSpacers: true,
+		padLine: (line, innerWidth) => {
+			const innerPad = " ".repeat(padding);
+			return fitWidth(innerPad + line + innerPad, innerWidth);
+		},
+		theme,
+		color: opts?.color,
+		colors: colorsOverride,
+	});
 }
 
-export function double(title: string, lines: string[]): string {
-  return box(lines, { title, style: 'double' })
-}
-
-export function single(title: string, lines: string[]): string {
-  return box(lines, { title, style: 'single' })
-}
-
-export function round(title: string, lines: string[]): string {
-  return box(lines, { title, style: 'round' })
-}
-
-export function devServer(localUrl: string, networkUrl: string | null): string {
-  const W = Math.min(terminalWidth(), 60)
-  const netLine = networkUrl
-    ? `  ${colors.green('➜')}  ${colors.green('Network:')} ${colors.cyan(networkUrl)}`
-    : `  ${colors.green('➜')}  ${colors.green('Network:')} ${colors.gray('use --host to expose')}`
-
-  return buildServerBox(
-    getConfig().devServerTitle,
-    [
-      `  ${colors.green('➜')}  ${colors.green('Local:')}   ${colors.cyan(localUrl)}`,
-      netLine,
-      '',
-      `  ${colors.dim('press h + enter for help')}`,
-    ],
-    W,
-  )
-}
-
-export function previewServer(
-  localUrl: string,
-  networkUrl: string | null,
+export function double(
+	lines: string[],
+	opts?: Omit<BoxOptions, "style">,
 ): string {
-  const W = Math.min(terminalWidth(), 60)
-  const netLine = networkUrl
-    ? `  ${colors.green('➜')}  ${colors.green('Network:')} ${colors.cyan(networkUrl)}`
-    : `  ${colors.green('➜')}  ${colors.green('Network:')} ${colors.gray('use --host to expose')}`
-
-  return buildServerBox(
-    getConfig().previewServerTitle,
-    [
-      `  ${colors.green('➜')}  ${colors.green('Local:')}   ${colors.cyan(localUrl)}`,
-      netLine,
-    ],
-    W,
-  )
+	return box(lines, { ...opts, style: "double" });
 }
 
-export function updateAvailable(current: string, latest: string): string {
-  const W = Math.min(terminalWidth(), 54)
+export function single(
+	lines: string[],
+	opts?: Omit<BoxOptions, "style">,
+): string {
+	return box(lines, { ...opts, style: "single" });
+}
 
-  const lines: string[] = [
-    padCenter('🚀  Update available!', W),
-    '',
-    `  ${colors.dim('Current:')} ${colors.red(current)}  ${colors.gray('→')}  ${colors.green(latest)}`,
-    '',
-    `  ${colors.dim('Run:')}  ${colors.bold(getConfig().updateCommand)}`,
-  ]
-
-  const str = buildBoxBase(lines, {
-    width: W,
-    style: 'double',
-    padLine: (line, innerWidth) => {
-      if (line.length === 0) {
-        return ' '.repeat(innerWidth)
-      }
-      const padding = innerWidth - visibleLength(line)
-      return `${line}${' '.repeat(Math.max(0, padding))}`
-    },
-  })
-  return '\n' + str + '\n'
+export function round(
+	lines: string[],
+	opts?: Omit<BoxOptions, "style">,
+): string {
+	return box(lines, { ...opts, style: "round" });
 }

@@ -1,0 +1,233 @@
+---
+title: Mejores Prácticas
+sidebarPosition: 100
+description: Patrones recomendados, errores comunes y guías para usar @bdocs/dui efectivamente.
+---
+
+---
+
+## Colores y Estilos
+
+### ✅ Usa la API encadenable sobre composición manual
+
+```ts
+// ✅ Recomendado
+colors.red.bold('urgente')
+
+// ⚠️ Funciona pero es menos legible
+colors.bold(colors.red('urgente'))
+```
+
+La API encadenable (`colors.red.bold('texto')`) es más legible, especialmente con 3+ estilos:
+
+```ts
+// ✅ Limpio
+colors.blue.bgYellow.underline.italic('aviso')
+
+// ⚠️ Infierno anidado
+colors.italic(colors.underline(colors.bgYellow(colors.blue('aviso'))))
+```
+
+### ✅ Usa argumentos variádicos para mezclar estilos
+
+```ts
+// ✅ Intención clara
+colors.red('Paso 1:', colors.bold('compilar'), colors.green('OK'))
+
+// ⚠️ Equivalente pero más verboso
+colors.red('Paso 1: ' + colors.bold('compilar') + ' ' + colors.green('OK'))
+```
+
+Cada argumento se estila independientemente y se une con espacio automáticamente.
+
+### ✅ El anidamiento de estilos funciona automáticamente
+
+```ts
+// ✅ Se compone perfectamente
+colors.red('hola ' + colors.blue('mundo') + '!')
+```
+
+Nuestro motor de color utiliza códigos de cierre individuales y vuelve a abrir automáticamente los estilos principales cuando los estilos internos se cierran. Por ejemplo, el código de cierre azul interno `\x1b[39m` se reemplaza con `\x1b[39m\x1b[31m` para restaurar el estilo rojo externo automáticamente.
+
+También puedes usar argumentos múltiples para un formato de diseño limpio:
+
+```ts
+colors.red('a', colors.blue('b'), 'c')
+```
+
+### ✅ Prefiere `colors.*` sobre `colorize`
+
+```ts
+// ✅ Legible y conciso
+colors.red('error')
+colors.bgGreen('éxito')
+
+// ✅ Usa colorize solo cuando necesites un color hex/rgb/oklch personalizado
+colorize('personalizado', '#ff6600')
+```
+
+Los colores nombrados son autodocumentados y requieren menos escritura.
+
+### ✅ Entiende los códigos de cierre individuales
+
+Cada estilo ahora cierra con su código ANSI específico en vez de un reset total `\x1b[0m`:
+
+| Estilo | Código de Cierre |
+|-------|-----------------|
+| bold / dim | `\x1b[22m` |
+| italic | `\x1b[23m` |
+| underline | `\x1b[24m` |
+| inverse | `\x1b[27m` |
+| hidden | `\x1b[28m` |
+| strikethrough | `\x1b[29m` |
+| frente (fg) | `\x1b[39m` |
+| fondo (bg) | `\x1b[49m` |
+
+Esto significa que estilos anidados de **diferentes tipos** se componen perfectamente:
+
+```ts
+colors.red('hola ' + colors.bold('mundo') + '!')
+// → \x1b[31mhola \x1b[1mmundo\x1b[22m!\x1b[39m
+//                        ^ bold off  ^ red continúa
+```
+
+---
+
+## Utilidades de Salida
+
+### ✅ Combina `renderLine` + `renderStatic`
+
+```ts
+// ✅ Salida dinámica limpia
+renderLine(colors.cyan('Cargando...'))
+// ... después de la operación:
+renderStatic(colors.green('¡Listo!'))
+```
+
+`renderLine` sobrescribe la línea actual (usa `readline.cursorTo` + `clearLine` cuando `stream.isTTY`). `renderStatic` escribe texto + nueva línea.
+
+### ❌ No mezcles `console.log` con `renderLine`
+
+```ts
+// ❌ Rompe el layout de la línea
+console.log('estado')
+renderLine(colors.cyan('progreso: 50%'))
+
+// ✅ Usa renderStatic para finalizar, renderLine para actualizaciones
+renderLine(colors.cyan('progreso: 50%'))
+// ... después:
+renderStatic(colors.green('completado'))
+```
+
+### ✅ Úsalo con animaciones
+
+```ts
+import { animate } from '@bdocs/dui'
+
+animate({
+  keyframes: [
+    { offset: 0,   content: '●', fg: '#666' },
+    { offset: 0.5, content: '●', fg: '#fff' },
+    { offset: 1,   content: '●', fg: '#666' },
+  ],
+  duration: 800,
+  loop: true,
+  onFrame: (frame) => {
+    renderLine(colors.cyan(`${frame.content} Cargando...`))
+  },
+}).then(() => renderStatic(colors.green('¡Listo!')))
+```
+
+---
+
+## Entorno y Tests
+
+### ✅ Respeta `NO_COLOR` y detección de TTY
+
+El motor verifica automáticamente `process.stdout.isTTY` y la variable de entorno `NO_COLOR`. Las funciones `colors.*` retornan texto plano cuando los colores no están soportados — no necesitas verificaciones manuales:
+
+```ts
+// Estas degradan automáticamente en entornos sin TTY:
+console.log(colors.red('error'))
+console.log(colors.bold('encabezado'))
+```
+
+### ❌ No olvides `setColorSupported` en tests
+
+Los entornos de test (vitest, jest) no tienen un TTY real, por lo que `isColorSupported` es `false` por defecto. Usa `setColorSupported(true)` en `beforeAll`:
+
+```ts
+import { setColorSupported, colors } from '@bdocs/dui'
+
+beforeAll(() => {
+  setColorSupported(true)
+})
+
+it('aplica color rojo', () => {
+  const result = colors.red('hola')
+  expect(result).toMatch(/\x1b\[31m/)
+})
+```
+
+### ✅ Usa `colorMap` para acceso dinámico
+
+Cuando necesitas buscar un color por nombre en tiempo de ejecución:
+
+```ts
+const severity = 'error'
+colorMap[severity]('Algo se rompió')
+// equivalente a colors.red('Algo se rompió')
+```
+
+---
+
+## Sistema de Tema
+
+### ✅ Usa slots semánticos sobre colores hardcodeados
+
+```ts
+// ✅ Flexible: cambia el tema una vez, afecta todo
+configure({
+  theme: {
+    success: '#22c55e',
+    error: '#ef4444',
+  },
+})
+
+// ❌ Difícil de mantener
+const SUCCESS = '#22c55e'
+const ERROR = '#ef4444'
+```
+
+### ✅ Sobreescribe por llamada cuando sea necesario
+
+```ts
+// Tema por defecto + sobreescritura por llamada
+success('Deploy OK')
+success('Deploy OK', { color: '#00ff88' })
+```
+
+Las sobreescrituras por llamada tienen prioridad sobre el tema, que tiene prioridad sobre el color por defecto.
+
+---
+
+## Logger
+
+### ✅ Usa niveles semánticos
+
+```ts
+info('Iniciando build...')
+success('Build completado!')
+warn('API deprecada usada')
+error('Error al conectar', err)
+```
+
+No uses `console.log` para salida estructurada — el logger agrega formato consistente `[prefix]`, colores del tema, y visibilidad condicional para debug.
+
+### ✅ Usa debug para salida verbosa
+
+```ts
+debug('Traza verbosa')  // solo se muestra con DEBUG o BOLTDOCS_DEBUG env
+```
+
+Los mensajes de debug están ocultos por defecto, manteniendo la salida limpia para usuarios finales.

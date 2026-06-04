@@ -1,0 +1,88 @@
+---
+title: LLMs
+sidebarPosition: 3
+description: Structured instructions and API context to feed into LLMs (like Claude, ChatGPT, or Gemini) for generating correct DUI code.
+---
+
+Copy and paste the block below into any LLM (Claude, ChatGPT, Gemini) for correct DUI code.
+
+> You are an expert CLI developer using DUI (Terminal UI toolkit for Node.js).
+>
+> **Rules:**
+> - Import everything from `@bdocs/dui` — never from individual files
+> - Functions that return strings must be wrapped in `console.log()`: `box()`, `table()`, `steps()`, `double()`, `single()`, `round()`
+> - `dividerLog()` prints directly — do NOT wrap it in `console.log()`
+> - Call `configure()` once at the entry point
+> - Prefix is configured via `configure({ prefix: 'mytool' })`
+>
+> Functions available: `configure`, `getConfig`, `resetConfig`, `info`, `warn`, `error`, `success`, `debug`, `createLogger`, `formatLog`, `divider`, `dividerLog`, `box`, `double`, `single`, `round`, `table`, `steps`, `bullet`, `ordered`, `tasks`, `createSpinner`, `confirm`, `colors`, `colorMap`, `padCenter`, `padRight`, `fitWidth`, `terminalWidth`, `stripAnsi`, `visibleLength`, `wrapAnsiWord`
+>
+> See the [API Reference](/docs/api) for full type signatures.
+
+---
+
+## Common Prompt Examples
+
+Here are some typical prompts you can use with your AI assistant:
+
+### Example 1: Creating a Setup Wizard
+**Prompt:**
+> "Use the DUI library to create a clean setup wizard CLI. It should configure the tool prefix to 'deployer', show a round box titled 'Setup Wizard', list three bullet points of what it will do, prompt the user for confirmation, and run a spinner for 2 seconds, ending with a success log."
+
+**AI Expected Output:**
+```ts
+import { configure, round, bullet, confirm, createSpinner, success, error } from '@bdocs/dui'
+
+configure({ prefix: 'deployer' })
+
+async function runWizard() {
+  console.log(round([
+    'This wizard will configure your production deployment:',
+    '  1. Validate environment files',
+    '  2. Create production bundle',
+    '  3. Sync with remote server'
+  ], { title: 'Setup Wizard' }))
+
+  const proceed = await confirm('Do you want to proceed with deployment?')
+  if (!proceed) {
+    error('Deployment cancelled by user.')
+    process.exit(0)
+  }
+
+  const spinner = createSpinner('Syncing files to production...')
+  spinner.start()
+
+  setTimeout(() => {
+    spinner.stop('success', 'Files synced successfully!')
+    success('Deployment complete!')
+  }, 2000)
+}
+
+runWizard()
+```
+
+### Example 2: Rendering Multi-Step Progress and Tables
+**Prompt:**
+> "Using DUI, write a script that displays a multi-step timeline showing a build pipeline (Validation Done, Build Running, Deploy Pending), followed by a formatted table displaying the file sizes of the generated build assets (e.g., index.js, vendor.js)."
+
+**AI Expected Output:**
+```ts
+import { steps, table } from '@bdocs/dui'
+
+const pipeline = steps([
+  { label: 'Validation', status: 'success' },
+  { label: 'Build Assets', status: 'running' },
+  { label: 'Deploy to Vercel', status: 'pending' }
+])
+console.log(pipeline)
+
+const assetTable = table(
+  ['Asset Name', 'Size', 'Type'],
+  [
+    ['dist/index.mjs', '12.4 kB', 'ESM'],
+    ['dist/index.css', '8.5 kB', 'CSS'],
+    ['dist/chunks/vendor.js', '142.1 kB', 'JS']
+  ]
+)
+console.log(assetTable)
+```

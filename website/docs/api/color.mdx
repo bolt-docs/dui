@@ -1,0 +1,294 @@
+---
+title: Colors
+sidebarPosition: 7
+description: Color engine — named colors, true color (hex/rgb/rgba/oklch), foreground and background.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+```ts
+import { colors, colorize, parseColor, interpolateColor, toAnsiFg, toAnsiBg, toAnsiFgBg, applyStyle, setColorSupported, renderLine, renderStatic } from '@bdocs/dui'
+```
+
+The color engine replaces `picocolors` entirely. It supports 16 named ANSI colors, true color 24-bit (hex, rgb, rgba, oklch), and separate foreground/background painting. It also provides a chalk-like chainable API with individual close codes for proper nested style support.
+
+---
+
+## colors
+
+Named colors and text styles. Supports both traditional function composition and a chainable API (like chalk).
+
+### Chainable API
+
+```ts
+colors.red.bold('urgent')                    // chainable
+colors.blue.bgYellow.underline('notice')     // multi-chain
+colors.bold.dim.italic('muted')              // any combination
+```
+
+Each property access accumulates a style and returns a new callable function. Chain as many as you want.
+
+### Function composition (backward compatible)
+
+```ts
+colors.red('Error')                // red foreground
+colors.green('Success')            // green foreground
+colors.bgRed('Error bg')           // red background
+colors.bold(colors.cyan('Info'))   // composable
+colors.dim('Secondary')
+colors.underline('Link')
+```
+
+<TerminalPreview command="node colors.js">
+{`\x1b[31mError\x1b[39m
+\x1b[32mSuccess\x1b[39m
+\x1b[41mError bg\x1b[49m
+\x1b[1m\x1b[36mInfo\x1b[39m\x1b[22m
+\x1b[2mSecondary\x1b[22m`}
+</TerminalPreview>
+
+### Nested styles
+
+Nesting styles works correctly because each style closes with its individual ANSI close code instead of a blanket `\x1b[0m` reset:
+
+```ts
+colors.red('hello ' + colors.bold('world') + '!')
+// → \x1b[31mhello \x1b[1mworld\x1b[22m!\x1b[39m
+//                ^ red    ^ red+bold  ^ red    ^ default
+```
+
+| Style | Open Code | Close Code |
+|-------|-----------|------------|
+| bold / dim | `\x1b[1m` / `\x1b[2m` | `\x1b[22m` |
+| italic | `\x1b[3m` | `\x1b[23m` |
+| underline | `\x1b[4m` | `\x1b[24m` |
+| inverse | `\x1b[7m` | `\x1b[27m` |
+| hidden | `\x1b[8m` | `\x1b[28m` |
+| strikethrough | `\x1b[9m` | `\x1b[29m` |
+| foreground color | `\x1b[{30-97}m` | `\x1b[39m` |
+| background color | `\x1b[{40-107}m` | `\x1b[49m` |
+
+When nesting styles of the **same type** (e.g. `red` inside `blue`), the engine detects the inner close code and re-opens the outer style automatically:
+
+```ts
+colors.red('hello ' + colors.blue('world') + '!')
+// → \x1b[31mhello \x1b[34mworld\x1b[39m\x1b[31m!\x1b[39m
+//                                    ^ close blue
+//                                    ^ reopen red  → "!" is red
+```
+
+### Variadic / Multi-argument
+
+Pass multiple arguments — each gets styled independently and joined with space:
+
+```ts
+colors.red('hello', 'world', '!')
+colors.red.bold('Step 1:', colors.green('OK'))
+```
+
+### Available colors
+
+| Foreground | Background | Code |
+|------------|-----------|------|
+| `colors.black` | `colors.bgBlack` | `\x1b[30m` / `\x1b[40m` |
+| `colors.red` | `colors.bgRed` | `\x1b[31m` / `\x1b[41m` |
+| `colors.green` | `colors.bgGreen` | `\x1b[32m` / `\x1b[42m` |
+| `colors.yellow` | `colors.bgYellow` | `\x1b[33m` / `\x1b[43m` |
+| `colors.blue` | `colors.bgBlue` | `\x1b[34m` / `\x1b[44m` |
+| `colors.magenta` | `colors.bgMagenta` | `\x1b[35m` / `\x1b[45m` |
+| `colors.cyan` | `colors.bgCyan` | `\x1b[36m` / `\x1b[46m` |
+| `colors.white` | `colors.bgWhite` | `\x1b[37m` / `\x1b[47m` |
+| `colors.gray` | `colors.bgGray` | `\x1b[90m` / `\x1b[100m` |
+
+Plus `bright-red`, `bright-green`, `bright-yellow`, `bright-blue`, `bright-magenta`, `bright-cyan`, `bright-white` and their `bg*` variants.
+
+### Text styles
+
+`colors.bold`, `colors.dim`, `colors.italic`, `colors.underline`, `colors.inverse`, `colors.hidden`, `colors.strikethrough`
+
+### colorMap
+
+String-indexed map for dynamic color access:
+
+```ts
+const level = 'error'
+colorMap[level]('Something broke')
+// equivalent to colors.red('Something broke')
+```
+
+---
+
+## setColorSupported
+
+```ts
+setColorSupported(value: boolean): void
+```
+
+Force color support on or off. Useful in test environments where `process.stdout.isTTY` is not available:
+
+```ts
+import { setColorSupported } from '@bdocs/dui'
+
+setColorSupported(true)   // enable ANSI output
+setColorSupported(false)  // disable ANSI output
+```
+
+---
+
+## colorize
+
+```ts
+colorize(text: string, color: ColorInput, target?: 'fg' | 'bg'): string
+```
+
+Paint text with true color (24-bit). Supports hex, rgb, rgba, and oklch formats.
+
+### Foreground
+
+```ts
+colorize('Orange', '#ff8800')
+colorize('Custom RGB', 'rgb(100, 200, 50)')
+colorize('OKLCH', 'oklch(65% 0.2 30)')
+```
+
+<TerminalPreview command="node colorize-fg.js">
+{`\x1b[38;2;255;136;0mOrange\x1b[39m
+\x1b[38;2;100;200;50mCustom RGB\x1b[39m
+\x1b[38;2;189;113;40mOKLCH\x1b[39m`}
+</TerminalPreview>
+
+### Background
+
+Pass `'bg'` as the third argument:
+
+```ts
+colorize('Blue background', '#3355ff', 'bg')
+colorize('OKLCH bg', 'oklch(60% 0.2 280)', 'bg')
+```
+
+<TerminalPreview command="node colorize-bg.js">
+{`\x1b[48;2;51;85;255mBlue background\x1b[49m
+\x1b[48;2;99;112;175mOKLCH bg\x1b[49m`}
+</TerminalPreview>
+
+Combined foreground + background with `applyStyle`:
+
+```ts
+applyStyle('White on red', '#ffffff', '#cc3333')
+```
+
+<TerminalPreview command="node colorize-both.js">
+{`\x1b[38;2;255;255;255;48;2;204;51;51mWhite on red\x1b[39;49m`}
+</TerminalPreview>
+
+### Supported formats
+
+| Format | Example |
+|--------|---------|
+| Hex 3-digit | `#f60` |
+| Hex 6-digit | `#ff6600` |
+| Hex 8-digit (with alpha) | `#ff660080` |
+| RGB | `rgb(255, 102, 0)` |
+| RGBA | `rgba(255, 102, 0, 0.5)` |
+| OKLCH | `oklch(60% 0.15 250)` |
+| OKLCH with alpha | `oklch(60% 0.15 250 / 0.8)` |
+
+---
+
+## parseColor
+
+```ts
+parseColor(input: ColorInput): { r: number; g: number; b: number; a?: number }
+```
+
+Parse any supported color format to its RGB components:
+
+```ts
+parseColor('#ff6600')             // { r: 255, g: 102, b: 0 }
+parseColor('rgb(255, 0, 0)')     // { r: 255, g: 0, b: 0 }
+parseColor('rgba(255,0,0,0.5)') // { r: 255, g: 0, b: 0, a: 0.5 }
+parseColor('oklch(60% 0.15 250)') // { r: 57, g: 110, b: 188 }
+```
+
+Throws if the format is not recognized.
+
+---
+
+## interpolateColor
+
+```ts
+interpolateColor(a: ColorInput, b: ColorInput, t: number): string
+```
+
+Blend between two colors. Returns a hex string. Used internally by the animation engine.
+
+```ts
+interpolateColor('#ff0000', '#00ff00', 0)    // '#ff0000'
+interpolateColor('#ff0000', '#00ff00', 0.5)  // '#808000'
+interpolateColor('#ff0000', '#00ff00', 1)    // '#00ff00'
+```
+
+---
+
+## toAnsiFg / toAnsiBg / toAnsiFgBg
+
+Generate raw ANSI escape sequences for low-level use:
+
+```ts
+toAnsiFg('#ff0000')      // '\x1b[38;2;255;0;0m'
+toAnsiBg('#00ff00')      // '\x1b[48;2;0;255;0m'
+toAnsiFgBg('#fff', '#000') // '\x1b[38;2;255;255;255;48;2;0;0;0m'
+```
+
+---
+
+## applyStyle
+
+```ts
+applyStyle(text: string, fg?: ColorInput, bg?: ColorInput, styles?: string[]): string
+```
+
+Apply foreground, background, and text styles in a single call:
+
+```ts
+applyStyle('Bold orange', '#ff8800', undefined, ['bold'])
+applyStyle('White on black', '#ffffff', '#000000')
+applyStyle('Bold underlined green', '#22c55e', undefined, ['bold', 'underline'])
+```
+
+<TerminalPreview command="node apply-style.js">
+{`\x1b[1;38;2;255;136;0mBold orange\x1b[22;39m
+\x1b[38;2;255;255;255;48;2;0;0;0mWhite on black\x1b[39;49m
+\x1b[1;4;38;2;34;197;94mBold underlined green\x1b[22;24;39m`}
+</TerminalPreview>
+
+---
+
+## renderLine / renderStatic
+
+Output utilities for dynamic terminal rendering (spinners, progress bars, etc.).
+
+```ts
+renderLine(text: string, stream?: NodeJS.WriteStream): void
+renderStatic(text: string, stream?: NodeJS.WriteStream): void
+```
+
+`renderLine` overwrites the current line using `readline.cursorTo` + `clearLine` (when `stream.isTTY` is true). `renderStatic` writes text + newline, for finalizing a dynamic output sequence.
+
+```ts
+import { renderLine, renderStatic, colors } from '@bdocs/dui'
+
+let i = 0
+const timer = setInterval(() => {
+  const bar = '█'.repeat(i) + '░'.repeat(20 - i)
+  renderLine(colors.cyan(`Progress: ${bar} ${i * 5}%`))
+  if (++i > 20) {
+    clearInterval(timer)
+    renderStatic(colors.green('Done!'))
+  }
+}, 100)
+```
+
+---
+
+For usage guidelines, common pitfalls, and recommendations, see the [Best Practices](/docs/api/best-practices) page.

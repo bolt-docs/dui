@@ -1,0 +1,89 @@
+---
+title: Logger
+sidebarPosition: 2
+description: info, warn, error, success, debug — salida consistente con prefijo [prefix].
+---
+
+```ts
+import { info, warn, error, success, debug } from '@bdocs/dui'
+```
+
+Cada función acepta un objeto de opciones opcional como último argumento:
+
+```ts
+info(msg, { prefix?: string, color?: ColorInput })
+warn(msg, { prefix?: string, color?: ColorInput })
+error(msg, err?, { prefix?: string, color?: ColorInput })
+success(msg, { prefix?: string, color?: ColorInput })
+debug(msg, { prefix?: string, color?: ColorInput })
+```
+
+| Función | Color por Defecto | Stream | Compuerta |
+|----------|--------------|--------|------|
+| `info(msg)` | ninguno | stdout | no |
+| `warn(msg)` | amarillo | stdout | no |
+| `error(msg, err?)` | rojo | stderr | no |
+| `success(msg)` | verde | stdout | no |
+| `debug(msg)` | dim | stdout | `DEBUG` |
+
+<Callout variant="info">
+  `debug()` solo imprime cuando `DEBUG` o `BOLTDOCS_DEBUG` está configurado.
+</Callout>
+
+### ejemplos
+
+```ts
+info('Iniciando build...')
+success('Build completado!')
+warn('API deprecada usada')
+error('Error al conectar')
+debug('Traza verbose') // solo se muestra con DEBUG=1
+```
+
+<TerminalPreview command="node demo.js">
+{`\x1b[1m[dui]\x1b[0m Iniciando build...
+\x1b[32m\x1b[1m[dui] Build completado!\x1b[0m
+\x1b[33m\x1b[1m[dui] API deprecada usada\x1b[0m
+\x1b[31m\x1b[1m[dui] Error al conectar\x1b[0m`}
+</TerminalPreview>
+
+Pasa una opción `color` para sobrescribir el color por defecto en cualquier llamada al logger:
+
+```ts
+import { info, success } from '@bdocs/dui'
+
+info('Mensaje azul personalizado', { color: '#00aaff' })
+success('Verde es el default, pero podemos sobrescribir', { color: '#ff8800' })
+```
+
+<TerminalPreview command="node colors.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255mMensaje azul personalizado\x1b[39m
+\x1b[1m[dui]\x1b[0m \x1b[38;2;255;136;0mVerde es el default, pero podemos sobrescribir\x1b[39m`}
+</TerminalPreview>
+
+La función `error` acepta un objeto de error opcional que se imprimirá después del mensaje:
+
+```ts
+error('Algo se rompió', err)
+// [mytool] Algo se rompió
+// [mytool]   ↳ Error: Algo se rompió
+//       at main (file.ts:10)
+```
+
+## createLogger
+
+```ts
+createLogger(prefix: string): LoggerInstance
+```
+
+Crea una instancia de logger aislada con un prefijo personalizado. Es útil para sub-módulos o plugins donde deseas un prefijo diferente al configurado globalmente en `configure({ prefix })`.
+
+```ts
+import { createLogger } from '@bdocs/dui'
+
+const log = createLogger('myapp')
+log.info('Ejecutando instalador...')
+log.success('¡Instalación completada!')
+```
+
+Todos los métodos (`info`, `warn`, `error`, `success`, `debug`) se comportan exactamente como las funciones globales del logger, pero muestran el prefijo personalizado `[prefix]`.

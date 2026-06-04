@@ -1,0 +1,78 @@
+---
+title: Overview
+sidebarPosition: 1
+description: Terminal UI utilities — boxes, colors, logging, lists, dividers, and more.
+---
+
+import { Terminal, Paintbrush, ListOrdered, Table, MessageSquare, Activity, Cog, Type, PanelTop, SquareDashed, SplitSquareHorizontal, Bot, TrendingUp, Play, Palette } from 'lucide-react'
+
+**DUI** — terminal UI toolkit for Node.js CLI apps. ANSI-aware, zero-dependency (just `picocolors` + `string-width`), tree-shakeable.
+
+---
+
+## Quick Start
+
+```bash
+pnpm add @bdocs/dui
+```
+
+```ts
+import { configure, info, success, box, bullet } from '@bdocs/dui'
+
+configure({ prefix: 'mytool' })
+
+info('Starting build...')
+success('Build completed!')
+
+console.log(box(['Output ready at dist/'], { title: 'Result', style: 'round' }))
+console.log(bullet(['File A', 'File B', 'File C']))
+```
+
+---
+
+## modules
+
+<Cards cols={2}>
+  <Card title="Logger" icon={<MessageSquare />} href="/docs/api/logger">
+    info, warn, error, success, debug with configurable prefix
+  </Card>
+  <Card title="Box" icon={<PanelTop />} href="/docs/api/box">
+    Box builder with double, single, and round border styles
+  </Card>
+  <Card title="Lists" icon={<ListOrdered />} href="/docs/api/list">
+    Bullet points, numbered lists, and task checklists
+  </Card>
+  <Card title="Divider" icon={<SplitSquareHorizontal />} href="/docs/api/divider">
+    Horizontal line separators
+  </Card>
+  <Card title="Colors" icon={<Paintbrush />} href="/docs/api/color">
+    Color engine with hex, rgb, rgba, oklch support
+  </Card>
+  <Card title="Utils" icon={<Type />} href="/docs/api/utils">
+    ANSI-aware padding, centering, width utilities
+  </Card>
+  <Card title="Prompt" icon={<Activity />} href="/docs/api/prompt">
+    Interactive confirm prompts
+  </Card>
+  <Card title="Table" icon={<Table />} href="/docs/api/table">
+    Box-drawing character tables
+  </Card>
+  <Card title="Spinner" icon={<SquareDashed />} href="/docs/api/spinner">
+    Animated terminal spinners with braille frames
+  </Card>
+  <Card title="Progress" icon={<TrendingUp />} href="/docs/api/progress">
+    Animated progress bars with TTY and non-TTY modes
+  </Card>
+  <Card title="Animation" icon={<Play />} href="/docs/api/animation">
+    Keyframe animation engine for terminal
+  </Card>
+  <Card title="Theme" icon={<Palette />} href="/docs/api/theme">
+    Custom color themes for every DUI component
+  </Card>
+  <Card title="Steps" icon={<Cog />} href="/docs/api/steps">
+    Pipeline timeline display
+  </Card>
+  <Card title="AI Guide" icon={<Bot />} href="/docs/overview/llm">
+    Copy-paste prompt template for AI assistants
+  </Card>
+</Cards>

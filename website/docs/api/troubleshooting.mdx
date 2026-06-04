@@ -1,0 +1,191 @@
+---
+title: Troubleshooting
+sidebarPosition: 15
+description: Common issues, error messages, and solutions when using DUI.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+## Colors
+
+### Colors not showing
+
+If terminal output appears without any ANSI colors:
+
+- The `NO_COLOR` environment variable is set — unset it to re-enable colors.
+- The output is piped or redirected (non-TTY). Colors are automatically disabled when `stdout` is not a TTY.
+- The runtime does not support true color. DUI detects this and falls back to 16-color ANSI where possible.
+
+### "Unsupported color format"
+
+`parseColor()` and `colorize()` accept only specific formats:
+
+```
+✓ hex:      #ff6600, #f60, #ff660080
+✓ rgb:      rgb(255, 102, 0)
+✓ rgba:     rgba(255, 102, 0, 0.5)
+✓ oklch:    oklch(60% 0.15 250)
+✗ hsl, hwb, named CSS colors — not supported yet
+```
+
+### Invalid hex string
+
+<Callout variant="info">✅ Fixed in v0.1.x — now throws a clear error.</Callout>
+
+Previously a hex string like `#GGG` produced `NaN` silently. Now it throws: `Invalid hex color: "#GGG"`.
+
+### applyStyle unknown style
+
+Unknown style names in `applyStyle()` are silently ignored — they produce no effect but do not error. Use only: `bold`, `dim`, `italic`, `underline`, `inverse`, `hidden`, `strikethrough`.
+
+---
+
+## Box
+
+### "Cannot read properties of undefined"
+
+<Callout variant="info">✅ Fixed in v0.1.x — gracefully falls back to `"double"`.</Callout>
+
+Passing an invalid `style` (e.g. `style: 'none'`) used to crash. Now it falls back to the default `"double"` style.
+
+### Title appears truncated
+
+If the title is longer than the box width minus 4 characters, it is automatically truncated with `"..."`. Keep titles short or increase the box width.
+
+### Box looks empty
+
+Passing an empty `lines` array renders an empty box. This is valid output — provide at least one line for content.
+
+---
+
+## Logger
+
+### debug() shows nothing
+
+`debug()` only outputs when `DEBUG` or `BOLTDOCS_DEBUG` is set in the environment:
+
+```bash
+DEBUG=1 node your-cli.js
+```
+
+### error() crashes with circular objects
+
+The optional second argument of `error()` is logged via `console.error`. Passing circular references or very large objects may cause issues. Pass only plain serialisable data.
+
+---
+
+## Divider
+
+### RangeError: Invalid count value
+
+<Callout variant="info">✅ Fixed in v0.1.x — now clamps to minimum 1.</Callout>
+
+Passing a negative or zero value for `len` used to crash. Now it's clamped to `Math.max(1, len)`.
+
+---
+
+## Spinner & Progress
+
+### Cursor stays hidden after exit
+
+Both `createSpinner` and `createProgressBar` hide the terminal cursor while active. If the process exits without calling `stop()`, the cursor remains hidden.
+
+<Callout variant="warning">
+  Always wrap spinner/progress usage in try/catch/finally and call `stop()` in the `finally` block.
+</Callout>
+
+```ts
+const spinner = createSpinner('Working...')
+spinner.start()
+try {
+  // do work
+} finally {
+  spinner.stop('success', 'Done!')
+}
+```
+
+### No animation — static text only
+
+In non-TTY environments (CI, pipes, log files), spinners and progress bars degrade gracefully to static line-by-line output. This is expected behaviour.
+
+### progress bar percentage stuck at 0
+
+If `total` is set to `0` or a negative value, the percentage is always `0`. Always use a positive integer for total.
+
+---
+
+## Table
+
+### Table exceeds terminal width
+
+If too many columns are present, the table may overflow the terminal width. Reduce the number of columns or increase the terminal width.
+
+### Missing cells render as empty
+
+If a row has fewer cells than headers, the missing cells are rendered as empty strings. This is by design.
+
+---
+
+## Prompt
+
+### confirm() hangs or throws
+
+<Callout variant="info">✅ Fixed in v0.1.x — now resolves with default in non-TTY.</Callout>
+
+If `stdin` or `stdout` is not available (non-TTY, headless process), `confirm()` now resolves with the default value instead of throwing.
+
+### Unexpected default value
+
+If the user presses Enter without typing, the prompt resolves to `defaultVal ?? false`. Pass `default: true` to change this.
+
+---
+
+## Steps
+
+### Empty icon shown
+
+<Callout variant="info">✅ Fixed in v0.1.x — now defaults to `"pending"` icon.</Callout>
+
+An unknown `status` value used to produce an empty icon. Now it falls back to the `"pending"` indicator.
+
+---
+
+## Animation
+
+### animate() does nothing
+
+<Callout variant="info">✅ Fixed in v0.1.x — now warns if keyframes are empty.</Callout>
+
+An empty `keyframes` array now logs a warning: `[dui] animate() called with empty keyframes array`.
+
+---
+
+## Configuration
+
+### configure() has no effect
+
+`configure()` merges with existing config. If called after other modules have already read the config, those modules may still use the old values. Call `configure()` once at the very start of your CLI entry point.
+
+### Misspelled config keys are silently ignored
+
+<Callout variant="info">✅ Fixed in v0.1.x — now warns on unknown keys.</Callout>
+
+Invalid keys in `configure()` now log a warning: `[dui] Unknown config key: "xyz"`. Valid keys are listed.
+
+---
+
+## Environment
+
+### Colors disabled in CI
+
+Most CI systems set `CI=true` which does **not** disable colors by itself. However, some CI systems set `NO_COLOR` or pipe output. Check your CI environment variables.
+
+### terminalWidth() returns 80
+
+When `process.stdout.columns` is unavailable (non-TTY, pipe), DUI falls back to `80` columns. This is normal.
+
+---
+
+<Callout variant="info">
+Issues marked with ✅ are already fixed in the current version. If you encounter a problem not listed here, please open an issue on GitHub.
+</Callout>

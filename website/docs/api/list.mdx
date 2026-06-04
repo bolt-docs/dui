@@ -1,0 +1,88 @@
+---
+title: List
+sidebarPosition: 4
+description: Bullet points, numbered lists, and task checklists.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+```ts
+import { bullet, ordered, tasks } from '@bdocs/dui'
+```
+
+## bullet
+
+```ts
+bullet(items: string[]): string
+```
+
+Unordered list with `•` markers.
+
+```ts
+bullet(['Item A', 'Item B', 'Item C'])
+// • Item A
+// • Item B
+// • Item C
+```
+
+## ordered
+
+```ts
+ordered(items: string[]): string
+```
+
+Numbered list.
+
+```ts
+ordered(['First', 'Second', 'Third'])
+// 1. First
+// 2. Second
+// 3. Third
+```
+
+<TerminalPreview command="node list.js">
+{` • Item A
+ • Item B
+ • Item C
+ 1. First
+ 2. Second
+ 3. Third`}
+</TerminalPreview>
+
+## tasks
+
+```ts
+tasks(items: TaskItem[]): string
+```
+
+Check/cross task list.
+
+```ts
+tasks([
+  { label: 'Install', done: true },
+  { label: 'Configure', done: false },
+])
+// ✔ Install
+// ✘ Configure
+```
+
+<TerminalPreview command="node tasks.js">
+{`\x1b[32m✔\x1b[0m Install
+\x1b[31m✘\x1b[0m Configure`}
+</TerminalPreview>
+
+All list functions accept an optional `color` option to override the marker color:
+
+```ts
+bullet(['Item A', 'Item B'], { color: '#00aaff' })
+ordered(['First', 'Second'], { color: '#ff3366' })
+tasks([
+  { label: 'Install', done: true },
+  { label: 'Configure', done: false },
+], { color: '#00cc88' })
+```
+
+### TaskItem
+
+<Field name="label" type="string">Display text for the task.</Field>
+<Field name="done" type="boolean">Whether the task is completed.</Field>

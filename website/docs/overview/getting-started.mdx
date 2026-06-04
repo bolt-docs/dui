@@ -1,0 +1,48 @@
+---
+title: Getting Started
+sidebarPosition: 2
+description: Install DUI and use it in your CLI project.
+---
+
+## Installation
+
+<PackageManager />
+
+## Configuration
+
+Call `configure()` once at your CLI entry point:
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({ prefix: 'mytool' })
+```
+
+### Fields
+
+<Field name="prefix" type="string" default="'dui'">Prefix in log lines, e.g. `[mytool]`.</Field>
+<Field name="devServerTitle" type="string" default="'dev server'" deprecated>Title of the dev-server box.</Field>
+<Field name="previewServerTitle" type="string" default="'preview server'" deprecated>Title of the preview-server box.</Field>
+<Field name="updateCommand" type="string" default="'npm install dui@latest'" deprecated>Command shown in update notification.</Field>
+
+### Reading Config
+
+```ts
+import { getConfig } from '@bdocs/dui'
+
+const cfg = getConfig()
+console.log(cfg.prefix)
+```
+
+## Example
+
+```ts
+import { configure, info, success, box, double, bullet } from '@bdocs/dui'
+
+configure({ prefix: 'example' })
+
+info('Starting process...')
+console.log(bullet(['Parse input', 'Transform data', 'Write output']))
+console.log(double('Result', ['Completed successfully']))
+success('All done!')
+```

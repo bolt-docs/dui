@@ -1,0 +1,65 @@
+---
+title: Spinner
+sidebarPosition: 13
+description: Animated terminal spinners with braille frames.
+---
+
+import TerminalPreview from '../../components/TerminalPreview'
+
+```ts
+import { createSpinner } from '@bdocs/dui'
+```
+
+## createSpinner
+
+```ts
+createSpinner(message: string, opts?: SpinnerOptions): Spinner
+```
+
+<Field name="message" type="string">Initial status text.</Field>
+<Field name="opts.prefix" type="string" default="configured prefix">Custom prefix for this spinner.</Field>
+<Field name="opts.color" type="ColorStyle">Foreground and/or background color for the spinner frames and status icon. Supports hex, rgb, rgba, oklch, or named colors.</Field>
+
+Creates an animated spinner for long-running operations.
+
+### usage
+
+```ts
+const spinner = createSpinner('Installing dependencies...')
+spinner.start()
+
+// ... do async work ...
+
+spinner.stop('success', 'Installed!')
+spinner.stop('fail', 'Build failed!')
+```
+
+<TerminalPreview command="node spinner.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[36m⠋\x1b[0m Installing dependencies...
+\x1b[1m[dui]\x1b[0m \x1b[32m✔\x1b[0m Installed!`}
+</TerminalPreview>
+
+### api
+
+<Field name="start" type="() => void">Start the spinner animation.</Field>
+<Field name="update" type="(msg: string) => void">Update the displayed message.</Field>
+<Field name="stop" type="(status?, msg?) => void">Stop with a status icon (`'success'`, `'fail'`, `'warn'`, or `'info'`).</Field>
+
+| Status | Icon |
+|--------|------|
+| `'success'` | green ✔ |
+| `'fail'` | red ✖ |
+| `'warn'` | yellow ⚠ |
+| `'info'` | blue ℹ |
+
+Override the spinner color by passing `color` in the options:
+
+```ts
+const spinner = createSpinner('Loading...', { color: { fg: '#00aaff' } })
+spinner.start()
+```
+
+<TerminalPreview command="node color-spinner.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255m⠋\x1b[0m Loading...
+\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255m✔\x1b[0m Done!`}
+</TerminalPreview>

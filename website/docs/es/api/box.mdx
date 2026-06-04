@@ -1,0 +1,73 @@
+---
+title: Box
+sidebarPosition: 3
+description: Constructor flexible de cajas con tres estilos de borde.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { box, double, single, round } from '@bdocs/dui'
+```
+
+## box
+
+```ts
+box(lines: string[], opts?: BoxOptions): string
+```
+
+Constructor genérico de cajas. El ancho se adapta al tamaño de la terminal por defecto.
+
+```ts
+box(['Línea 1', 'Línea 2'], {
+  title: 'Estado',
+  style: 'double',
+})
+```
+
+<TerminalPreview command="node box.js">
+{`╔═ \x1b[1mEstado\x1b[0m ════════════════╗
+║                         ║
+║ Línea 1                 ║
+║ Línea 2                 ║
+║                         ║
+╚═════════════════════════╝`}
+</TerminalPreview>
+
+### shorthands
+
+```ts
+double(['Contenido'], { title: 'Título' })
+single(['Contenido'], { title: 'Título' })
+round(['Contenido'], { title: 'Título' })
+```
+
+<TerminalPreview command="node shorthands.js">
+{`╭─ \x1b[1mTítulo\x1b[0m ────────────────╮
+│                         │
+│ Contenido               │
+│                         │
+╰─────────────────────────╯`}
+</TerminalPreview>
+
+### Opciones
+
+<Field name="title" type="string">Título en negrita centrado en el borde superior.</Field>
+<Field name="width" type="number" default="auto">Ancho de la caja. Por defecto al ancho de la terminal (máx. 80).</Field>
+<Field name="style" type="'single' | 'double' | 'round'" default="'single'">Estilo del borde.</Field>
+<Field name="padding" type="number" default="1">Padding horizontal interno.</Field>
+<Field name="color" type="ColorInput">Color del borde. Acepta hex, rgb, rgba, oklch o color nombrado.</Field>
+
+Todos los shorthands de caja también aceptan una opción `color` para teñir las líneas del borde:
+
+```ts
+round('Aviso', ['Servidor iniciando...'], { color: '#ff8800' })
+```
+
+<TerminalPreview command="node color-box.js">
+{`\x1b[38;2;255;136;0m╭─\x1b[0m \x1b[1mAviso\x1b[0m \x1b[38;2;255;136;0m─────────────────╮\x1b[0m
+\x1b[38;2;255;136;0m│\x1b[0m                         \x1b[38;2;255;136;0m│\x1b[0m
+\x1b[38;2;255;136;0m│\x1b[0m  Servidor iniciando...  \x1b[38;2;255;136;0m│\x1b[0m
+\x1b[38;2;255;136;0m│\x1b[0m                         \x1b[38;2;255;136;0m│\x1b[0m
+\x1b[38;2;255;136;0m╰─────────────────────────╯\x1b[0m`}
+</TerminalPreview>

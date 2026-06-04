@@ -1,0 +1,88 @@
+---
+title: Lista
+sidebarPosition: 4
+description: Puntos, listas numeradas y listas de tareas.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { bullet, ordered, tasks } from '@bdocs/dui'
+```
+
+## bullet
+
+```ts
+bullet(items: string[]): string
+```
+
+Lista no ordenada con marcadores `•`.
+
+```ts
+bullet(['Item A', 'Item B', 'Item C'])
+// • Item A
+// • Item B
+// • Item C
+```
+
+## ordered
+
+```ts
+ordered(items: string[]): string
+```
+
+Lista numerada.
+
+```ts
+ordered(['Primero', 'Segundo', 'Tercero'])
+// 1. Primero
+// 2. Segundo
+// 3. Tercero
+```
+
+<TerminalPreview command="node list.js">
+{` • Item A
+ • Item B
+ • Item C
+ 1. First
+ 2. Second
+ 3. Third`}
+</TerminalPreview>
+
+## tasks
+
+```ts
+tasks(items: TaskItem[]): string
+```
+
+Lista de tareas con check/cruz.
+
+```ts
+tasks([
+  { label: 'Instalar', done: true },
+  { label: 'Configurar', done: false },
+])
+// ✔ Instalar
+// ✘ Configurar
+```
+
+<TerminalPreview command="node tasks.js">
+{`\x1b[32m✔\x1b[0m Install
+\x1b[31m✘\x1b[0m Configure`}
+</TerminalPreview>
+
+Todas las funciones de lista aceptan una opción `color` para sobrescribir el color del marcador:
+
+```ts
+bullet(['Item A', 'Item B'], { color: '#00aaff' })
+ordered(['Primero', 'Segundo'], { color: '#ff3366' })
+tasks([
+  { label: 'Instalar', done: true },
+  { label: 'Configurar', done: false },
+], { color: '#00cc88' })
+```
+
+### TaskItem
+
+<Field name="label" type="string">Texto mostrado para la tarea.</Field>
+<Field name="done" type="boolean">Si la tarea está completada.</Field>
