@@ -24,7 +24,29 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  docs:
+  packages/dui:
+    dependencies:
+      string-width:
+        specifier: ^7.2.0
+        version: 7.2.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.19
+      '@vitest/coverage-v8':
+        specifier: ^3.0.0
+        version: 3.2.6(vitest@3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0))
+      tsdown:
+        specifier: ^0.21.7
+        version: 0.21.10(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
+
+  website:
     dependencies:
       '@bdocs/dui':
         specifier: workspace:*
@@ -52,8 +74,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.2(vite@8.0.16(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))
       boltdocs:
-        specifier: file:boltdocs-2.8.3.tgz
-        version: file:docs/boltdocs-2.8.3.tgz(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0)
+        specifier: latest
+        version: 2.8.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0)
       tailwindcss:
         specifier: ^4.3.0
         version: 4.3.0
@@ -63,28 +85,6 @@ importers:
       vite:
         specifier: ^8.0.0
         version: 8.0.16(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)
-
-  packages/dui:
-    dependencies:
-      string-width:
-        specifier: ^7.2.0
-        version: 7.2.0
-    devDependencies:
-      '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.19
-      '@vitest/coverage-v8':
-        specifier: ^3.0.0
-        version: 3.2.6(vitest@3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0))
-      tsdown:
-        specifier: ^0.21.7
-        version: 0.21.10(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
 
 packages:
 
@@ -1884,9 +1884,8 @@ packages:
   birpc@4.0.0:
     resolution: {integrity: sha512-LShSxJP0KTmd101b6DRyGBj57LZxSDYWKitQNW/mi8GRMvZb078Uf9+pveax1DrVL89vm7mWe+TovdI/UDOuPw==}
 
-  boltdocs@file:docs/boltdocs-2.8.3.tgz:
-    resolution: {integrity: sha512-wK+gXioujYrOh4sIwCs190/U8JQa5TBuILKoQeHDXwBtgDqek1VrWMSD4XijkRfORBYJI0e0hKeNxcs6WKDkaA==, tarball: file:docs/boltdocs-2.8.3.tgz}
-    version: 2.8.3
+  boltdocs@2.8.4:
+    resolution: {integrity: sha512-Gm6LiW0PSlfZhYMhQKySTIaz48s4Jv8UiPvKtK9OEX+CGqCekC3q/IawETK982rWFzwskBhZUyF9bEuXymdwBQ==}
     hasBin: true
     peerDependencies:
       react: 19.0.0
@@ -5413,7 +5412,7 @@ snapshots:
 
   birpc@4.0.0: {}
 
-  boltdocs@file:docs/boltdocs-2.8.3.tgz(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0):
+  boltdocs@2.8.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@react-spectrum/provider@3.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.61.0):
     dependencies:
       '@bdocs/dui': 0.1.2
       '@bdocs/ssg': 0.1.1(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0))
