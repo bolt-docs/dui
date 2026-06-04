@@ -1,0 +1,67 @@
+---
+title: Agentes AI y Skills
+sidebarPosition: 4
+description: Instala la skill de DUI para Claude Code, Cursor, OpenCode y otros agentes AI para generar código DUI correcto.
+---
+
+## Instalación en un solo paso
+
+Ejecuta este comando en la raíz de tu proyecto para instalar la skill de DUI para cualquier agente AI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash
+```
+
+El script preguntará qué agente configurar:
+
+| # | Agente | Destino |
+|---|--------|---------|
+| 1 | **Claude Code** | `CLAUDE.md` |
+| 2 | **Cursor** | `.cursor/rules/dui.mdc` |
+| 3 | **OpenCode** | `.opencode/skills/dui.md` |
+| 4 | **.agents** | `.agents/dui.md` (formato universal) |
+| 5 | **Todos** | Todos los agentes soportados |
+
+### Modo no interactivo
+
+```bash
+# Instalar para un agente específico
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent cursor
+
+# Instalar para todos los agentes sin preguntar
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent todos --yes
+```
+
+### Desde el repo clonado
+
+```bash
+bash scripts/install-ai-agent.sh
+```
+
+---
+
+## Qué incluye la skill
+
+La skill de DUI le da al agente AI conocimiento completo de la librería:
+
+- **API pública completa** — firmas de funciones, tipos e interfaces
+- **Ejemplos de uso** — código práctico para cada componente
+- **Sistema de temas** — slots de `DuiTheme`, `ColorStyle`, resolución en cascada
+- **Mejores prácticas** — comportamiento TTY vs non-TTY, `NO_COLOR`, manejo de errores
+- **Configuración** — `configure()`, `getConfig()`, `resetConfig()`
+
+Una vez instalada, tu agente AI sabrá cómo usar `@bdocs/dui` correctamente sin alucinar imports o APIs.
+
+---
+
+## Lo que tu agente AI sabrá hacer
+
+Después de instalar la skill, tu agente AI podrá responder preguntas como:
+
+> "Crea un CLI con un spinner, una barra de progreso y un select usando DUI"
+
+> "Muéstrame cómo personalizar colores con un tema"
+
+> "Construye un asistente de configuración multi-paso con confirmación"
+
+Consulta la [Guía LLM](/docs/es/overview/llm) para plantillas de prompt listas para copiar y pegar.

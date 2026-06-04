@@ -1,0 +1,67 @@
+---
+title: AI Agents & Skills
+sidebarPosition: 4
+description: Install the DUI skill for Claude Code, Cursor, OpenCode, and other AI agents to generate correct DUI code.
+---
+
+## One-Click Install
+
+Run this command in your project root to install the DUI skill for any AI agent:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash
+```
+
+The script will ask which agent to configure:
+
+| # | Agent | Destination |
+|---|-------|-------------|
+| 1 | **Claude Code** | `CLAUDE.md` |
+| 2 | **Cursor** | `.cursor/rules/dui.mdc` |
+| 3 | **OpenCode** | `.opencode/skills/dui.md` |
+| 4 | **.agents** | `.agents/dui.md` (universal format) |
+| 5 | **All** | Every supported agent |
+
+### Non-interactive mode
+
+```bash
+# Install for a specific agent
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent cursor
+
+# Install for all agents without prompting
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent todos --yes
+```
+
+### From a cloned repo
+
+```bash
+bash scripts/install-ai-agent.sh
+```
+
+---
+
+## What the skill includes
+
+The DUI skill gives the AI agent complete knowledge of the library:
+
+- **All public API** — function signatures, types, and interfaces
+- **Usage examples** — practical code for every component
+- **Theme system** — `DuiTheme` slots, `ColorStyle`, cascading resolution
+- **Best practices** — TTY vs non-TTY behavior, `NO_COLOR`, error handling
+- **Configuration** — `configure()`, `getConfig()`, `resetConfig()`
+
+Once installed, your AI agent will understand how to use `@bdocs/dui` correctly without hallucinating imports or APIs.
+
+---
+
+## What your AI agent will know
+
+After installing the skill, your AI agent can answer questions like:
+
+> "Create a CLI with a spinner, a progress bar, and a select prompt using DUI"
+
+> "Show me how to customize colors with a theme"
+
+> "Build a multi-step setup wizard with confirmation"
+
+See the [LLM Guide](/docs/overview/llm) for copy-paste prompt templates.
