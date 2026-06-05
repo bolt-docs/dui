@@ -41,10 +41,10 @@ export default defineConfig({
 			light: "github-light",
 			dark: "github-dark",
 		},
-		favicon: "/light.svg",
+		favicon: "/dark.svg",
 		logo: {
-			dark: "/light.svg",
-			light: "/dark.svg",
+			dark: "/dark.svg",
+			light: "/light.svg",
 			alt: "DUI Logo",
 		},
 		editLink: "https://github.com/bolt-docs/dui/edit/main/website/docs/:path",

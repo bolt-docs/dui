@@ -104,7 +104,6 @@ export function HomePage() {
 					<div className="text-base text-dim mb-4 select-none self-center md:self-start">
 						{"// @bdocs/dui v0.1.2"}
 					</div>
-					{/* ASCII Art Hero */}
 					<pre className="font-mono font-bold leading-none select-none text-terminal-green drop-shadow-[0_0_15px_rgba(74,222,128,0.35)] text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
 						{
 							"██████╗ ██╗   ██╗██╗\n██╔══██╗██║   ██║██║\n██║  ██║██║   ██║██║\n██║  ██║██║   ██║██║\n██████╔╝╚██████╔╝██║\n╚═════╝  ╚═════╝ ╚═╝"

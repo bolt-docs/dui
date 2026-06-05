@@ -1,6 +1,8 @@
 ---
 name: dui
 description: Terminal UI library for Node.js (@bdocs/dui). Use when the project imports from '@bdocs/dui' or when building CLIs with colored output, boxes, tables, spinners, progress bars, interactive prompts, etc.
+version: 0.2.0
+
 ---
 
 # DUI — Terminal UI Library for Node.js

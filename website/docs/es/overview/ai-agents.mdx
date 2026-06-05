@@ -16,20 +16,21 @@ El script preguntará qué agente configurar:
 
 | # | Agente | Destino |
 |---|--------|---------|
-| 1 | **Claude Code** | `CLAUDE.md` |
-| 2 | **Cursor** | `.cursor/rules/dui.mdc` |
-| 3 | **OpenCode** | `.opencode/skills/dui.md` |
-| 4 | **.agents** | `.agents/dui.md` (formato universal) |
-| 5 | **Todos** | Todos los agentes soportados |
+| 1 | **Claude Code** | `CLAUDE.md` (instrucciones del proyecto) |
+| 2 | **Claude Skill** | `.claude/skills/dui/SKILL.md` (skill modular) |
+| 3 | **Cursor** | `.cursor/rules/dui.mdc` (reglas del sistema) |
+| 4 | **OpenCode** | `.opencode/skills/dui/SKILL.md` (skill modular) |
+| 5 | **.agents** | `.agents/skills/dui/SKILL.md` & `.agents/skill/dui/SKILL.md` (universal) |
+| 6 | **Todos** | Todos los agentes soportados |
 
 ### Modo no interactivo
 
 ```bash
-# Instalar para un agente específico
+# Instalar para un agente específico (ej. cursor)
 curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent cursor
 
 # Instalar para todos los agentes sin preguntar
-curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent todos --yes
+curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash -s -- --agent all --yes
 ```
 
 ### Desde el repo clonado

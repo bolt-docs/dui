@@ -12,7 +12,7 @@ import { Menu as MenuIcon } from "lucide-react";
 import TerminalSearchDialog from "./TerminalSearchDialog";
 
 export function TerminalNavbar() {
-	const { title, links, github } = useNavbar();
+	const { title, links, github, logoProps, logo } = useNavbar();
 	const { resolvedTheme, setTheme } = useTheme();
 	const { toggleSidebar } = useUI();
 	const { pathname } = useLocation();
@@ -27,7 +27,7 @@ export function TerminalNavbar() {
 					>
 						<MenuIcon size={20} />
 					</Button>
-					<Navbar.Logo src="/light.svg" alt={title} href="/" />
+					<Navbar.Logo src={logo} {...logoProps} />
 					<Navbar.Title className="font-mono text-sm font-semibold hidden sm:inline">
 						{title}
 					</Navbar.Title>
