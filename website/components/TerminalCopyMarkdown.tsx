@@ -27,7 +27,7 @@ export function TerminalCopyMarkdown({
 	if (!source) return null;
 
 	return (
-		<div className="flex items-center border border-strong">
+		<div className="flex w-full max-w-[18rem] flex-shrink-0 overflow-hidden border border-strong sm:w-auto">
 			<Button
 				onPress={handleCopy}
 				className="flex items-center gap-1.5 rounded-none border-r border-strong dark:bg-neutral-950 px-2.5 py-1.5 text-[10px] font-mono text-muted hover:bg-soft dark:hover:text-white/80 hover:text-black/80 transition-colors cursor-pointer"
@@ -40,7 +40,7 @@ export function TerminalCopyMarkdown({
 				{copied ? "Copied" : "Copy"}
 			</Button>
 			<Menu.Trigger placement="bottom end">
-				<Button className="rounded-none dark:bg-neutral-950 px-2 py-1.5 text-muted hover:bg-soft hover:text-blackdark:hover:text-white transition-colors cursor-pointer">
+				<Button className="rounded-none dark:bg-neutral-950 px-2 py-1.5 text-muted hover:bg-soft hover:text-black dark:hover:text-white transition-colors cursor-pointer">
 					<ChevronDown className="h-3 w-3" />
 				</Button>
 				<Menu className="min-w-36 border border-strong bg-main dark:bg-neutral-950 p-1 font-mono text-xs shadow-lg">

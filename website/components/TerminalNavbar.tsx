@@ -17,17 +17,20 @@ export function TerminalNavbar() {
 	const { toggleSidebar } = useUI();
 	const { pathname } = useLocation();
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const showSidebarToggle = pathname.startsWith("/docs");
 	return (
-		<Navbar className="bg-main/80 backdrop-blur-md border-b border-strong">
+		<Navbar className="bg-main backdrop-blur-md border-b border-strong">
 			<Navbar.Content className="max-w-352 mx-auto w-full px-6">
 				<Navbar.Left>
-					<Button
+					{showSidebarToggle ? (
+						<Button
 						onPress={toggleSidebar}
 						className="mr-2 lg:hidden p-1.5 text-muted hover:text-body rounded-lg hover:bg-soft transition-colors"
 					>
 						<MenuIcon size={20} />
 					</Button>
-					<Navbar.Logo src={logo} {...logoProps} />
+				) : null}
+				<Navbar.Logo src={logo} {...logoProps} />
 					<Navbar.Title className="font-mono text-sm font-semibold hidden sm:inline">
 						{title}
 					</Navbar.Title>
@@ -81,6 +84,7 @@ export function TerminalNavbar() {
 			</Navbar.Content>
 
 			<Navbar.MobileMenu
+			className="bg-main"
 				isOpen={mobileOpen}
 				onClose={() => setMobileOpen(false)}
 			>
