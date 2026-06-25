@@ -3,6 +3,7 @@ import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
+import { countRenderLines } from "./utils";
 
 export interface MultiselectChoice<T = string> {
 	label: string;
@@ -185,12 +186,14 @@ function interactiveMultiselect<T>(
 			const output = lines.join("\n");
 
 			if (linesRendered > 0) {
-				readline.moveCursor(stdout, 0, -linesRendered);
+				stdout.write("\x1b[u");
+			} else {
+				stdout.write("\x1b[s");
 			}
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(output);
-			linesRendered = lines.length;
+			linesRendered = lines.reduce((sum, l) => sum + countRenderLines(l), 0);
 		}
 
 		function getSelected(): T[] {
@@ -211,7 +214,7 @@ function interactiveMultiselect<T>(
 				? colors.dim("(none selected)")
 				: `${selected.length} selected`;
 			const finalLine = `${messageColor(`? ${message}`)} ${summary}\n`;
-			readline.moveCursor(stdout, 0, -linesRendered);
+			stdout.write("\x1b[u");
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(finalLine);
@@ -244,7 +247,7 @@ function interactiveMultiselect<T>(
 				finalize();
 			} else if (key.name === "escape") {
 				cleanup();
-				readline.moveCursor(stdout, 0, -linesRendered);
+				stdout.write("\x1b[u");
 				readline.cursorTo(stdout, 0);
 				readline.clearScreenDown(stdout);
 				reject(new Error("Cancelled"));

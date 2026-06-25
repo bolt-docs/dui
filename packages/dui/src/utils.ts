@@ -34,6 +34,13 @@ export function terminalWidth(): number {
 	return 80;
 }
 
+export function countRenderLines(line: string): number {
+	const len = visibleLength(line);
+	const width = terminalWidth();
+	if (width <= 0) return 1;
+	return Math.max(1, Math.ceil(len / width));
+}
+
 interface Token {
 	type: "ansi" | "word" | "space" | "newline";
 	value: string;

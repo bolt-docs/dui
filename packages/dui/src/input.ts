@@ -3,7 +3,7 @@ import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { stripAnsi } from "./utils";
+import { stripAnsi, countRenderLines } from "./utils";
 
 export interface InputOptions {
 	default?: string;
@@ -126,17 +126,20 @@ function interactiveInput(
 			const output = lines.join("\n");
 
 			if (linesRendered > 0) {
-				readline.moveCursor(stdout, 0, -linesRendered);
+				stdout.write("\x1b[u");
+			} else {
+				stdout.write("\x1b[s");
 			}
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(output);
-			linesRendered = lines.length;
+			linesRendered = lines.reduce((sum, l) => sum + countRenderLines(l), 0);
 
 			// Position cursor after the prompt text in the input line
 			const promptPrefix = `${stripAnsi(promptLine)} `;
 			const prefixLen = promptPrefix.length;
 			const cursorOffset = prefixLen + buf.slice(0, cursorPos).length;
+			readline.moveCursor(stdout, 0, -(linesRendered - 1));
 			readline.cursorTo(stdout, cursorOffset);
 		}
 
@@ -151,7 +154,7 @@ function interactiveInput(
 			validateBuf();
 			cleanup();
 			const finalLine = `${messageColor(`? ${message}`)} ${valueColor(buf)}\n`;
-			readline.moveCursor(stdout, 0, -linesRendered);
+			stdout.write("\x1b[u");
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(finalLine);
@@ -169,7 +172,7 @@ function interactiveInput(
 				finalize();
 			} else if (key.name === "escape") {
 				cleanup();
-				readline.moveCursor(stdout, 0, -linesRendered);
+				stdout.write("\x1b[u");
 				readline.cursorTo(stdout, 0);
 				readline.clearScreenDown(stdout);
 				reject(new Error("Cancelled"));
