@@ -1,6 +1,6 @@
 {
 	"name": "@dui-toolkit/plugin-markdown",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Markdown renderer plugin for @bdocs/dui — renderiza markdown con colores, tablas y código resaltado en la terminal",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",

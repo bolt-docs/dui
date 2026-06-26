@@ -1,5 +1,44 @@
 # @bdocs/dui
 
+## 0.3.0
+
+### Minor Changes
+
+- [`169abf8`](https://github.com/bolt-docs/dui/commit/169abf8c1d3dd8633d99c49fa6594d13d2f5504f) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Plugin system + Markdown + Chart packages
+
+  **`@bdocs/dui` core:**
+
+  - Added `plugin.ts` with `usePlugin()`, `DuiPlugin`, `PluginAPI`, and `PluginEvents`
+  - Plugins can hook into `register` and `configure` lifecycle events
+  - Access core utilities (colors, configure, terminalWidth, etc.) through `api.utils`
+
+  **`@dui-toolkit/plugin-markdown` (new package):**
+
+  - Render markdown to ANSI-colored terminal output with `md()` and `mdRender()`
+  - Supports: headings (#), bold (\*_), italic (_), inline code (`), links, images, lists, blockquotes, code blocks with syntax highlighting, tables, and thematic breaks
+  - Syntax highlighting via **shiki** with lazy initialization, singleton highlighter, and result caching
+  - Includes `markdownPlugin` for future integration with the core plugin system
+
+  **`@dui-toolkit/plugin-chart` (new package):**
+
+  - Bar, column, line, pie, and sparkline chart types
+  - Each chart supports `progress` (0–1) for data-driven animation
+  - `animateChart()` helper using the same easing/timing engine as core `animate()`
+  - Built-in color palette, auto-sizing to terminal width
+  - Zero external dependencies beyond `@bdocs/dui`
+
+### Patch Changes
+
+- [`2aba60e`](https://github.com/bolt-docs/dui/commit/2aba60e069a932c82a3c504eace0651a12925970) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix scrolling bug in interactive prompts (select, multiselect, input, tree)
+
+  Two root causes:
+
+  1. **Off-by-one in cursor movement**: `readline.moveCursor(up by -linesRendered)` moved 1 row too many because the cursor was already on the last row of the output. Changed to use ANSI save/restore cursor (`\x1b[s`/`\x1b[u`) instead of relative movement.
+
+  2. **Wrapped lines miscount**: `linesRendered = lines.length` counted logical array elements instead of actual terminal rows. Added `countRenderLines()` that divides visible length by terminal width with `Math.ceil`.
+
+  Also fixed cursor positioning in `input()` — after writing output the cursor now correctly moves to the value line instead of the error line.
+
 ## 0.2.0
 
 ### Minor Changes
