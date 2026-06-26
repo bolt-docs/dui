@@ -53,6 +53,8 @@ export { steps } from "./steps";
 export type { TableColumnOptions, TableOptions } from "./table";
 export { table } from "./table";
 export type { ColorStyle, DuiTheme } from "./theme";
+export type { DuiPlugin, PluginAPI, PluginEvents } from "./plugin";
+export { emit, usePlugin } from "./plugin";
 export {
 	fitWidth,
 	padCenter,
