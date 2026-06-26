@@ -33,6 +33,10 @@ export default defineConfig({
 				href: "/docs/overview",
 			},
 			{
+				label: "Plugins",
+				href: "/docs/plugins",
+			},
+			{
 				label: "API",
 				href: "/docs/api",
 			},

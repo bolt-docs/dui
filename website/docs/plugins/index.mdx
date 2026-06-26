@@ -1,0 +1,30 @@
+---
+title: Plugins
+sidebarPosition: 1
+description: Official DUI plugins to extend your terminal toolkit.
+---
+
+import { File, BarChart3 } from 'lucide-react'
+
+**DUI** has a lightweight plugin system that lets you extend the core with custom
+functionality. These are the official plugins maintained by the DUI team.
+
+---
+
+## Official plugins
+
+<Cards cols={2}>
+  <Card title="@dui-toolkit/plugin-markdown" icon={<File />} href="/docs/plugins/markdown">
+    Render markdown with colors, tables, and syntax-highlighted code blocks.
+  </Card>
+  <Card title="@dui-toolkit/plugin-chart" icon={<BarChart3 />} href="/docs/plugins/chart">
+    Bar, column, line, pie, and sparkline charts for your terminal.
+  </Card>
+</Cards>
+
+---
+
+## Creating your own plugin
+
+See the [Plugin API docs](/docs/api/plugin) to learn how to create and register
+your own plugins.

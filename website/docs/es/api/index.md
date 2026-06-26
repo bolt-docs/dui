@@ -8,6 +8,7 @@ Todas las funciones son importables desde `@bdocs/dui`:
 
 ```ts
 import { info, box, bullet } from '@bdocs/dui'
+import { usePlugin } from '@bdocs/dui'
 ```
 
 | Módulo | Funciones | Tipos |
@@ -26,3 +27,4 @@ import { info, box, bullet } from '@bdocs/dui'
 | [Table](./table) | `table` | `TableOptions`, `TableColumnOptions` |
 | [Spinner](./spinner) | `createSpinner` | `Spinner`, `SpinnerOptions` |
 | [Steps](./steps) | `steps` | `StepItem` |
+| [Plugin](./plugin) | `usePlugin` | `DuiPlugin`, `PluginAPI`, `PluginEvents` |

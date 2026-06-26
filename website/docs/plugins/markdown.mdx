@@ -1,0 +1,129 @@
+---
+title: Markdown
+sidebarPosition: 2
+description: Render markdown with colors, tables, and syntax-highlighted code blocks.
+---
+
+import PackageManager from '../../components/PackageManager'
+
+<PackageManager />
+
+```ts
+import { md, mdRender, mdSyntax } from '@dui-toolkit/plugin-markdown'
+```
+
+`@dui-toolkit/plugin-markdown` renders Markdown to ANSI-colored terminal output, with
+syntax highlighting powered by **shiki** (lazy-loaded, singleton highlighter with
+result caching).
+
+## md
+
+```ts
+md(text: string): Promise<string>
+```
+
+Parses and renders markdown, returning a string with ANSI escape sequences.
+
+```ts
+const output = await md('# Hello **world**')
+console.log(output)
+```
+
+## mdRender
+
+```ts
+mdRender(text: string): void
+```
+
+Parses and renders markdown directly to stdout.
+
+```ts
+mdRender(`# Title
+
+- Item with **bold**
+- Item with \`code\`
+`)
+```
+
+## mdSyntax
+
+```ts
+mdSyntax(code: string, lang?: string): Promise<string>
+```
+
+Syntax-highlights a code string using shiki with the `min-dark` theme. Falls back
+to keyword-based highlighting when shiki is unavailable.
+
+```ts
+const highlighted = await mdSyntax('const x: number = 1', 'ts')
+console.log(highlighted)
+```
+
+## Supported languages
+
+| Language | Aliases |
+|----------|---------|
+| TypeScript | `ts`, `typescript` |
+| JavaScript | `js`, `javascript` |
+| JSON | `json` |
+| HTML | `html` |
+| CSS | `css` |
+| Bash | `bash`, `sh`, `shell` |
+| Python | `python`, `py` |
+| YAML | `yaml`, `yml` |
+
+## Supported elements
+
+| Element | Syntax | Render |
+|---------|--------|--------|
+| Heading 1–6 | `# text` … `###### text` | Colored by level (red → purple) |
+| Bold | `**text**` | Bold |
+| Italic | `*text*` | Italic (dim) |
+| Inline code | `` `code` `` | Blue on dark background |
+| Link | `[label](url)` | Underlined blue + URL hint |
+| Image | `![alt](url)` | `[image: alt]` dimmed |
+| Unordered list | `- item` / `* item` | • bullets |
+| Ordered list | `1. item` | Numbered |
+| Checkbox list | `- [x] done` | ✔ / ✘ |
+| Code block | ```` ```lang … ``` ```` | Bordered box with lang + highlighting |
+| Blockquote | `> text` | Dim with │ bar |
+| Table | `| col | col |` | Grid with header row |
+| Thematic break | `---` | Divider line |
+
+```ts
+import { md } from '@dui-toolkit/plugin-markdown'
+
+const markdown = `
+# Project Status
+
+**Build:** passing
+**Version:** \`1.2.3\`
+
+| Component | Status |
+|-----------|--------|
+| Core      | ✅ |
+| CLI       | ✅ |
+| Docs      | 🚧 |
+
+> Ship early, ship often.
+
+\`\`\`ts
+function hello(): void {
+  console.log('Hi!')
+}
+\`\`\`
+`
+
+console.log(await md(markdown))
+```
+
+## Plugin integration
+
+Register the plugin to hook into lifecycle events:
+
+```ts
+import { usePlugin } from '@bdocs/dui'
+import { markdownPlugin } from '@dui-toolkit/plugin-markdown'
+
+usePlugin(markdownPlugin)
+```

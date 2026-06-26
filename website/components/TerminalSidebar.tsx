@@ -121,7 +121,7 @@ export function TerminalSidebar() {
 
 	const sidebarContent = (
 		<Sidebar.Content className="terminal-sidebar p-3 pt-6 pb-4 [&_button>svg]:hidden [&_button]:after:content-['+'] [&_button]:after:font-mono [&_button]:after:text-[10px] [&_button]:after:text-dim [&_button:has(.rotate-90)]:after:content-['-'] **:[[class*='border-l']]:border-strong [&_.border-l]:border-strong">
-			<div className="flex flex-col gap-6">
+			<div className="flex flex-col gap-3">
 				{ungrouped.length > 0 && (
 					<Sidebar.Group className="flex flex-col gap-0.5">
 						{ungrouped.map((route: any) => (

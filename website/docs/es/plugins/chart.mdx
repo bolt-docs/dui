@@ -1,0 +1,135 @@
+---
+title: Chart
+sidebarPosition: 3
+description: Gráficos para terminal — barras, columnas, líneas, pie y sparkline con soporte de animación.
+---
+
+import PackageManager from '../../../components/PackageManager'
+
+<PackageManager />
+
+```ts
+import { bar, column, line, pie, sparkline, animateChart } from '@dui-toolkit/plugin-chart'
+```
+
+`@dui-toolkit/plugin-chart` renderiza gráficos a terminal con colores ANSI. Todos los
+tipos soportan `progress` (0–1) para animación de datos, y el helper `animateChart()`
+usa el mismo motor de easing que `@bdocs/dui`.
+
+## bar
+
+```ts
+bar(data: number[], options?: BarOptions): string
+```
+
+Gráfico de barras horizontal con etiquetas.
+
+```ts
+console.log(bar([12_345, 6_789, 3_456], {
+  labels: ['dui', 'chalk', 'ink'],
+  title: 'npm downloads',
+  width: 50,
+}))
+```
+
+## column
+
+```ts
+column(data: number[], options?: ColumnOptions): string
+```
+
+Gráfico de columnas vertical.
+
+```ts
+console.log(column([10, 25, 40, 30, 15], {
+  labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
+  height: 8,
+}))
+```
+
+## line
+
+```ts
+line(data: number[], options?: LineOptions): string
+```
+
+Gráfico de líneas con caracteres Braille Unicode.
+
+```ts
+console.log(line([10, 30, 50, 20, 60, 80, 40], {
+  labels: ['Inicio', 'Final'],
+  width: 25,
+  height: 6,
+  color: '#6c5ce7',
+}))
+```
+
+## pie
+
+```ts
+pie(data: PieSlice[], options?: PieOptions): string
+```
+
+Gráfico de pastel con leyenda de colores.
+
+```ts
+console.log(pie([
+  { label: 'TypeScript', value: 45 },
+  { label: 'JavaScript', value: 30 },
+  { label: 'Python', value: 25 },
+]))
+```
+
+## sparkline
+
+```ts
+sparkline(data: number[], options?: SparklineOptions): string
+```
+
+Sparkline compacto usando 8 niveles de barra unicode.
+
+```ts
+console.log(sparkline([1, 3, 5, 8, 12, 7, 4, 2], { color: '#00d4aa' }))
+```
+
+## Animación
+
+Todos los gráficos aceptan `progress` (0–1) para interpolar valores:
+
+```ts
+bar([100, 60, 30], { progress: 0.5 }) // barras al 50%
+```
+
+Usa `animateChart()` para un loop completo con el mismo motor de easing:
+
+```ts
+import { animateChart } from '@dui-toolkit/plugin-chart'
+
+const data = [100, 60, 30, 15]
+const labels = ['Q1', 'Q2', 'Q3', 'Q4']
+
+animateChart({
+  duration: 2000,
+  easing: 'ease-out',
+  onFrame: (progress) => {
+    console.clear()
+    console.log(bar(data, {
+      labels,
+      progress,
+      title: `Ingresos — ${Math.round(progress * 100)}%`,
+    }))
+  },
+})
+```
+
+## Opciones comunes
+
+| Opción | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `width` | `number` | ancho terminal | Ancho máximo en columnas |
+| `height` | `number` | auto | Alto del gráfico (column, line) |
+| `color` | `string` | paleta | Color hex del gráfico |
+| `progress` | `number` | `1` | Progreso de animación (0–1) |
+| `labels` | `string[]` | — | Etiquetas para los datos |
+| `title` | `string` | — | Título del gráfico (bar) |
+| `fill` | `boolean` | `false` | Área rellena (line) |
