@@ -1,0 +1,49 @@
+{
+	"name": "@dui-toolkit/plugin-markdown",
+	"version": "0.1.0",
+	"description": "Markdown renderer plugin for @bdocs/dui — renderiza markdown con colores, tablas y código resaltado en la terminal",
+	"main": "dist/index.mjs",
+	"types": "dist/index.d.mts",
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"dev": "tsdown --watch --config-loader unrun",
+		"test": "vitest run"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/dui-toolkit/plugin-markdown.git"
+	},
+	"keywords": [
+		"terminal",
+		"cli",
+		"markdown",
+		"renderer",
+		"syntax-highlighting",
+		"ansi"
+	],
+	"packageManager": "pnpm@10.30.2",
+	"license": "MIT",
+	"type": "module",
+	"dependencies": {
+		"@bdocs/dui": "workspace:*",
+		"shiki": "^3.5.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"tsdown": "^0.21.7",
+		"typescript": "^5.9.3",
+		"vitest": "^3.0.0"
+	}
+}
