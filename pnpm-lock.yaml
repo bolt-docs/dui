@@ -46,6 +46,47 @@ importers:
         specifier: ^3.0.0
         version: 3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
 
+  packages/dui-chart:
+    dependencies:
+      '@bdocs/dui':
+        specifier: workspace:*
+        version: link:../dui
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.19
+      tsdown:
+        specifier: ^0.21.7
+        version: 0.21.10(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
+
+  packages/dui-markdown:
+    dependencies:
+      '@bdocs/dui':
+        specifier: workspace:*
+        version: link:../dui
+      shiki:
+        specifier: ^3.5.0
+        version: 3.23.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.19
+      tsdown:
+        specifier: ^0.21.7
+        version: 0.21.10(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.6(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
+
   website:
     dependencies:
       '@bdocs/dui':
