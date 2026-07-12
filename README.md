@@ -9,6 +9,8 @@ A lightweight, zero-dependency (well, just `picocolors`) library for consistent 
 | Package | Description |
 |---------|-------------|
 | [`@bdocs/dui`](./packages/dui) | Core terminal UI library |
+| [`@dui-toolkit/plugin-chart`](./packages/dui-chart) | Terminal charts (bar, column, line, pie, sparkline) |
+| [`@dui-toolkit/plugin-markdown`](./packages/dui-markdown) | Markdown rendering with syntax highlighting |
 
 ## Documentation
 

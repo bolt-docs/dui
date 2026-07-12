@@ -3,7 +3,7 @@
 **Docs UI** — Terminal output utilities for CLI tools.
 
 A lightweight, zero-dependency library for consistent terminal
-output: boxes, colors, logging, lists, dividers, progress bars, spinners, animations, and more.
+output: boxes, colors, logging, lists, dividers, progress bars, spinners, animations, plugins, and more.
 Built for the Boltdocs ecosystem but fully configurable for any tool.
 
 ## Install
@@ -347,9 +347,66 @@ visibleLength('\x1b[31mred\x1b[0m')       // 3
 | `terminalWidth()` | number | Terminal columns (falls back to 80) |
 | `stripAnsi(s)` | string | Removes all ANSI escape sequences (SGR + OSC + Fe) |
 | `visibleLength(s)` | number | String length excluding ANSI codes |
+| `countRenderLines(s)` | number | How many terminal rows a string occupies |
+| `wrapAnsiWord(s, w)` | string | ANSI-preserving word-wrap |
 | `renderLine(text, stream?)` | void | Overwrite current line (readline.cursorTo + clearLine) |
 | `renderStatic(text, stream?)` | void | Write text + newline |
 
 ## License
 
 MIT
+
+---
+
+## Plugins
+
+### Plugin System
+
+Register plugins to extend DUI's functionality:
+
+```ts
+import { usePlugin, type DuiPlugin } from '@bdocs/dui'
+
+const myPlugin: DuiPlugin = {
+  name: 'my-plugin',
+  async setup(api) {
+    api.utils.colors
+    api.on('configure', (config) => { /* ... */ })
+  }
+}
+
+usePlugin(myPlugin)
+```
+
+### Chart Plugin
+
+`@dui-toolkit/plugin-chart` — Terminal charts (bar, column, line, pie, sparkline).
+
+```bash
+pnpm add @dui-toolkit/plugin-chart
+```
+
+```ts
+import { bar, column, line, pie, sparkline, animateChart } from '@dui-toolkit/plugin-chart'
+
+bar([80, 60, 95], { labels: ['A', 'B', 'C'], title: 'Scores' })
+column([20, 40, 60], { labels: ['Q1', 'Q2', 'Q3'] })
+line([10, 25, 18, 30], { width: 40, height: 8, fill: true })
+pie([{ label: 'Used', value: 65 }, { label: 'Free', value: 35 }])
+sparkline([10, 25, 18, 30, 22])  // → ▂▅▃▇▅
+```
+
+### Markdown Plugin
+
+`@dui-toolkit/plugin-markdown` — Render markdown to terminal with syntax highlighting.
+
+```bash
+pnpm add @dui-toolkit/plugin-markdown shiki
+```
+
+```ts
+import { md, mdRender, mdSyntax, tokenize } from '@dui-toolkit/plugin-markdown'
+
+await mdRender('# Title\n\n- Item 1\n- Item 2')
+const highlighted = await mdSyntax('const x = 1', 'javascript')
+```
