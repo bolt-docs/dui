@@ -1,0 +1,26 @@
+{
+	"name": "examples",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"colors": "npx tsx 01-colors/index.ts",
+		"boxes": "npx tsx 02-boxes/index.ts",
+		"lists": "npx tsx 03-lists/index.ts",
+		"tables": "npx tsx 04-tables/index.ts",
+		"steps": "npx tsx 05-steps/index.ts",
+		"confirm": "npx tsx 06-confirm/index.ts",
+		"progress": "npx tsx 07-progress/index.ts",
+		"spinner": "npx tsx 08-spinner/index.ts",
+		"animation": "npx tsx 09-animation/index.ts",
+		"image": "npx tsx 10-image/index.ts",
+		"cli": "npx tsx 11-cli/index.ts",
+		"all": "npm run colors && npm run boxes && npm run lists && npm run tables && npm run steps && npm run progress && npm run animation && npm run image"
+	},
+	"dependencies": {
+		"@bdocs/dui": "workspace:*",
+		"@dui-toolkit/plugin-image": "workspace:*",
+		"@dui-toolkit/plugin-chart": "workspace:*",
+		"@dui-toolkit/plugin-markdown": "workspace:*",
+		"tsx": "^4.19.0"
+	}
+}
