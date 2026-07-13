@@ -7,7 +7,7 @@ function _isColorStyle(
 	obj: unknown,
 ): obj is { fg?: ColorInput; bg?: ColorInput } {
 	return (
-		typeof obj === "object" && obj !== null && !("startsWith" in (obj as any))
+		typeof obj === "object" && obj !== null && !("startsWith" in (obj as object))
 	);
 }
 
@@ -207,12 +207,15 @@ function getFromTheme(
 	if (!theme) return undefined;
 
 	const parts = path.split(".");
-	let current: any = theme;
+	let current: Record<string, unknown> = theme as Record<string, unknown>;
 	for (const part of parts) {
-		if (current == null || typeof current !== "object") return undefined;
-		current = current[part];
+		const value = current[part];
+		if (value == null || typeof value !== "object") {
+			return value as ColorStyle | undefined;
+		}
+		current = value as Record<string, unknown>;
 	}
-	return current;
+	return current as ColorStyle | undefined;
 }
 
 export function resolveColor(

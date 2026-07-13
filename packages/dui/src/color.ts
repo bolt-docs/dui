@@ -92,10 +92,10 @@ for (const [name, code] of Object.entries(STYLE_CODES)) {
 
 // --- Chalk-like chainable API ---
 
-interface NestedColors {
+type NestedColors = {
 	(...args: string[]): string;
-	[method: string]: any;
-}
+	[method: string]: NestedColors;
+};
 
 function createNestedColors(styles: StyleDef[] = []): NestedColors {
 	const fn = function (...args: string[]): string {
@@ -118,7 +118,7 @@ function createNestedColors(styles: StyleDef[] = []): NestedColors {
 		}
 
 		return `${openSeq}${text}${fullClose}`;
-	};
+	} as NestedColors;
 
 	for (const name of Object.keys(ALL_STYLES)) {
 		Object.defineProperty(fn, name, {

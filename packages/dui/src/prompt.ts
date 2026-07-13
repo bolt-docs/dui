@@ -74,7 +74,7 @@ export function formatLog(
 			return style(full);
 		} else {
 			const slot = `logger.${style}`;
-			const { apply } = resolveColor(slot as any, theme);
+			const { apply } = resolveColor(slot, theme);
 			p = apply(colors.bold(prefixText));
 		}
 	}
