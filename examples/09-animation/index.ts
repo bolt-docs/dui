@@ -46,29 +46,30 @@ const easingNames = [
 	"ease-in-back",
 	"ease-out-back",
 ];	for (const name of easingNames) {
-	const bar = await new Promise<string>((resolve) => {
-		const chars: string[] = [];
-		animateProgress({
-			duration: 600,
-			easing: name as any,
-			onFrame: (p) => {
-				// Clamp progress to [0,1] because overshooting easings
-				// (elastic, bounce, back) produce p > 1 or p < 0.
-				const clamped = Math.min(1, Math.max(0, p));
-				const pos = Math.round(clamped * 30);
-				const dotColor = pos > 15 ? "#00d4aa" : "#ff6b6b";
-				const line =
-					" ".repeat(pos) +
-					colorize("●", dotColor) +
-					" ".repeat(30 - pos);
-				chars.push(line);
-			},
-		});
-		setTimeout(() => resolve(chars[chars.length - 1] ?? ""), 650);
+	const label = name.padEnd(20);
+
+	const anim = animateProgress({
+		duration: 600,
+		easing: name as any,
+		onFrame: (p) => {
+			// Clamp progress to [0,1] because overshooting easings
+			// (elastic, bounce, back) produce p > 1 or p < 0.
+			const clamped = Math.min(1, Math.max(0, p));
+			const pos = Math.round(clamped * 30);
+			const dotColor = pos > 15 ? "#00d4aa" : "#ff6b6b";
+			const bar =
+				" ".repeat(pos) +
+				colorize("●", dotColor) +
+				" ".repeat(30 - pos);
+			// Label goes inside renderLine because renderLine() clears the
+			// whole line (cursorTo(0) + clearLine(0)) before writing.
+			renderLine(`  ${colors.dim(label)}${bar}`);
+		},
 	});
 
-	const label = name.padEnd(20);
-	console.log(`  ${colors.dim(label)}${bar}`);
+	await sleep(650);
+	anim.stop();
+	renderStatic("");
 }
 
 console.log("");
