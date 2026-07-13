@@ -7,10 +7,19 @@ description: Keyframe animation engine for terminal — pulse, loading dots, and
 import TerminalPreview from '../../components/TerminalPreview'
 
 ```ts
-import { animate, lerp } from '@bdocs/dui'
+import {
+  animate,
+  animateProgress,
+  lerp,
+  createEasing,
+  createSpring,
+  createTimeline,
+} from '@bdocs/dui'
 ```
 
 The animation engine lets you create frame-based terminal animations using keyframes. It powers the spinner internally and can be used for progress bars, pulsing text, loading indicators, and any time-based visual effect.
+
+Supports **25 easing presets**, **spring physics**, **custom cubic-bezier easings**, **CSS-style keyframes** with percentage offsets, **frame rate control**, and a **timeline API** for sequencing multiple animations.
 
 ---
 
@@ -22,47 +31,69 @@ animate(config: {
   duration: number
   loop?: boolean
   easing?: Easing
+  fps?: number
   onFrame: (frame: ResolvedFrame) => void
 }): AnimationHandle
 ```
 
-Run a keyframe animation. Calls `onFrame` at ~60fps with interpolated values.
+Run a keyframe animation. Calls `onFrame` at configurable framerate with interpolated values.
 
 ### Configuration
 
-<Field name="keyframes" type="Keyframe[]">Animation keyframes sorted by offset.</Field>
+<Field name="keyframes" type="Keyframe[]">Animation keyframes sorted by offset (CSS-style 0.0 – 1.0).</Field>
 <Field name="duration" type="number">Total duration in milliseconds.</Field>
 <Field name="loop" type="boolean" default="false">Restart when reaching the end.</Field>
-<Field name="easing" type="Easing" default="'linear'">Easing function for interpolation.</Field>
+<Field name="easing" type="Easing" default="'linear'">Easing preset, spring config, or custom function.</Field>
+<Field name="fps" type="number" default="60">Target frame rate.</Field>
 <Field name="onFrame" type="(frame) => void">Called each frame with interpolated values.</Field>
 
 ### Keyframe
 
 ```ts
 interface Keyframe {
-  offset: number       // position 0.0 – 1.0
+  offset: number       // position 0.0 – 1.0 (CSS-style)
   content?: string     // text (snaps, does not interpolate)
   fg?: ColorInput      // foreground color (interpolates)
   bg?: ColorInput      // background color (interpolates)
 }
 ```
 
-Missing `offset: 0` or `offset: 1` keyframes are auto-filled from the nearest keyframe.
-
-### Easing
-
-| Value | Effect |
-|-------|--------|
-| `'linear'` | Constant speed |
-| `'ease-in'` | Starts slow, speeds up |
-| `'ease-out'` | Starts fast, slows down |
-| `'ease-in-out'` | Smooth acceleration and deceleration |
-| `(t) => number` | Custom function |
+Use any number of keyframes with `offset` from 0 to 1, like CSS `@keyframes`. Missing `offset: 0` or `offset: 1` keyframes are auto-filled from the nearest keyframe. Colors interpolate smoothly between consecutive keyframes.
 
 ### AnimationHandle
 
 <Field name="stop" type="() => void">Stop the animation immediately.</Field>
 <Field name="then" type="(cb) => void">Register a callback for when a non-looping animation finishes.</Field>
+
+---
+
+## animateProgress
+
+```ts
+animateProgress(config: {
+  duration?: number    // default 1000
+  loop?: boolean
+  easing?: Easing      // default 'ease-out'
+  fps?: number         // default 60
+  onFrame: (progress: number) => void
+}): AnimateProgressHandle
+```
+
+A simpler API when you don't need keyframes — just a smooth progress value from 0 to 1. Perfect for progress bars, counters, and single-value transitions.
+
+```ts
+import { animateProgress } from '@bdocs/dui'
+
+animateProgress({
+  duration: 2000,
+  easing: 'ease-out-elastic',
+  onFrame: (p) => {
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(`Progress: ${Math.round(p * 100)}%`)
+  },
+})
+```
 
 ---
 
@@ -81,11 +112,107 @@ lerp(10, 20, 0.3)  // 13
 
 ---
 
+## Easing
+
+### Presets (25)
+
+| Category | Values |
+|----------|--------|
+| **Linear** | `'linear'` |
+| **Standard** | `'ease-in'` `'ease-out'` `'ease-in-out'` |
+| **Power** | `'ease-in-quad'` `'ease-out-quad'` `'ease-in-out-quad'` |
+| | `'ease-in-cubic'` `'ease-out-cubic'` `'ease-in-out-cubic'` |
+| | `'ease-in-quart'` `'ease-out-quart'` `'ease-in-out-quart'` |
+| | `'ease-in-quint'` `'ease-out-quint'` `'ease-in-out-quint'` |
+| **Trigonometric** | `'ease-in-sine'` `'ease-out-sine'` `'ease-in-out-sine'` |
+| **Exponential** | `'ease-in-expo'` `'ease-out-expo'` `'ease-in-out-expo'` |
+| **Circular** | `'ease-in-circ'` `'ease-out-circ'` `'ease-in-out-circ'` |
+| **Overshoot** | `'ease-in-back'` `'ease-out-back'` `'ease-in-out-back'` |
+| **Elastic** | `'ease-in-elastic'` `'ease-out-elastic'` `'ease-in-out-elastic'` |
+| **Bounce** | `'ease-in-bounce'` `'ease-out-bounce'` `'ease-in-out-bounce'` |
+
+### Custom cubic-bezier — `createEasing()`
+
+```ts
+createEasing(x1: number, y1: number, x2: number, y2: number): (t: number) => number
+```
+
+Create a custom easing function from a cubic bezier curve, mirroring CSS `cubic-bezier()`.
+
+```ts
+// CSS ease-in-out equivalent
+const myEasing = createEasing(0.42, 0, 0.58, 1)
+
+animate({
+  keyframes: [...],
+  duration: 500,
+  easing: myEasing,
+  onFrame: (f) => render(f),
+})
+```
+
+### Spring physics — `createSpring()`
+
+```ts
+createSpring(config?: SpringConfig): (t: number) => number
+
+interface SpringConfig {
+  stiffness?: number  // tension, default 180
+  damping?: number    // lower = more bounce, default 12
+  mass?: number       // higher = slower, default 1
+  velocity?: number   // initial velocity, default 0
+}
+```
+
+```ts
+// Bouncy spring
+const spring = createSpring({ stiffness: 200, damping: 8 })
+
+animate({ keyframes, duration: 600, easing: spring, onFrame })
+
+// Or pass SpringConfig directly
+animate({ keyframes, duration: 600, easing: { stiffness: 200, damping: 8 }, onFrame })
+```
+
+Spring physics uses a critically-damped / underdamped mass-spring-damper model so the animation "settles" naturally instead of following a fixed curve.
+
+### Custom function
+
+Pass any `(t: number) => number` function directly. `t` goes from 0 to 1, and the return value goes from 0 to 1 (but may overshoot with elastic/bounce easings).
+
+---
+
+## createTimeline
+
+```ts
+const tl = createTimeline()
+
+// Parallel — start at the same time
+tl.add({ duration: 500, onFrame: render1 })
+tl.add({ duration: 500, onFrame: render2 })
+
+// Sequential — start after previous ends
+tl.add({ duration: 500, onFrame: render2 }, { after: true })
+
+// Overlap — start when previous is 70% done
+tl.add({ duration: 1000, onFrame: render1 })
+tl.add({ duration: 500, onFrame: render2 }, { offset: 0.7 })
+
+// Play all
+const handle = tl.play()
+handle.stop()              // stop all
+handle.then(() => done())  // all finished
+```
+
+Animations are **lazy**: they won't start until `.play()` is called. This lets you build the full sequence declaratively, then start it.
+
+---
+
 ## Examples
 
-### Color pulse
+### Color pulse with elastic easing
 
-Pulse a loading indicator between two colors:
+Pulse a loading indicator between two colors using a bouncy elastic easing:
 
 ```ts
 import { animate, colorize } from '@bdocs/dui'
@@ -97,7 +224,8 @@ const pulse = animate({
     { offset: 0.5, fg: '#ffffff' },
     { offset: 1,   fg: '#666666' },
   ],
-  duration: 800,
+  duration: 1000,
+  easing: 'ease-out-elastic',
   loop: true,
   onFrame: (frame) => {
     readline.clearLine(process.stdout, 0)
@@ -133,26 +261,47 @@ animate({
 })
 ```
 
-### Progress color transition
+### Progress with spring physics
 
-Transition the color of a progress bar from red to green as it fills:
+Animate a progress bar with natural spring motion:
 
 ```ts
-let pct = 0
-const colors = animate({
-  keyframes: [
-    { offset: 0, fg: '#ef4444' },  // red
-    { offset: 0.5, fg: '#eab308' }, // yellow
-    { offset: 1, fg: '#22c55e' },   // green
-  ],
-  duration: 3000,
-  onFrame: (frame) => {
-    pct = Math.min(100, pct + 1)
-    const filled = '█'.repeat(Math.floor(pct / 2))
-    const empty = '░'.repeat(50 - filled.length)
+import { animateProgress } from '@bdocs/dui'
+
+let progress = 0
+const anim = animateProgress({
+  duration: 1500,
+  easing: { stiffness: 200, damping: 14 },
+  onFrame: (p) => {
+    progress = p
+    const filled = '█'.repeat(Math.round(p * 30))
+    const empty = '░'.repeat(30 - filled.length)
     readline.clearLine(process.stdout, 0)
     readline.cursorTo(process.stdout, 0)
-    process.stdout.write(colorize(filled, frame.fg!) + empty + ` ${Math.round(pct)}%`)
+    process.stdout.write(` ${filled}${empty} ${Math.round(p * 100)}%`)
+  },
+})
+```
+
+### Custom cubic-bezier transition
+
+Transition text color using a custom easing curve:
+
+```ts
+const bounceEasing = createEasing(0.68, -0.55, 0.27, 1.55)
+
+animate({
+  keyframes: [
+    { offset: 0, fg: '#ef4444' },
+    { offset: 0.5, fg: '#eab308' },
+    { offset: 1, fg: '#22c55e' },
+  ],
+  duration: 2000,
+  easing: bounceEasing,
+  onFrame: (frame) => {
+    readline.clearLine(process.stdout, 0)
+    readline.cursorTo(process.stdout, 0)
+    process.stdout.write(colorize('▸ Transitioning...', frame.fg!))
   },
 })
 ```

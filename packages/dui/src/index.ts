@@ -1,11 +1,22 @@
 export type {
+	AnimateProgressConfig,
+	AnimateProgressHandle,
 	AnimationConfig,
 	AnimationHandle,
 	Easing,
+	EasingName,
 	Keyframe,
 	ResolvedFrame,
+	SpringConfig,
 } from "./animation";
-export { animate, lerp } from "./animation";
+export {
+	animate,
+	animateProgress,
+	createEasing,
+	createSpring,
+	createTimeline,
+	lerp,
+} from "./animation";
 export type { BoxBorderStyle, BoxOptions } from "./box";
 export {
 	box,
