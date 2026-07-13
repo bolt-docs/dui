@@ -52,10 +52,10 @@ const easingNames = [
 			duration: 600,
 			easing: name as any,
 			onFrame: (p) => {
-				const pos = Math.round(p * 30);
-				// Use position-based color, not eased progress,
-				// because overshooting easings (elastic, bounce)
-				// produce p > 1 which would create invalid hex colors.
+				// Clamp progress to [0,1] because overshooting easings
+				// (elastic, bounce, back) produce p > 1 or p < 0.
+				const clamped = Math.min(1, Math.max(0, p));
+				const pos = Math.round(clamped * 30);
 				const dotColor = pos > 15 ? "#00d4aa" : "#ff6b6b";
 				const line =
 					" ".repeat(pos) +
@@ -84,11 +84,12 @@ const springAnim = animateProgress({
 	duration: 1500,
 	easing: springEasing,
 	onFrame: (p) => {
-		const filled = Math.round(p * 40);
+		const clamped = Math.min(1, Math.max(0, p));
+		const filled = Math.round(clamped * 40);
 		const bar =
 			colors.green("█").repeat(filled) +
 			colors.dim("░").repeat(40 - filled);
-		renderLine(`   ${bar} ${Math.round(p * 100)}%`);
+		renderLine(`   ${bar} ${Math.round(clamped * 100)}%`);
 	},
 });
 
@@ -106,11 +107,12 @@ const customAnim = animateProgress({
 	duration: 1200,
 	easing: customEasing,
 	onFrame: (p) => {
-		const filled = Math.round(p * 40);
+		const clamped = Math.min(1, Math.max(0, p));
+		const filled = Math.round(clamped * 40);
 		const bar =
 			colors.magenta("█").repeat(filled) +
 			colors.dim("░").repeat(40 - filled);
-		renderLine(`   ${bar} ${Math.round(p * 100)}%`);
+		renderLine(`   ${bar} ${Math.round(clamped * 100)}%`);
 	},
 });
 
