@@ -9,6 +9,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
+interface SearchItem {
+	id: string;
+	title: string;
+	path?: string;
+	bio?: string;
+	isHeading?: boolean;
+}
+
 const locales: Record<BoltdocsLocale, Record<string, string>> = {
 	es: {
 		search: "Buscar",
@@ -116,7 +124,7 @@ export default function TerminalSearchDialog() {
 									items={list}
 									className="p-1 max-h-80 overflow-y-auto"
 								>
-									{(item: any) => (
+									{(item: SearchItem) => (
 										<SearchDialog.Item
 											key={item.id}
 											id={item.id}

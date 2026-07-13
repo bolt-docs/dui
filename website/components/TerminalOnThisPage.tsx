@@ -15,8 +15,14 @@ import {
 } from "boltdocs/client";
 import { Pencil } from "lucide-react";
 
+interface HeadingItem {
+	id: string;
+	text: string;
+	level: number;
+}
+
 interface ListProps {
-	headings: any[];
+	headings: HeadingItem[];
 }
 
 function TerminalOnThisPageList({ headings }: ListProps) {
