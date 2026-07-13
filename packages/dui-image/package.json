@@ -1,0 +1,51 @@
+{
+	"name": "@dui-toolkit/plugin-image",
+	"version": "0.1.0",
+	"description": "Terminal image renderer for @bdocs/dui — renderiza imágenes PNG, JPG y GIF en la terminal usando ANSI half-blocks, Sixel y soporte para animaciones.",
+	"main": "dist/index.mjs",
+	"types": "dist/index.d.mts",
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"dev": "tsdown --watch --config-loader unrun",
+		"test": "vitest run"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bolt-docs/dui.git"
+	},
+	"keywords": [
+		"terminal",
+		"cli",
+		"image",
+		"ansi",
+		"sixel",
+		"gif",
+		"block-art",
+		"image-rendering"
+	],
+	"packageManager": "pnpm@10.30.2",
+	"license": "MIT",
+	"type": "module",
+	"dependencies": {
+		"@bdocs/dui": "workspace:*",
+		"sharp": "^0.34.1"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"tsdown": "^0.21.7",
+		"typescript": "^5.9.3",
+		"vitest": "^3.0.0"
+	}
+}
