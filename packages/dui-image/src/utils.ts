@@ -42,17 +42,13 @@ export async function loadResizedPixels(
 		.raw()
 		.toBuffer({ resolveWithObject: true });
 
-	const pixels = new Uint8Array(
-		data.buffer,
-		data.byteOffset,
-		data.byteLength,
-	);
-
+	// Buffer extends Uint8Array — no need to re-wrap, which can
+	// cause issues with Node.js pooled shared buffers.
 	if (dither) {
-		applyDither(pixels, info.width, info.height);
+		applyDither(data, info.width, info.height);
 	}
 
-	return { pixels, width: info.width, height: info.height };
+	return { pixels: data, width: info.width, height: info.height };
 }
 
 /**

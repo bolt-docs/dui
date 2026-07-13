@@ -49,8 +49,7 @@ export async function renderImage(
 
 /**
  * Render an image to ANSI half-block art (always uses ANSI).
- */
-export async function renderAnsi(
+ */	export async function renderAnsi(
 	imagePath: string | Buffer,
 	options: AnsiImageOptions = {},
 ): Promise<string> {
@@ -58,14 +57,16 @@ export async function renderAnsi(
 	const caps = detectTerminal();
 	const dims = resolveDimensions(caps.columns, width, height);
 
-	const { pixels } = await loadResizedPixels(
+	const { pixels, width: actualWidth, height: actualHeight } = await loadResizedPixels(
 		imagePath,
 		dims.width,
 		dims.height * 2,
 		dither,
 	);
 
-	return pixelsToAnsi(pixels, dims.width, dims.height * 2, {
+	// Use actual sharp output dimensions (withoutEnlargement may prevent
+	// full resize, so actualWidth/actualHeight may differ from requested).
+	return pixelsToAnsi(pixels, actualWidth, actualHeight, {
 		...renderOpts,
 		width: dims.width,
 		height: dims.height,

@@ -52,8 +52,8 @@ export interface GifOptions extends AnsiImageOptions {
 	for (let page = 0; page < totalFrames; page++) {
 		frames.push(
 			loadResizedPixels(gifPath, dims.width, dims.height * 2, dither, page)
-				.then(({ pixels }) => ({
-					ansi: pixelsToAnsi(pixels, dims.width, dims.height * 2, {
+				.then(({ pixels, width: actualWidth, height: actualHeight }) => ({
+					ansi: pixelsToAnsi(pixels, actualWidth, actualHeight, {
 						...ansiOpts,
 						width: dims.width,
 						height: dims.height,
