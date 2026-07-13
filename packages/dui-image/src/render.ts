@@ -34,15 +34,16 @@ export async function renderImage(
 	imagePath: string | Buffer,
 	options: ImageRenderOptions = {},
 ): Promise<string> {
-	const { format = "auto", autoFormat = true, ...ansiOpts } = options;
-	const caps = detectTerminal();
+	const { format = "auto", ...ansiOpts } = options;
 
-	// Try Kitty graphics protocol if auto-detected or explicitly requested
-	if (format === "kitty" || (autoFormat && format === "auto" && caps.bestFormat === "kitty")) {
+	// Only use Kitty protocol when explicitly requested.
+	// Auto-detection is disabled to avoid breaking terminals
+	// with raw escape sequences on non-Kitty terminals.
+	if (format === "kitty") {
 		return renderKitty(imagePath, options);
 	}
 
-	// Fall back to ANSI half-block rendering
+	// Fall back to ANSI half-block rendering (safe for all terminals)
 	return renderAnsi(imagePath, ansiOpts);
 }
 

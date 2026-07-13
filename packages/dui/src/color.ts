@@ -332,9 +332,9 @@ export function interpolateColor(
 ): string {
 	const ca = parseColor(a);
 	const cb = parseColor(b);
-	const r = Math.round(ca.r + (cb.r - ca.r) * t);
-	const g = Math.round(ca.g + (cb.g - ca.g) * t);
-	const b_ = Math.round(ca.b + (cb.b - ca.b) * t);
+	const r = clamp(Math.round(ca.r + (cb.r - ca.r) * t), 0, 255);
+	const g = clamp(Math.round(ca.g + (cb.g - ca.g) * t), 0, 255);
+	const b_ = clamp(Math.round(ca.b + (cb.b - ca.b) * t), 0, 255);
 	return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b_.toString(16).padStart(2, "0")}`;
 }
 

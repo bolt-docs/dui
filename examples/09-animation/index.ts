@@ -15,7 +15,6 @@ import {
 	createTimeline,
 	createEasing,
 	colorize,
-	interpolateColor,
 	renderLine,
 	renderStatic,
 } from "@bdocs/dui";
@@ -46,9 +45,7 @@ const easingNames = [
 	"ease-out-bounce",
 	"ease-in-back",
 	"ease-out-back",
-];
-
-for (const name of easingNames) {
+];	for (const name of easingNames) {
 	const bar = await new Promise<string>((resolve) => {
 		const chars: string[] = [];
 		animateProgress({
@@ -56,9 +53,13 @@ for (const name of easingNames) {
 			easing: name as any,
 			onFrame: (p) => {
 				const pos = Math.round(p * 30);
+				// Use position-based color, not eased progress,
+				// because overshooting easings (elastic, bounce)
+				// produce p > 1 which would create invalid hex colors.
+				const dotColor = pos > 15 ? "#00d4aa" : "#ff6b6b";
 				const line =
 					" ".repeat(pos) +
-					colorize("●", interpolateColor("#ff0000", "#00aaff", p)) +
+					colorize("●", dotColor) +
 					" ".repeat(30 - pos);
 				chars.push(line);
 			},
