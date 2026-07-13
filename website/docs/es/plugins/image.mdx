@@ -1,0 +1,250 @@
+---
+title: Image
+sidebarPosition: 4
+description: Renderiza imágenes — PNG, JPG y GIF — en la terminal con ANSI half-block art, protocolo Kitty y animación de frames.
+---
+
+import PackageManager from '../../../components/PackageManager'
+
+<PackageManager />
+
+```ts
+import { renderImage, renderAnsi, renderGifFrames, animateGif, detectTerminal } from '@dui-toolkit/plugin-image'
+```
+
+`@dui-toolkit/plugin-image` renderiza imágenes directamente en tu terminal usando **ANSI half-block art**
+(compatible universalmente), el **protocolo Kitty** (alta fidelidad) y soporte para **GIFs animados**
+con renderizado frame por frame.
+
+Internamente usa [sharp](https://sharp.pixelplumbing.com/) para procesamiento y
+redimensionado de imágenes, y dithering Floyd-Steinberg para degradados de color suaves.
+
+---
+
+## renderAnsi
+
+```ts
+renderAnsi(imagePath: string | Buffer, options?: AnsiImageOptions): Promise<string>
+```
+
+Renderiza cualquier imagen a ANSI half-block art usando el carácter `▀` para empaquetar
+dos píxeles verticales en cada celda de la terminal. Funciona en **cualquier terminal**
+que soporte color de 24 bits.
+
+```ts
+const output = await renderAnsi('./captura.png', {
+  width: 40,
+})
+
+console.log(output)
+```
+
+### Opciones
+
+| Opción | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `width` | `number` | min(columnas, 80) | Ancho objetivo en columnas |
+| `height` | `number` | `width × 0.5` | Alto objetivo en filas |
+| `maxWidth` | `number` | — | Restricción de ancho máximo |
+| `maxHeight` | `number` | — | Restricción de alto máximo |
+| `dither` | `boolean` | `false` | Aplicar dithering Floyd-Steinberg |
+| `blockChar` | `string` | `"▀"` | Carácter de medio bloque |
+| `bgColor` | `string` | — | Color de fondo personalizado (hex) |
+
+### Dithering
+
+Activa `dither` para reducir el banding de color en degradados e imágenes fotográficas:
+
+```ts
+const output = await renderAnsi('./foto.jpg', {
+  width: 60,
+  dither: true,
+})
+```
+
+---
+
+## renderImage
+
+```ts
+renderImage(imagePath: string | Buffer, options?: ImageRenderOptions): Promise<string>
+```
+
+Función de renderizado de alto nivel que **detecta automáticamente** las capacidades
+de la terminal y elige el mejor formato:
+
+- **Protocolo Kitty** si el emulador lo soporta (alta fidelidad, color completo)
+- **ANSI fallback** (compatible universalmente)
+
+```ts
+// Auto-detección del mejor formato
+const best = await renderImage('./logo.png', { width: 40 })
+console.log(best)
+
+// Forzar ANSI independientemente de la terminal
+const ansi = await renderImage('./logo.png', {
+  format: 'ansi',
+  width: 40,
+})
+console.log(ansi)
+```
+
+### Opciones
+
+Hereda todas las `AnsiImageOptions` más:
+
+| Opción | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `format` | `"ansi" \| "kitty" \| "auto"` | `"auto"` | Formato de salida |
+| `autoFormat` | `boolean` | `true` | Auto-detectar mejor formato |
+
+---
+
+## renderGifFrames
+
+```ts
+renderGifFrames(gifPath: string | Buffer, options?: GifOptions): Promise<GifFrame[]>
+```
+
+Extrae cada frame de un GIF animado y lo renderiza a ANSI half-block art.
+Devuelve un array de objetos `GifFrame` con `ansi`, `delay` (ms), `width` y `height`.
+
+```ts
+const frames = await renderGifFrames('./animacion.gif', {
+  width: 40,
+  maxFrames: 30,
+})
+
+for (const frame of frames) {
+  console.log(frame.ansi)
+  await new Promise(r => setTimeout(r, frame.delay))
+}
+```
+
+### Opciones
+
+Hereda todas las `AnsiImageOptions` más:
+
+| Opción | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `maxFrames` | `number` | todos | Máximo de frames a extraer |
+| `delayScale` | `number` | `1` | Factor de escala para delays |
+
+---
+
+## animateGif
+
+```ts
+animateGif(gifPath: string | Buffer, options?: GifOptions): AsyncGenerator<string>
+```
+
+Generador async que cicla los frames de un GIF con el timing correcto. Cada string
+incluye códigos de escape para **sobrescribir el frame anterior**, ideal para
+reproducción continua.
+
+```ts
+import { renderLine } from '@bdocs/dui'
+
+for await (const frame of animateGif('./spin.gif', {
+  width: 20,
+})) {
+  renderLine(frame)
+}
+```
+
+La animación se repite indefinidamente. Presiona `Ctrl+C` para detener.
+
+---
+
+## detectTerminal
+
+```ts
+detectTerminal(): TerminalCapabilities
+```
+
+Detecta las capacidades de renderizado de imágenes de la terminal actual.
+Los resultados se cachean tras la primera llamada.
+
+```ts
+const caps = detectTerminal()
+console.log(caps.bestFormat)
+// → "kitty" | "sixel" | "iterm2" | "ansi"
+```
+
+### TerminalCapabilities
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `truecolor` | `boolean` | Soporte de color 24-bit |
+| `sixel` | `boolean` | Protocolo Sixel |
+| `kitty` | `boolean` | Protocolo Kitty |
+| `iterm2` | `boolean` | Protocolo iTerm2 |
+| `columns` | `number` | Ancho de la terminal |
+| `rows` | `number` | Alto de la terminal |
+| `bestFormat` | `string` | Formato de salida recomendado |
+
+---
+
+## Ejemplos
+
+### Mostrar un logo al inicio
+
+```ts
+import { renderAnsi } from '@dui-toolkit/plugin-image'
+
+async function showBanner() {
+  const logo = await renderAnsi('./logo.png', { width: 30 })
+  console.log(logo)
+}
+```
+
+### GIF animado en un loop spinner
+
+```ts
+import { animateGif } from '@dui-toolkit/plugin-image'
+import { renderLine } from '@bdocs/dui'
+
+async function showSpinner() {
+  const anim = animateGif('./loading.gif', { width: 16 })
+  for await (const frame of anim) {
+    renderLine(frame)
+  }
+}
+```
+
+### Renderizado con detección de terminal
+
+```ts
+import { renderImage, detectTerminal } from '@dui-toolkit/plugin-image'
+
+async function showImage(path: string) {
+  const caps = detectTerminal()
+  console.log(`Renderizando vía ${caps.bestFormat}…`)
+  const output = await renderImage(path, { width: 50 })
+  console.log(output)
+}
+```
+
+---
+
+## Cómo funciona
+
+### Half-block rendering
+
+El plugin mapea 2 píxeles verticales a cada celda de la terminal usando el
+**upper half block** (`▀`, U+2580):
+
+- **Color de frente** → píxel superior
+- **Color de fondo** → píxel inferior
+
+Esto da 2× de resolución vertical comparado con el enfoque ingenuo de
+1 píxel por carácter, manteniendo 1× de resolución horizontal. Los caracteres
+de terminal tienen una proporción aproximada 2:1 (alto:ancho), por lo que
+el resultado final se ve correctamente proporcionado.
+
+### Dithering Floyd-Steinberg
+
+El dithering por difusión de error distribuye el error de cuantificación a
+píxeles vecinos, reduciendo el banding visible en degradados suaves.
+Actívalo con `dither: true` en imágenes fotográficas para obtener resultados
+notablemente más suaves.

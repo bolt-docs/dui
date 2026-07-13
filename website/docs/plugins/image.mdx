@@ -1,0 +1,247 @@
+---
+title: Image
+sidebarPosition: 4
+description: Render images — PNG, JPG, and GIF — in the terminal with ANSI half-block art, Kitty protocol, and frame animation.
+---
+
+import PackageManager from '../../components/PackageManager'
+
+<PackageManager />
+
+```ts
+import { renderImage, renderAnsi, renderGifFrames, animateGif, detectTerminal } from '@dui-toolkit/plugin-image'
+```
+
+`@dui-toolkit/plugin-image` renders images directly in your terminal using **ANSI half-block art**
+(universally compatible), the **Kitty graphics protocol** (high-fidelity), and animated **GIF**
+support with frame-by-frame rendering.
+
+Under the hood it uses [sharp](https://sharp.pixelplumbing.com/) for image processing and
+resizing, and Floyd-Steinberg dithering for smooth color gradients.
+
+---
+
+## renderAnsi
+
+```ts
+renderAnsi(imagePath: string | Buffer, options?: AnsiImageOptions): Promise<string>
+```
+
+Renders any image to ANSI half-block art using the `▀` character to pack two vertical
+pixels into each terminal cell. Works on **any terminal** that supports 24-bit color.
+
+```ts
+const output = await renderAnsi('./screenshot.png', {
+  width: 40,
+})
+
+console.log(output)
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | `number` | min(tty cols, 80) | Target width in columns |
+| `height` | `number` | `width × 0.5` | Target height in rows |
+| `maxWidth` | `number` | — | Maximum width constraint |
+| `maxHeight` | `number` | — | Maximum height constraint |
+| `dither` | `boolean` | `false` | Apply Floyd-Steinberg dithering |
+| `blockChar` | `string` | `"▀"` | Half-block character |
+| `bgColor` | `string` | — | Background color override (hex) |
+
+### Dithering
+
+Enable `dither` to reduce color banding in gradients and photographic images:
+
+```ts
+const output = await renderAnsi('./photo.jpg', {
+  width: 60,
+  dither: true,
+})
+```
+
+---
+
+## renderImage
+
+```ts
+renderImage(imagePath: string | Buffer, options?: ImageRenderOptions): Promise<string>
+```
+
+High-level render function that **auto-detects** terminal capabilities and chooses
+the best format:
+
+- **Kitty protocol** if the terminal emulator supports it (high fidelity, full color)
+- **ANSI fallback** (universally compatible)
+
+```ts
+// Auto-detect best format
+const best = await renderImage('./logo.png', { width: 40 })
+console.log(best)
+
+// Force ANSI regardless of terminal
+const ansi = await renderImage('./logo.png', {
+  format: 'ansi',
+  width: 40,
+})
+console.log(ansi)
+```
+
+### Options
+
+Inherits all `AnsiImageOptions` plus:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `format` | `"ansi" \| "kitty" \| "auto"` | `"auto"` | Output format |
+| `autoFormat` | `boolean` | `true` | Auto-detect best format |
+
+---
+
+## renderGifFrames
+
+```ts
+renderGifFrames(gifPath: string | Buffer, options?: GifOptions): Promise<GifFrame[]>
+```
+
+Extracts every frame from an animated GIF and renders each to ANSI half-block art.
+Returns an array of `GifFrame` objects with `ansi`, `delay` (ms), `width`, and `height`.
+
+```ts
+const frames = await renderGifFrames('./animation.gif', {
+  width: 40,
+  maxFrames: 30,
+})
+
+for (const frame of frames) {
+  console.log(frame.ansi)
+  await new Promise(r => setTimeout(r, frame.delay))
+}
+```
+
+### Options
+
+Inherits all `AnsiImageOptions` plus:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxFrames` | `number` | all | Maximum frames to extract |
+| `delayScale` | `number` | `1` | Scale factor for frame delays |
+
+---
+
+## animateGif
+
+```ts
+animateGif(gifPath: string | Buffer, options?: GifOptions): AsyncGenerator<string>
+```
+
+Async generator that cycles through GIF frames with proper timing. Each yielded string
+includes escape codes to **overwrite the previous frame in-place**, so it's perfect for
+continuous playback.
+
+```ts
+import { renderLine } from '@bdocs/dui'
+
+for await (const frame of animateGif('./spin.gif', {
+  width: 20,
+})) {
+  renderLine(frame)
+}
+```
+
+The animation loops indefinitely. Press `Ctrl+C` to stop.
+
+---
+
+## detectTerminal
+
+```ts
+detectTerminal(): TerminalCapabilities
+```
+
+Detects the current terminal's image rendering capabilities. Results are cached
+after the first call.
+
+```ts
+const caps = detectTerminal()
+console.log(caps.bestFormat)
+// → "kitty" | "sixel" | "iterm2" | "ansi"
+```
+
+### TerminalCapabilities
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `truecolor` | `boolean` | 24-bit color support |
+| `sixel` | `boolean` | Sixel graphics protocol |
+| `kitty` | `boolean` | Kitty graphics protocol |
+| `iterm2` | `boolean` | iTerm2 graphics protocol |
+| `columns` | `number` | Terminal width |
+| `rows` | `number` | Terminal height |
+| `bestFormat` | `string` | Recommended output format |
+
+---
+
+## Examples
+
+### Display a logo on startup
+
+```ts
+import { renderAnsi } from '@dui-toolkit/plugin-image'
+
+async function showBanner() {
+  const logo = await renderAnsi('./logo.png', { width: 30 })
+  console.log(logo)
+}
+```
+
+### Animated GIF in a spinner loop
+
+```ts
+import { animateGif } from '@dui-toolkit/plugin-image'
+import { renderLine } from '@bdocs/dui'
+
+async function showSpinner() {
+  const anim = animateGif('./loading.gif', { width: 16 })
+  for await (const frame of anim) {
+    renderLine(frame)
+  }
+}
+```
+
+### Terminal-aware render
+
+```ts
+import { renderImage, detectTerminal } from '@dui-toolkit/plugin-image'
+
+async function showImage(path: string) {
+  const caps = detectTerminal()
+  console.log(`Rendering via ${caps.bestFormat}…`)
+  const output = await renderImage(path, { width: 50 })
+  console.log(output)
+}
+```
+
+---
+
+## How it works
+
+### Half-block rendering
+
+The plugin maps 2 vertical pixels to each terminal character cell using the
+**upper half block** (`▀`, U+2580):
+
+- **Foreground color** → upper pixel
+- **Background color** → lower pixel
+
+This gives 2× vertical resolution compared to a naive 1-pixel-per-character
+approach, while keeping 1× horizontal resolution. Terminal characters are
+roughly 2:1 (height:width), so the final result looks properly proportioned.
+
+### Floyd-Steinberg dithering
+
+Error diffusion dithering distributes quantization error to neighboring pixels,
+reducing visible banding in smooth gradients. Enable it with `dither: true`
+on photographic images for noticeably smoother results.
