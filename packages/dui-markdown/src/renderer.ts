@@ -6,7 +6,7 @@ import {
 	visibleLength,
 	stripAnsi,
 } from "@bdocs/dui";
-import { tokenize, type BlockToken, type InlineToken } from "./tokenizer";
+import { tokenize, type BlockToken, type BlockTokenHeading, type BlockTokenCode, type BlockTokenList, type BlockTokenQuote, type BlockTokenTable, type BlockTokenParagraph, type InlineToken } from "./tokenizer";
 import { mdSyntax } from "./syntax";
 
 const headingColors = [
@@ -143,13 +143,13 @@ async function renderParagraph(token: BlockToken & { type: "paragraph" }): Promi
 type BlockRenderer = (token: BlockToken) => Promise<string>;
 
 const renderers: Record<string, BlockRenderer> = {
-	heading: renderHeading,
-	code: renderCode,
-	list: renderList,
-	quote: renderQuote,
-	table: renderTable,
-	thematicBreak: renderThematicBreak,
-	paragraph: renderParagraph,
+	heading: renderHeading as BlockRenderer,
+	code: renderCode as BlockRenderer,
+	list: renderList as BlockRenderer,
+	quote: renderQuote as BlockRenderer,
+	table: renderTable as BlockRenderer,
+	thematicBreak: renderThematicBreak as BlockRenderer,
+	paragraph: renderParagraph as BlockRenderer,
 };
 
 function renderBlock(token: BlockToken): Promise<string> {
