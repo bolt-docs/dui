@@ -1,13 +1,15 @@
 {
 	"name": "@dui-toolkit/plugin-qrcode",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "QR code generator for @bdocs/dui — render scannable QR codes directly in the terminal with ANSI blocks.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
 	"publishConfig": {
 		"access": "public"
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
@@ -23,7 +25,14 @@
 		"type": "git",
 		"url": "git+https://github.com/bolt-docs/dui.git"
 	},
-	"keywords": ["terminal", "cli", "qrcode", "qr", "ansi", "barcode"],
+	"keywords": [
+		"terminal",
+		"cli",
+		"qrcode",
+		"qr",
+		"ansi",
+		"barcode"
+	],
 	"packageManager": "pnpm@10.30.2",
 	"license": "MIT",
 	"type": "module",

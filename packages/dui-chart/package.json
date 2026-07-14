@@ -1,6 +1,6 @@
 {
 	"name": "@dui-toolkit/plugin-chart",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Terminal charts — bar, column, line, pie, and sparkline charts for @bdocs/dui with animation support.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",

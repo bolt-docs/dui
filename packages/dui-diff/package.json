@@ -1,13 +1,15 @@
 {
 	"name": "@dui-toolkit/plugin-diff",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Diff viewer for @bdocs/dui — render unified and side-by-side diffs with syntax-colored additions, deletions, and context in the terminal.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
 	"publishConfig": {
 		"access": "public"
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
@@ -23,7 +25,14 @@
 		"type": "git",
 		"url": "git+https://github.com/bolt-docs/dui.git"
 	},
-	"keywords": ["terminal", "cli", "diff", "unified-diff", "side-by-side", "ansi"],
+	"keywords": [
+		"terminal",
+		"cli",
+		"diff",
+		"unified-diff",
+		"side-by-side",
+		"ansi"
+	],
 	"packageManager": "pnpm@10.30.2",
 	"license": "MIT",
 	"type": "module",

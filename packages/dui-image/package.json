@@ -1,6 +1,6 @@
 {
 	"name": "@dui-toolkit/plugin-image",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Terminal image renderer for @bdocs/dui — renderiza imágenes PNG, JPG y GIF en la terminal usando ANSI half-blocks, Sixel y soporte para animaciones.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
