@@ -1,6 +1,6 @@
 {
 	"name": "@bdocs/dui",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Terminal UI utilities — boxes, colors, logging, lists, and dividers",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
