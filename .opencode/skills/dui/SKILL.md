@@ -660,6 +660,32 @@ const myPlugin: DuiPlugin = {
 usePlugin(myPlugin)
 ```
 
+## QR Code plugin (`@dui-toolkit/plugin-qrcode`)
+
+```bash
+pnpm add @dui-toolkit/plugin-qrcode
+```
+
+```typescript
+import { qrcode } from '@dui-toolkit/plugin-qrcode'
+
+// Natural size, dimmed URL label
+console.log(await qrcode('https://example.com'))
+
+// Branded colors + custom label
+console.log(await qrcode('https://example.com/pair', {
+  color: '#22c55e',
+  bgColor: '#0a0a0a',
+  margin: 1,
+  label: 'Scan to continue',
+}))
+
+// Narrow render for tight columns
+console.log(await qrcode('https://example.com', { width: 40, label: false }))
+```
+
+Options: `width`, `errorCorrection` (`L`|`M`|`Q`|`H`), `color`, `bgColor`, `margin`, `label` (`boolean | string`), `showVersion`.
+
 ## Chart plugin (`@dui-toolkit/plugin-chart`)
 
 ```bash
@@ -826,3 +852,6 @@ pnpm exec biome format --write .
 | `packages/dui/src/plugin.ts` | Plugin system |
 | `packages/dui-chart/` | Chart plugin (bar, column, line, pie, sparkline) |
 | `packages/dui-markdown/` | Markdown plugin (render, syntax highlight) |
+| `packages/dui-qrcode/` | QR code plugin (terminal scannable QR) |
+| `packages/dui-diff/` | Diff plugin (unified, side-by-side, word) |
+| `packages/dui-image/` | Image plugin (ANSI half-block + Kitty) |

@@ -4,9 +4,9 @@ sidebarPosition: 1
 description: Terminal UI utilities — boxes, colors, logging, lists, dividers, and more.
 ---
 
-import { Terminal, Paintbrush, ListOrdered, Table, MessageSquare, Activity, Cog, Type, PanelTop, SquareDashed, SplitSquareHorizontal, Bot, TrendingUp, Play, Palette } from 'lucide-react'
+import { Terminal, Paintbrush, ListOrdered, Table, MessageSquare, Activity, Cog, Type, PanelTop, SquareDashed, SplitSquareHorizontal, Bot, TrendingUp, Play, Palette, Package, File, BarChart3, GitCompare, QrCode, Image as ImageIcon } from 'lucide-react'
 
-**DUI** — terminal UI toolkit for Node.js CLI apps. ANSI-aware, zero-dependency (just `picocolors` + `string-width`), tree-shakeable.
+**DUI** — terminal UI toolkit for Node.js CLI apps. ANSI-aware, zero-dependency (just `string-width`), tree-shakeable.
 
 ---
 
@@ -77,5 +77,32 @@ console.log(bullet(['File A', 'File B', 'File C']))
   </Card>
   <Card title="AI Agents & Skills" icon={<Bot />} href="/docs/overview/ai-agents">
     Install DUI skill for Claude Code, Cursor, and more
+  </Card>
+</Cards>
+
+---
+
+## Official plugins
+
+Extend DUI with optional packages. Full guide: [Plugins](/docs/plugins).
+
+<Cards cols={2}>
+  <Card title="Markdown" icon={<File />} href="/docs/plugins/markdown">
+    Render markdown with colors, tables, and syntax-highlighted code
+  </Card>
+  <Card title="Chart" icon={<BarChart3 />} href="/docs/plugins/chart">
+    Bar, column, line, pie, and sparkline charts
+  </Card>
+  <Card title="Image" icon={<ImageIcon />} href="/docs/plugins/image">
+    PNG, JPG, and GIF in the terminal (ANSI + Kitty)
+  </Card>
+  <Card title="Diff" icon={<GitCompare />} href="/docs/plugins/diff">
+    Unified, side-by-side, and word-level diffs
+  </Card>
+  <Card title="QR Code" icon={<QrCode />} href="/docs/plugins/qrcode">
+    Scannable QR codes with colors, width cap, and labels
+  </Card>
+  <Card title="All plugins" icon={<Package />} href="/docs/plugins">
+    Plugin index and how to build your own
   </Card>
 </Cards>

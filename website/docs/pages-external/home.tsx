@@ -102,7 +102,7 @@ export function HomePage() {
 			<section className="border-b border-strong px-6 py-20 md:py-28 relative">
 				<div className="mx-auto max-w-4xl flex flex-col items-center md:items-start text-center md:text-left">
 					<div className="text-base text-dim mb-4 select-none self-center md:self-start">
-						{"// @bdocs/dui v0.2.0"}
+						{"// @bdocs/dui v0.4.0"}
 					</div>
 					<pre className="font-mono font-bold leading-none select-none text-terminal-green drop-shadow-[0_0_15px_rgba(74,222,128,0.35)] text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
 						{

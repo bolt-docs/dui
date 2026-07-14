@@ -43,6 +43,20 @@ configure({ prefix: 'example' })
 
 info('Iniciando proceso...')
 console.log(bullet(['Parsear input', 'Transformar datos', 'Escribir salida']))
-console.log(double('Resultado', ['Completado exitosamente']))
+console.log(double(['Completado exitosamente'], { title: 'Resultado' }))
 success('Todo listo!')
 ```
+
+## Plugins oficiales
+
+Paquetes opcionales extienden DUI para markdown, gráficos, imágenes, diffs y códigos QR:
+
+```bash
+pnpm add @dui-toolkit/plugin-markdown
+pnpm add @dui-toolkit/plugin-chart
+pnpm add @dui-toolkit/plugin-image
+pnpm add @dui-toolkit/plugin-diff
+pnpm add @dui-toolkit/plugin-qrcode
+```
+
+Consulta la sección [Plugins](/docs/es/plugins) para instalación y API completa.

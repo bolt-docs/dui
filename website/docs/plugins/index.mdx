@@ -4,7 +4,7 @@ sidebarPosition: 1
 description: Official DUI plugins to extend your terminal toolkit.
 ---
 
-import { File, BarChart3 } from 'lucide-react'
+import { File, BarChart3, GitCompare, QrCode } from 'lucide-react'
 import { Image } from '../../components/icons'
 
 **DUI** has a lightweight plugin system that lets you extend the core with custom
@@ -23,6 +23,12 @@ functionality. These are the official plugins maintained by the DUI team.
   </Card>
   <Card title="@dui-toolkit/plugin-image" icon={<Image />} href="/docs/plugins/image">
     Render images — PNG, JPG, and GIF — in the terminal with ANSI half-block art and Kitty protocol.
+  </Card>
+  <Card title="@dui-toolkit/plugin-diff" icon={<GitCompare />} href="/docs/plugins/diff">
+    Unified, side-by-side, and word-level diffs themed for the terminal.
+  </Card>
+  <Card title="@dui-toolkit/plugin-qrcode" icon={<QrCode />} href="/docs/plugins/qrcode">
+    Scannable QR codes in the terminal with custom colors, width cap, and labels.
   </Card>
 </Cards>
 

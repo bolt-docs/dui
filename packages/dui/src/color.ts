@@ -1,8 +1,36 @@
-export let isColorSupported =
-	!("NO_COLOR" in process.env) && (process.stdout?.isTTY ?? false);
+/**
+ * Color auto-detection.
+ *
+ * Resolution order (mirrors the de-facto convention used by chalk,
+ * picocolors, kleur, etc.):
+ *   1. `NO_COLOR` present in env           → colors disabled
+ *   2. `FORCE_COLOR` non-empty in env      → colors enabled (overrides TTY check;
+ *                                             used in CI, vitest, scripts)
+ *   3. `process.stdout.isTTY === true`     → colors enabled
+ *   4. otherwise                           → colors disabled
+ *
+ * `NO_COLOR` always wins over `FORCE_COLOR` — see
+ * https://no-color.org for the standard.
+ */
+function detectColorSupport(): boolean {
+	if ("NO_COLOR" in process.env) return false;
+	if (process.env.FORCE_COLOR && process.env.FORCE_COLOR !== "0") return true;
+	return process.stdout?.isTTY ?? false;
+}
+
+export let isColorSupported: boolean = detectColorSupport();
 
 export function setColorSupported(value: boolean): void {
 	isColorSupported = value;
+}
+
+/**
+ * Re-evaluate color support from env vars (`NO_COLOR`, `FORCE_COLOR`,
+ * `process.stdout.isTTY`). Useful for tests, scripts, or anywhere
+ * the initial detection may have happened against stale env state.
+ */
+export function refreshColorSupport(): void {
+	isColorSupported = detectColorSupport();
 }
 
 export type ColorInput = string;
@@ -30,7 +58,84 @@ interface StyleDef {
 	close: number[];
 }
 
-const NAMED_FG: Record<string, number> = {
+// ────────────────────────────────────────────────────────────────────────────
+// Color/style name catalog — single source of truth for RUNTIME + TYPES
+//
+// These `as const` arrays drive BOTH:
+//   1. The TypeScript mapped type so IDE autocomplete enumerates every option.
+//   2. The runtime iteration that wires up `Object.defineProperty` getters in
+//      `createNestedColors()` below.
+//
+// Note: using a plain `[method: string]: NestedColors` index signature would
+// cause IDE autocomplete to fall through to `Function.prototype` methods
+// (`bind`, `call`, `apply`, …) because TypeScript would have no way to
+// enumerate the valid keys. Mapping over a literal union gives every key
+// a concrete type, so autocomplete shows `red`, `green`, `bold`,
+// `bgBright-red`, etc. instead.
+// ────────────────────────────────────────────────────────────────────────────
+
+const NAMED_FG_NAMES = [
+	"black",
+	"red",
+	"green",
+	"yellow",
+	"blue",
+	"magenta",
+	"cyan",
+	"white",
+	"gray",
+	"bright-red",
+	"bright-green",
+	"bright-yellow",
+	"bright-blue",
+	"bright-magenta",
+	"bright-cyan",
+	"bright-white",
+] as const;
+
+const NAMED_BG_NAMES = [
+	"bgBlack",
+	"bgRed",
+	"bgGreen",
+	"bgYellow",
+	"bgBlue",
+	"bgMagenta",
+	"bgCyan",
+	"bgWhite",
+	"bgGray",
+	"bgBright-red",
+	"bgBright-green",
+	"bgBright-yellow",
+	"bgBright-blue",
+	"bgBright-magenta",
+	"bgBright-cyan",
+	"bgBright-white",
+] as const;
+
+const STYLE_NAMES = [
+	"bold",
+	"dim",
+	"italic",
+	"underline",
+	"inverse",
+	"hidden",
+	"strikethrough",
+] as const;
+
+type FgName = (typeof NAMED_FG_NAMES)[number];
+type BgName = (typeof NAMED_BG_NAMES)[number];
+type StyleName = (typeof STYLE_NAMES)[number];
+
+/**
+ * Every autocomplete-able key on the `colors` chainable object.
+ * Use this to type CLI wrappers or theme plugins that need to dispatch on
+ * a color name.
+ */
+export type ColorName = FgName | BgName | StyleName | "grey";
+
+// === SGR code dictionaries (typed against the name arrays) ===
+
+const NAMED_FG: Record<FgName, number> = {
 	black: 30,
 	red: 31,
 	green: 32,
@@ -49,7 +154,7 @@ const NAMED_FG: Record<string, number> = {
 	"bright-white": 97,
 };
 
-const NAMED_BG: Record<string, number> = {
+const NAMED_BG: Record<BgName, number> = {
 	bgBlack: 40,
 	bgRed: 41,
 	bgGreen: 42,
@@ -68,7 +173,7 @@ const NAMED_BG: Record<string, number> = {
 	"bgBright-white": 107,
 };
 
-const STYLE_CODES: Record<string, number> = {
+const STYLE_CODES: Record<StyleName, number> = {
 	bold: 1,
 	dim: 2,
 	italic: 3,
@@ -78,27 +183,37 @@ const STYLE_CODES: Record<string, number> = {
 	strikethrough: 9,
 };
 
+// === Build the merged ALL_STYLES dictionary used by the chainable API ===
+
 const ALL_STYLES: Record<string, StyleDef> = {};
+for (const name of NAMED_FG_NAMES) {
+	ALL_STYLES[name] = { open: [NAMED_FG[name]], close: [CLOSE_FG] };
+}
+for (const name of NAMED_BG_NAMES) {
+	ALL_STYLES[name] = { open: [NAMED_BG[name]], close: [CLOSE_BG] };
+}
+for (const name of STYLE_NAMES) {
+	ALL_STYLES[name] = { open: [STYLE_CODES[name]], close: [CLOSE_STYLE[name]] };
+}
 
-for (const [name, code] of Object.entries(NAMED_FG)) {
-	ALL_STYLES[name] = { open: [code], close: [CLOSE_FG] };
-}
-for (const [name, code] of Object.entries(NAMED_BG)) {
-	ALL_STYLES[name] = { open: [code], close: [CLOSE_BG] };
-}
-for (const [name, code] of Object.entries(STYLE_CODES)) {
-	ALL_STYLES[name] = { open: [code], close: [CLOSE_STYLE[name]] };
-}
-
-// --- Chalk-like chainable API ---
+// ────────────────────────────────────────────────────────────────────────────
+// Chalk-like chainable API
+//
+// `colors` is BOTH a function `(text: string) => styled string` AND an object
+// with one property per color/style. Each property yields a fresh `colors`
+// with the additional style pre-applied — chaining accumulates SGR codes
+// (e.g. `colors.red.bold("urgent")` → `\x1b[31;1murgent\x1b[39;22m`).
+// ────────────────────────────────────────────────────────────────────────────
 
 type NestedColors = {
+	readonly [K in ColorName]: NestedColors;
+} & {
+	/** Format and style the given text fragments (variadic — joined with a space). */
 	(...args: string[]): string;
-	[method: string]: NestedColors;
 };
 
 function createNestedColors(styles: StyleDef[] = []): NestedColors {
-	const fn = function (...args: string[]): string {
+	const impl = function (...args: string[]): string {
 		if (!isColorSupported || styles.length === 0) {
 			return args.join(" ");
 		}
@@ -118,7 +233,14 @@ function createNestedColors(styles: StyleDef[] = []): NestedColors {
 		}
 
 		return `${openSeq}${text}${fullClose}`;
-	} as NestedColors;
+	};
+
+	// Type system + runtime meet here: TS cannot statically verify that every
+	// `ColorName` property was added via `Object.defineProperty`, but the
+	// construction below is exhaustive (we iterate `Object.keys(ALL_STYLES)`
+	// which contains exactly the `ColorName` keys plus "grey"). The explicit
+	// `as unknown as` documents that hand-off.
+	const fn = impl as unknown as NestedColors;
 
 	for (const name of Object.keys(ALL_STYLES)) {
 		Object.defineProperty(fn, name, {
@@ -130,25 +252,46 @@ function createNestedColors(styles: StyleDef[] = []): NestedColors {
 		});
 	}
 
+	// Long-established `grey` alias for `gray`.
+	Object.defineProperty(fn, "grey", {
+		get() {
+			return fn.gray;
+		},
+		enumerable: true,
+		configurable: true,
+	});
+
 	return fn;
 }
 
-export const colors = createNestedColors();
+/**
+ * The chainable, callable color object.
+ *
+ * @example // Basic
+ *   colors.red("hello");                        // → "\x1b[31mhello\x1b[39m"
+ * @example // Chained
+ *   colors.red.bold("urgent");                  // → "\x1b[31;1murgent\x1b[39;22m"
+ * @example // Variadic
+ *   colors.cyan("a", "b", "c");                 // → "\x1b[36ma b c\x11b[39m"
+ *
+ * Type-safe autocomplete: typing `colors.` in your IDE will list every
+ * color/style (33 names + `grey` alias), not `Function.prototype` methods.
+ */
+export const colors: NestedColors = createNestedColors();
 
-Object.defineProperty(colors, "grey", {
-	get() {
-		return colors.gray;
-	},
-	enumerable: true,
-	configurable: true,
-});
-
+// === Legacy flat lookup table ===
+//
+// Loosely typed so callers can use dynamically-built string keys (e.g. from
+// user configuration) without TS errors. Prefer `colors[name]` for static,
+// type-safe access.
 export const colorMap: Record<string, (s: string) => string> = {};
 for (const name of Object.keys(ALL_STYLES)) {
 	const def = ALL_STYLES[name];
 	colorMap[name] = (s: string) => ansi(def.open) + s + ansi(def.close);
 }
 colorMap.grey = colorMap.gray;
+
+// === Hex / rgb() / oklch() color parsing + direct emit ===
 
 export interface ParsedColor {
 	r: number;
@@ -349,7 +492,9 @@ export function applyStyle(
 
 	if (styles) {
 		for (const style of styles) {
-			const code = STYLE_CODES[style];
+			// Local cast: STYLE_CODES is keyed by the static StyleName union but
+			// callers may pass arbitrary strings — we tolerate unknowns at runtime.
+			const code = STYLE_CODES[style as StyleName];
 			if (code !== undefined) {
 				openParts.push(code);
 				closeParts.push(CLOSE_STYLE[style]);

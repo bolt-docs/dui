@@ -1,0 +1,482 @@
+---
+title: Diff
+sidebarPosition: 5
+description: Render unified, side-by-side, and word-level diffs with ANSI colors, hunk tracking, and multi-file support.
+---
+
+import PackageManager from '../../components/PackageManager'
+import TerminalPreview from '../../components/TerminalPreview'
+
+<PackageManager pkg="@dui-toolkit/plugin-diff" />
+
+```ts
+import { diff, diffSideBySide, diffFiles, diffWords, diffStat } from '@dui-toolkit/plugin-diff'
+```
+
+`@dui-toolkit/plugin-diff` renders text diffs directly in the terminal — unified, side-by-side,
+word-level, multi-file, or whole directory. Built on top of [jsdiff's `structuredPatch`](https://github.com/kpdecker/jsdiff)
+for correct hunk boundaries and line-number tracking, every renderer emits ANSI-colored
+output that slips cleanly into DUI's `DuiTheme` system so any project can brand it
+project-wide.
+
+---
+
+## diff
+
+```ts
+diff(oldStr: string, newStr: string, options?: DiffOptions): DiffResult
+```
+
+Renders a **unified diff** (git-style) with proper `@@ -A,B +C,D @@` hunk headers,
+per-hunk context, and ANSI-colored additions / deletions / context lines.
+
+```ts
+import { diff } from '@dui-toolkit/plugin-diff'
+
+const oldCode = `function greet(name: string) {
+  console.log("Hello", name)
+  return name
+}`
+
+const newCode = `function greet(name: string, polite = false) {
+  console.log(polite ? \`Hello, \${name}\` : \`Hi \${name}\`)
+  return name
+}`
+
+const r = diff(oldCode, newCode, { filename: 'src/greet.ts' })
+console.log(r.output)
+
+// r.additions → 1
+// r.deletions  → 1
+// r.hunks     → 1
+```
+
+### Options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `context` | `number` | `3` | Number of unchanged lines shown around each hunk |
+| `width` | `number` | terminal | Truncate rendered lines to this column width |
+| `lineNumbers` | `boolean` | `true` | Show old/new line numbers in a left-side gutter |
+| `header` | `boolean` | `true` | Show the file header above the diff |
+| `filename` | `string` | — | Custom filename used in the header line |
+| `wordHighlight` | `boolean` | `true` | Highlight intra-line word-level changes in modified pairs |
+| `gutterStyle` | `"bracket" \| "bar" \| "compact" \| "arrow"` | `"bracket"` | Visual style for the gutter column |
+| `addColor` | `ColorStyle` | green | Override addition color (or use `configure({ theme: { diff: { add } } })`) |
+| `delColor` | `ColorStyle` | red | Override deletion color |
+| `contextColor` | `ColorStyle` | gray | Override context color |
+| `hunkColor` | `ColorStyle` | cyan | Override `@@ ... @@` hunk header color |
+| `linenumColor` | `ColorStyle` | gray | Override line number color |
+| `gutterColor` | `ColorStyle` | gray | Override gutter column color |
+| `fileHeaderColor` | `ColorStyle` | bold white | Override file header color |
+| `statColor` | `ColorStyle` | gray | Override stat summary color |
+| `wordAddColor` | `ColorStyle` | bgGreen black | Override word-level add highlight |
+| `wordDelColor` | `ColorStyle` | bgRed white | Override word-level del highlight |
+
+`ColorStyle` accepts any of DUI's color formats: a named color (`"green"`), a hex string
+(`"#88ff88"`), an `rgb()` / `rgba()` / `oklch()` string, or `{ fg, bg }`.
+
+### Return shape
+
+`DiffResult`:
+
+| Field | Type | Description |
+|---|---|---|
+| `output` | `string` | ANSI-formatted diff, ready to print |
+| `additions` | `number` | Total added lines |
+| `deletions` | `number` | Total deleted lines |
+| `hunks` | `number` | Number of hunk groups |
+| `lines` | `number` | Total rendered output lines |
+
+### Gutter styles
+
+| Style | Looks like |
+|---|---|
+| `"bracket"` (default) | `│ + line content` |
+| `"bar"` | `\| + line content` |
+| `"compact"` | `+ line content` (no gutter char) |
+| `"arrow"` | `▸ + line content` |
+
+```ts
+const minimal = diff(oldStr, newStr, { gutterStyle: 'compact', wordHighlight: false })
+```
+
+<TerminalPreview command="node diff.js">
+{`\x1b[1;37m  src/greet.ts\x1b[22;39m
+\x1b[90m  1 insertion(+), 1 deletion(-) — 1 hunk\x1b[22;39m
+
+\x1b[36m  @@ -1,4 +1,4 @@\x1b[39m
+\x1b[1;90m     1     1 \x1b[22;39m │ function greet(name: string\x1b[39m\x1b[32m, polite = false\x1b[39m) {
+\x1b[1;90m     2     2 \x1b[22;39m │ \x1b[39m\x1b[31m-  console.log("Hello", name)\x1b[39m
+\x1b[1;90m          2 \x1b[22;39m │ \x1b[39m\x1b[32m+  console.log(polite ? \`Hello, \${name}\` : \`Hi \${name}\`)\x1b[39m
+\x1b[1;90m     3     3 \x1b[22;39m │   return name
+\x1b[1;90m     4     4 \x1b[22;39m │ }`}
+</TerminalPreview>
+
+<Callout variant="info">
+  `context: 0` collapses each hunk to just the changed lines, useful for code-review
+  tools where you only want to surface the diff itself.
+</Callout>
+
+---
+
+## diffSideBySide
+
+```ts
+diffSideBySide(oldStr: string, newStr: string, options?: DiffOptions): DiffResult
+```
+
+Renders a **two-column view** — old content on the left, new content on the right — with
+column-aligned rows and per-row line numbering. Modified pairs are paired line-for-line,
+with word-level intra-line highlighting inherited from `wordHighlight`.
+
+```ts
+const r = diffSideBySide(oldCode, newCode, { filename: 'greet.ts' })
+console.log(r.output)
+```
+
+| Style | Layout |
+|---|---|
+| Empty left column | removal-only row (right side blank) |
+| Empty right column | addition-only row (left side blank) |
+| Both columns filled | modified pair (with word-level diff) |
+
+`diffSideBySide` accepts the same `DiffOptions` as `diff` (including all color overrides).
+When the left/right line counts of a modified pair differ (e.g. 3 removals + 5 additions),
+the smaller side is padded with empty dim placeholders so the columns stay aligned.
+
+<TerminalPreview command="node side.js">
+{`\x1b[1;37m  greet.ts (side-by-side)\x1b[22;39m
+\x1b[90m  39-column view · 5 rows\x1b[22;39m
+
+\x1b[90m                                   old\x1b[22;39m │ \x1b[90mnew\x1b[22;39m
+\x1b[90m─────────────────────────────────────\x1b[22;39m │ \x1b[90m──────────────────\x1b[22;39m
+\x1b[1;90m  1     1 \x1b[22;39m │ function greet(name: string) {
+\x1b[1;90m  2     2 \x1b[22;39m │ \x1b[42;30m console.log("Hello", name)  \x1b[49;39m │ \x1b[31m─\x1b[39m console.log("Hello", name)\x1b[39m
+\x1b[1;90m       2 \x1b[22;39m │ \x1b[90m                                  \x1b[22;39m │ \x1b[32m+ console.log(\`Hi \${name}\`)\x1b[39m`}
+</TerminalPreview>
+
+---
+
+## diffWords & diffWordsRender
+
+```ts
+diffWords(oldStr: string, newStr: string): WordDiffSegment[]
+```
+
+Returns a flat sequence of segments describing the word-level diff between two strings —
+each segment carries an `added`, `removed`, or `equal` flag. Uses `jsdiff`'s
+`diffWordsWithSpace` to preserve whitespace boundaries.
+
+```ts
+import { diffWords } from '@dui-toolkit/plugin-diff'
+
+const segs = diffWords('hello world', 'hello there world')
+// [
+//   { value: 'hello ' },
+//   { value: 'there ', added: true },
+//   { value: 'world' },
+// ]
+```
+
+```ts
+diffWordsRender(
+  oldLine: string,
+  newLine: string,
+): { old: string; new: string }
+```
+
+Renders the side-by-side word diff as ANSI-colored strings — ready to drop into a CLI
+table, box, or any other DUI renderer. The added words land on the `new` string (green
+background), removed words on the `old` string (red background).
+
+```ts
+import { diffWordsRender } from '@dui-toolkit/plugin-diff'
+
+const { old, new: next } = diffWordsRender('function foo() {}', 'function bar() {}')
+// old: "function [bgRed white]foo[/bgRed white]() {}"
+// new: "function [bgGreen black]bar[/bgGreen black]() {}"
+```
+
+This is the same renderer used internally by `diff` and `diffSideBySide` for the
+intra-line word highlights inside modified pairs.
+
+---
+
+## diffStat
+
+```ts
+diffStat(result: DiffResult | MultiFileDiffResult): string
+```
+
+Renders a one-line summary widget — `1 file changed, +12, -3` or `1 hunk, +1, -1`.
+Useful as a CI / status-line badge.
+
+```ts
+import { diff, diffStat } from '@dui-toolkit/plugin-diff'
+
+const r = diff('a\nb\nc', 'a\nB\nc')
+console.log(diffStat(r))
+// "  1 hunk, +1, -1"
+```
+
+---
+
+## diffFiles
+
+```ts
+diffFiles(files: MultiFileDiffInput[], options?: MultiDiffOptions): MultiFileDiffResult
+```
+
+Compose a **multi-file diff** from a list of file pairs. Each file gets its own section
+with a status badge (`NEW` / `DEL` / `MOD`), per-file stats, and the per-file `diff()`
+output. By default files are emitted in the order supplied; pass `sortFiles: true` to
+alphabeticalize.
+
+```ts
+import { diffFiles } from '@dui-toolkit/plugin-diff'
+
+const r = diffFiles([
+  { oldPath: 'src/a.ts', newPath: 'src/a.ts', oldContent: 'x', newContent: 'y' },
+  { oldPath: 'src/b.ts', newPath: 'src/b.ts', oldContent: '1\n2', newContent: '1\n3' },
+])
+
+console.log(r.output)
+
+console.log(r.totals)
+// { files: 2, additions: 2, deletions: 1 }
+
+console.log(r.files)
+// [
+//   { oldPath: 'src/a.ts', newPath: 'src/a.ts', status: 'modified', result: {...} },
+//   { oldPath: 'src/b.ts', newPath: 'src/b.ts', status: 'modified', result: {...} },
+// ]
+```
+
+### MultiFileDiffInput
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `oldPath` | `string` | — | Path as it appears in the old version |
+| `newPath` | `string` | — | Path as it appears in the new version |
+| `oldContent` | `string` | — | Old file contents |
+| `newContent` | `string` | — | New file contents |
+| `status` | `"added" \| "removed" \| "modified"` | auto | Override the automatically-detected status |
+| `options` | `DiffOptions` | — | Per-file overrides |
+
+### MultiDiffOptions
+
+Extends `DiffOptions` with two extras:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `showFileHeaders` | `boolean` | `true` | Render the per-file header / status badge block |
+| `sortFiles` | `boolean` | `false` | Sort files alphabetically by path |
+
+---
+
+## diffDirectories
+
+```ts
+diffDirectories(oldDir: string, newDir: string, options?: MultiDiffOptions): Promise<MultiFileDiffResult>
+```
+
+Recursively walks **two directory trees** on disk and produces the same multi-file
+output as `diffFiles`. Missing files in either tree are inferred as `added` /
+`removed`. Identical files are skipped.
+
+```ts
+import { diffDirectories } from '@dui-toolkit/plugin-diff'
+
+const r = await diffDirectories('./v1', './v2', { sortFiles: true })
+console.log(r.output)
+```
+
+<Callout variant="note">
+  Uses `node:fs/promises` under the hood — no native binary dependencies. Symlinks
+  are not followed; binary files are skipped silently.
+</Callout>
+
+---
+
+## Plugin integration
+
+Register the plugin to hook into DUI's lifecycle events:
+
+```ts
+import { usePlugin } from '@bdocs/dui'
+import { diffPlugin } from '@dui-toolkit/plugin-diff'
+
+usePlugin(diffPlugin)
+```
+
+`diffPlugin` is a no-op identity plugin today — wiring it up preserves future
+forward-compatibility (e.g. lifecycle hooks, telemetry, theme registration).
+
+---
+
+## Theme customization
+
+Every color in the output is theme-driven. Configure colors project-wide through
+DUI's standard `configure()`:
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({
+  theme: {
+    diff: {
+      add: '#88ff88',
+      del: { fg: '#ff8888', bg: '#1a0808' },
+      hunk: 'brightcyan',
+      wordAdd: 'bgGreen',
+      wordDel: 'bgRed',
+    },
+  },
+})
+```
+
+Or per-call via the option on the renderer:
+
+```ts
+const r = diff(oldStr, newStr, {
+  addColor: '#88ff88',
+  delColor: '#ff6666',
+  hunkColor: 'magenta',
+})
+```
+
+Available theme slots (also re-exported as `DIFF_THEME_SLOTS` for tooling / autocomplete):
+
+| Slot key | Default | Description |
+|---|---|---|
+| `add` | green | Added line fg |
+| `del` | red | Deleted line fg |
+| `context` | gray | Unchanged context line |
+| `hunk` | cyan | `@@ ... @@` header |
+| `linenum` | gray (bold) | Line-number column |
+| `gutter` | gray (bold) | Gutter column |
+| `fileHeader` | bold white | File header line |
+| `stat` | gray | "+1, -1" summary line |
+| `wordAdd` | bgGreen black | Intra-line added-word highlight |
+| `wordDel` | bgRed white | Intra-line removed-word highlight |
+
+To suppress colors entirely for one render, override with identity functions:
+
+```ts
+const plain = diff(oldStr, newStr, {
+  addColor: (s) => s,
+  delColor: (s) => s,
+})
+```
+
+---
+
+## Examples
+
+### Show a code-review summary in CI
+
+```ts
+import { diff } from '@dui-toolkit/plugin-diff'
+import { configure } from '@bdocs/dui'
+
+configure({ prefix: 'review-bot' })
+
+const r = diff(previousVersion, incomingVersion, { filename: 'src/api.ts' })
+console.log(r.output)
+```
+
+### Compare two markdown files side-by-side in a tty
+
+```ts
+import { diffSideBySide } from '@dui-toolkit/plugin-diff'
+
+if (process.stdout.isTTY) {
+  console.log(diffSideBySide(a, b, { filename: 'design.md', context: 2 }).output)
+} else {
+  console.log(diff(a, b, { filename: 'design.md' }).output)
+}
+```
+
+### Detect added/removed files between commits
+
+```ts
+import { diffFiles } from '@dui-toolkit/plugin-diff'
+
+const changedFiles = git.lsFiles({ staged: true })
+
+const r = diffFiles(
+  changedFiles.map((p) => ({
+    oldPath: p,
+    newPath: p,
+    oldContent: git.show(`${HEAD}:${p}`),
+    newContent: git.show(`:${p}`),
+  })),
+)
+
+console.log(r.output)
+console.error(`${r.totals.files} files changed (+${r.totals.additions}, -${r.totals.deletions})`)
+```
+
+### Apply a different palette to monorepo subpackages
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({
+  theme: {
+    diff: {
+      add: '#bbffbb',
+      del: '#ffbbbb',
+      hunk: '#88ccff',
+    },
+  },
+})
+```
+
+---
+
+## How it works
+
+### `structuredPatch` under the hood
+
+The core renderer (`diff`) delegates hunk construction to
+[`diff.structuredPatch()`](https://github.com/kpdecker/jsdiff). This gives us
+pre-bunked output with positional metadata:
+
+```ts
+{
+  oldStart: 12,
+  oldLines: 7,
+  newStart: 12,
+  newLines: 8,
+  lines: [
+    ' ctx before',     //  ' '
+    ' ctx before',
+    '-old line',
+    '+new line',
+    ' ctx after',
+    ...
+  ]
+}
+```
+
+This eliminates the entire class of custom-hunk-builder off-by-one bugs that bespoke
+diff renderers tend to accumulate — the algorithm handles EOF newlines, multi-hunk
+grouping, and line-counter bookkeeping for us. `ignoreNewlineAtEof: true` is passed
+so "a" vs "a\nb\nc" isn't flagged as a full-block replacement.
+
+### Side-by-side pairing
+
+When rendering side-by-side, removed and added runs are buffered separately then
+flushed in matched pairs (`[rem1, add1]`, `[rem2, add2]`, …). If the run lengths
+differ (e.g. 3 removals + 5 additions), the smaller side is padded with empty dim
+placeholders so the columns stay aligned row-for-row.
+
+### Color emission
+
+Colors are emitted as **raw SGR codes** (e.g. `\x1b[32m`, `\x1b[1;90m`) rather than
+delegating to `@bdocs/dui`'s `colors.X` chain. This means the plugin's output is
+deterministic across test runners (vitest, jest, CI) regardless of worker pool
+isolation — the ANSI will go where the caller puts it. Theme overrides always win
+over the defaults, so the consumer's `DuiTheme` config takes precedence.

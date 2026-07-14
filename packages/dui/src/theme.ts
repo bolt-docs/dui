@@ -1,5 +1,5 @@
 import type { ColorInput } from "./color";
-import { colorize, colors } from "./color";
+import { colorize, colorMap } from "./color";
 
 export type ColorStyle = ColorInput | { fg?: ColorInput; bg?: ColorInput };
 
@@ -196,7 +196,14 @@ function getDefaultFn(slot: string): ColorFn {
 	};
 
 	const name = map[slot];
-	if (name && colors[name]) return colors[name];
+	// `name` is statically known to be a ColorName (the map only references the
+	// canonical foreground/style names). We expose the dynamic-looking lookup
+	// through the loose `colorMap` escape hatch so callers retain the option to
+	// pass arbitrary strings to `applyStyle()` elsewhere.
+	if (name) {
+		const fn = colorMap[name];
+		if (fn) return fn;
+	}
 	return (s: string) => s;
 }
 

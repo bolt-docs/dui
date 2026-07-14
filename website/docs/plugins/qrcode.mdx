@@ -1,0 +1,214 @@
+---
+title: QR Code
+sidebarPosition: 6
+description: Render scannable QR codes directly in the terminal using full-block cell pairs, with a configurable width cap and per-line bg/fg SGR scoping that prevents terminal BCE bands — any URL or text, with custom colors, error correction, and an optional label.
+---
+
+import PackageManager from '../../components/PackageManager'
+
+<PackageManager pkg="@dui-toolkit/plugin-qrcode" />
+
+```ts
+import { qrcode } from '@dui-toolkit/plugin-qrcode'
+```
+
+`@dui-toolkit/plugin-qrcode` renders **scannable QR codes** directly in the terminal —
+perfect for onboarding flows, payment links, share codes, OAuth device-pairing prompts,
+or any CLI scenario where you need to ferry a piece of data off-screen and onto a
+phone. The plugin cleanly separates two responsibilities:
+
+- **Encoder** — delegates to the production-tested [`qrcode`](https://www.npmjs.com/package/qrcode)
+  library to produce the QR matrix.
+- **Renderer** — maps every matrix module to terminal characters (`██` / `  ` at natural
+  size, or `█` / ` ` when you cap `width`) and wraps each row in its own fg/bg SGR block.
+
+Background colors (`bgColor`) are scoped **per row** so the active `\x1b[48;2;…m` never
+spans a `\n`. That avoids the Background-Color-Erase (BCE) bug that produces horizontal
+bands on modern terminals when a body-wide bg SGR stays open across newlines.
+
+Colors go through DUI's color engine — hex, `rgb()`, and `oklch()` all work.
+
+---
+
+## qrcode
+
+```ts
+qrcode(text: string, options?: QRCodeRenderOptions): Promise<string>
+```
+
+Returns a `Promise<string>` resolving to an **ANSI-escaped QR code** ready to
+`console.log()`, pipe into a DUI wrapper, or stash as a string.
+
+Empty `text` throws: `No input text provided for QR code generation`.
+
+```ts
+import { qrcode } from '@dui-toolkit/plugin-qrcode'
+
+// Natural size (29 modules × 2 chars = 58 cols × 29 rows for a v=2 URL),
+// transparent bg
+const art = await qrcode('https://github.com/bolt-docs/dui')
+
+// Branded palette — both colors explicit
+const branded = await qrcode('https://example.com/wallet', {
+  color: '#22c55e',
+  bgColor: '#0a0a0a',
+})
+
+// Narrow (29 cols × 29 rows) by capping `width`
+const compact = await qrcode('https://github.com/bolt-docs/dui', { width: 40 })
+
+console.log(art, branded, compact)
+```
+
+### Options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `text` | `string` | — | The URL or content to encode (required; non-empty) |
+| `width` | `number` | _(natural)_ | Target width in columns. Natural size is `2 × moduleCount`. Below that (and `>= moduleCount`) switches to single-char cells. Below `moduleCount` clamps back to natural. |
+| `errorCorrection` | `"L" \| "M" \| "Q" \| "H"` | `"M"` | Reed-Solomon error correction level — see below |
+| `color` | `string` | `"#000000"` | Dark modules. Hex, `rgb()`, or `oklch()`. |
+| `bgColor` | `string` | _(transparent)_ | Light modules. Omit for terminal default bg. Per-row SGR when set (BCE-safe). Same formats as `color`. |
+| `margin` | `number` | `2` | Quiet zone in modules around the code |
+| `label` | `boolean \| string` | `true` | `true` = dimmed encoded text (truncated to 40 chars); `false` = no label; `string` = custom caption |
+| `showVersion` | `boolean` | `false` | Replace the label with `QR v<n> \| <errorCorrection>` |
+
+<Callout variant="info">
+  **Error correction levels.** `L` (~7% recoverable) is the densest physical size on
+  screen — best for clean screens and short text. `M` (~15%) is the default and
+  handles most real-world camera quality. `Q` (~25%) tolerates a center overlay
+  (logo, badge, etc.) at the cost of a chunkier matrix. `H` (~30%) survives heavy
+  print noise, dirt on the lens, or stickers stuck on the code.
+</Callout>
+
+### Return value
+
+A `string` with all SGR styling baked in — pipe it through `process.stdout.write`,
+embed it inside a `box()`, wrap it in a `table`, or write it to a file.
+
+### Cell-pair rendering
+
+```text
+Natural size (no `width`, or `width >= 2 × moduleCount`):
+  Dark module  →  '██'    (two U+2588 FULL BLOCK glyphs, fg color)
+  Light module →  '  '    (two spaces; transparent unless bgColor is set)
+
+Narrow size (`width < 2 × moduleCount` and `width >= moduleCount`):
+  Dark module  →  '█'     (one U+2588 FULL BLOCK glyph, fg color)
+  Light module →  ' '     (one space; transparent unless bgColor is set)
+```
+
+Each row is wrapped as `<fgSgr><bgSgr><row>\x1b[0m` — the `\n` between rows is
+emitted **after** the per-row reset, so no bg SGR is active at newline time. The
+optional label line uses the same pattern.
+
+---
+
+## Examples
+
+### Default URL (natural size)
+
+```ts
+import { qrcode } from '@dui-toolkit/plugin-qrcode'
+
+const art = await qrcode('https://github.com/bolt-docs/dui')
+console.log(art)
+```
+
+Emits the QR at natural matrix size. Light modules inherit the terminal default bg.
+
+### Cap the width to fit a narrow column budget
+
+```ts
+const compact = await qrcode('https://github.com/bolt-docs/dui', { width: 40 })
+console.log(compact)
+```
+
+When `40` is below the natural width (~58 for a v=2 URL), the renderer switches to
+single-char cells — half the width, still scannable.
+
+### Branded fg + bg palette
+
+```ts
+const branded = await qrcode('https://example.com/wallet', {
+  color: '#22c55e',
+  bgColor: '#0a0a0a',
+  margin: 1,
+})
+
+console.log(branded)
+```
+
+### Custom label
+
+```ts
+const labeled = await qrcode('https://example.com/pair', {
+  label: 'Scan to continue',
+  color: '#22c55e',
+})
+console.log(labeled)
+```
+
+### Debug-friendly version tag
+
+```ts
+const debug = await qrcode('https://example.com/login/device', {
+  showVersion: true,
+  errorCorrection: 'H',
+  label: true,
+})
+
+console.log(debug)
+// bottom line: "QR v5 | H"
+```
+
+### Inside a Box
+
+```ts
+import { qrcode } from '@dui-toolkit/plugin-qrcode'
+import { box } from '@bdocs/dui'
+
+const art = await qrcode('https://example.com/login/device', { label: false })
+console.log(box([art], { title: 'device-pairing' }))
+```
+
+`box()` accepts `string[]` and splits embedded newlines, so wrap the QR string
+in a one-element array.
+
+### OAuth device flow
+
+```ts
+import { qrcode } from '@dui-toolkit/plugin-qrcode'
+
+async function deviceActivation(verificationUri: string, userCode: string) {
+  const data = `${verificationUri}?user_code=${userCode}`
+  console.log(
+    await qrcode(data, {
+      label: userCode,
+      color: '#22c55e',
+      errorCorrection: 'Q',
+    }),
+  )
+  console.log('  scan with your phone — code: ' + userCode)
+}
+```
+
+Pass a **string** `label` for a custom caption (e.g. the short user code).
+This is the canonical “scan this with your phone” pattern used by many CLI
+auth flows (GitHub CLI, `fly auth login`, Vercel, etc.).
+
+---
+
+## How it works
+
+1. **Validate** — empty `text` is rejected up front.
+2. **Encode** — `QRCode.create(text, opts)` returns a matrix. `errorCorrectionLevel`
+   and `margin` are passed through to the upstream library.
+3. **Choose cell size** — natural (`██`/`  `) vs narrow (`█`/` `) from the `width` cap.
+4. **Render rows** — each module becomes a cell character string (no ANSI yet).
+5. **Apply per-row SGR** — `toAnsiFg` / `toAnsiBg` from `@bdocs/dui`, then
+   `wrapRowSgr` so every newline is preceded by `\x1b[0m`.
+6. **Optional label** — dimmed auto text, custom string, or version tag.
+
+Unlike most CLI QR libraries, this plugin **never rasterizes to an image** —
+it goes matrix → ANSI. Runtime dependency: `qrcode` only (plus `@bdocs/dui`).

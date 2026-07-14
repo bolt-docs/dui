@@ -4,7 +4,7 @@ sidebarPosition: 1
 description: Utilidades de UI para terminal — cajas, colores, logging, listas, divisores y más.
 ---
 
-import { Terminal, Paintbrush, ListOrdered, Table, MessageSquare, Activity, Cog, Type, PanelTop, SquareDashed, SplitSquareHorizontal, Bot, TrendingUp, Play, Palette } from 'lucide-react'
+import { Terminal, Paintbrush, ListOrdered, Table, MessageSquare, Activity, Cog, Type, PanelTop, SquareDashed, SplitSquareHorizontal, Bot, TrendingUp, Play, Palette, Package, File, BarChart3, GitCompare, QrCode, Image as ImageIcon } from 'lucide-react'
 
 **DUI** — toolkit de UI para terminal para apps CLI de Node.js. Consciente de ANSI, cero dependencias (solo `string-width`), tree-shakeable.
 
@@ -77,5 +77,32 @@ console.log(bullet(['Archivo A', 'Archivo B', 'Archivo C']))
   </Card>
   <Card title="Agentes AI y Skills" icon={<Bot />} href="/docs/es/overview/ai-agents">
     Instala la skill de DUI para Claude Code, Cursor y más
+  </Card>
+</Cards>
+
+---
+
+## Plugins oficiales
+
+Extiende DUI con paquetes opcionales. Guía completa: [Plugins](/docs/es/plugins).
+
+<Cards cols={2}>
+  <Card title="Markdown" icon={<File />} href="/docs/es/plugins/markdown">
+    Renderiza markdown con colores, tablas y código resaltado
+  </Card>
+  <Card title="Chart" icon={<BarChart3 />} href="/docs/es/plugins/chart">
+    Gráficos de barras, columnas, líneas, pie y sparkline
+  </Card>
+  <Card title="Image" icon={<ImageIcon />} href="/docs/es/plugins/image">
+    PNG, JPG y GIF en la terminal (ANSI + Kitty)
+  </Card>
+  <Card title="Diff" icon={<GitCompare />} href="/docs/es/plugins/diff">
+    Diffs unificados, lado a lado y a nivel de palabra
+  </Card>
+  <Card title="Código QR" icon={<QrCode />} href="/docs/es/plugins/qrcode">
+    Códigos QR escaneables con colores, tope de ancho y etiquetas
+  </Card>
+  <Card title="Todos los plugins" icon={<Package />} href="/docs/es/plugins">
+    Índice de plugins y cómo crear el tuyo
   </Card>
 </Cards>

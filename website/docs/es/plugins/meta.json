@@ -1,1 +1,13 @@
-{ "title": "Plugins", "icon": "Package", "order": 3 }
+{
+  "title": "Plugins",
+  "icon": "Package",
+  "order": 3,
+  "pages": [
+    "index",
+    "markdown",
+    "chart",
+    "image",
+    "diff",
+    "qrcode"
+  ]
+}

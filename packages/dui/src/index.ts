@@ -24,7 +24,7 @@ export {
 	round,
 	single,
 } from "./box";
-export type { ColorInput, PaintTarget, ParsedColor } from "./color";
+export type { ColorInput, ColorName, PaintTarget, ParsedColor } from "./color";
 export {
 	applyStyle,
 	colorize,
@@ -33,6 +33,7 @@ export {
 	interpolateColor,
 	isColorSupported,
 	parseColor,
+	refreshColorSupport,
 	setColorSupported,
 	toAnsiBg,
 	toAnsiFg,
@@ -64,6 +65,7 @@ export { steps } from "./steps";
 export type { TableColumnOptions, TableOptions } from "./table";
 export { table } from "./table";
 export type { ColorStyle, DuiTheme } from "./theme";
+export { resolveColor, resolveColorSimple } from "./theme";
 export type { DuiPlugin, PluginAPI, PluginEvents } from "./plugin";
 export { emit, usePlugin } from "./plugin";
 export {
