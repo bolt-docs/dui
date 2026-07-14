@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-markdown
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`dfceb01`](https://github.com/bolt-docs/dui/commit/dfceb0181c85769d66137eac90827f681d988543), [`2efd8ef`](https://github.com/bolt-docs/dui/commit/2efd8ef81aa5ab7a3ddf828a0a5b10f58024badf)]:
+  - @bdocs/dui@0.5.0
+
 ## 0.2.0
 
 ### Minor Changes
