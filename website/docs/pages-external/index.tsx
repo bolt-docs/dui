@@ -18,7 +18,7 @@ export const layout = ({ children }: { children: React.ReactNode }) => (
 						<span className="text-terminal-green font-bold">$</span>
 						<span className="text-body font-bold">DUI CLI Toolkit</span>
 						<span className="bg-soft border border-strong text-muted px-1.5 py-0.25 text-[10px] rounded">
-							v0.4.0
+							v0.5.0
 						</span>
 					</div>
 					<div>©2026 Boltdocs Contributors. MIT License.</div>
