@@ -10,7 +10,8 @@
  *       Works best with 24-bit color terminals.
  */
 
-import { colors, box, renderStatic } from "@bdocs/dui";
+import { colors, box } from "@bdocs/dui";
+import { readFile } from "node:fs/promises";
 import { createMinimalPng, createGradientPng } from "./helpers.js";
 
 async function sleep(ms: number) {
@@ -54,6 +55,14 @@ async function main() {
 	console.log("  With dithering enabled:");
 	const dithered = await renderAnsi(gradientPng, { width: 40, dither: true });
 	console.log(box([dithered], { style: "single", width: 42 }));
+	console.log("\n");
+
+	// ── Render actual image file ───────────────────────────────
+
+	console.log("  Actual image (image.jpeg):");
+	const imageBuffer = await readFile(new URL("./image.jpeg", import.meta.url));
+	const actualImage = await renderAnsi(imageBuffer, { width: 40 });
+	console.log(box([actualImage], { style: "single", width: 42 }));
 	console.log("\n");
 
 	// ── Render with dark background ───────────────────────────
