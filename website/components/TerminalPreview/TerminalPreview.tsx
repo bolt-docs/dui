@@ -23,7 +23,7 @@ function isDividerLine(line: string): boolean {
 }
 
 function extractAnsiColor(line: string): string | undefined {
-	const match = line.match(/\u001b\[(\d+(?:\;\d+)*)m/);
+	const match = line.match(/\u001b\[(\d+(?:;\d+)*)m/);
 	if (!match) return undefined;
 	const codes = match[1].split(";").map(Number);
 	for (const code of codes) {
