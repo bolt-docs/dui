@@ -69,14 +69,33 @@ const IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)/g;
 export function tokenizeInline(text: string): InlineToken[] {
 	const tokens: InlineToken[] = [];
 	let remaining = text;
-	let lastIndex = 0;
 
 	const regexps: { re: RegExp; build: (...m: string[]) => InlineToken }[] = [
-		{ re: IMAGE_RE, build: (_, alt, url) => ({ type: "image" as const, content: alt || url, alt, url }) },
-		{ re: LINK_RE, build: (_, content, url) => ({ type: "link" as const, content, url }) },
-		{ re: CODE_RE, build: (_, content) => ({ type: "code" as const, content }) },
-		{ re: BOLD_RE, build: (_, content) => ({ type: "bold" as const, content }) },
-		{ re: ITALIC_RE, build: (_, content) => ({ type: "italic" as const, content }) },
+		{
+			re: IMAGE_RE,
+			build: (_, alt, url) => ({
+				type: "image" as const,
+				content: alt || url,
+				alt,
+				url,
+			}),
+		},
+		{
+			re: LINK_RE,
+			build: (_, content, url) => ({ type: "link" as const, content, url }),
+		},
+		{
+			re: CODE_RE,
+			build: (_, content) => ({ type: "code" as const, content }),
+		},
+		{
+			re: BOLD_RE,
+			build: (_, content) => ({ type: "bold" as const, content }),
+		},
+		{
+			re: ITALIC_RE,
+			build: (_, content) => ({ type: "italic" as const, content }),
+		},
 	];
 
 	while (remaining.length > 0) {
@@ -86,7 +105,10 @@ export function tokenizeInline(text: string): InlineToken[] {
 			const match = re.exec(remaining);
 			if (match && match.index === 0) {
 				if (match.index > 0) {
-					tokens.push({ type: "text", content: remaining.slice(0, match.index) });
+					tokens.push({
+						type: "text",
+						content: remaining.slice(0, match.index),
+					});
 				}
 				tokens.push(build(...match));
 				remaining = remaining.slice(match[0].length);
@@ -103,10 +125,16 @@ export function tokenizeInline(text: string): InlineToken[] {
 	return tokens;
 }
 
-function parseListItem(line: string): { checked: boolean | null; text: string } {
+function parseListItem(line: string): {
+	checked: boolean | null;
+	text: string;
+} {
 	const checkbox = CHECKBOX_RE.exec(line);
 	if (checkbox) {
-		return { checked: checkbox[1] === "x" || checkbox[1] === "X", text: checkbox[2] };
+		return {
+			checked: checkbox[1] === "x" || checkbox[1] === "X",
+			text: checkbox[2],
+		};
 	}
 	return { checked: null, text: line };
 }
@@ -210,9 +238,15 @@ export function tokenize(text: string): BlockToken[] {
 
 		const tableMatch = TABLE_RE.exec(line);
 		if (tableMatch) {
-			const headerCells = line.split("|").filter(Boolean).map((c) => c.trim());
+			const headerCells = line
+				.split("|")
+				.filter(Boolean)
+				.map((c) => c.trim());
 			i++;
-			const sepRow = lines[i]?.split("|").filter(Boolean).map((c) => c.trim());
+			const sepRow = lines[i]
+				?.split("|")
+				.filter(Boolean)
+				.map((c) => c.trim());
 			if (sepRow && sepRow.every((c) => /^:?-+:?$/.test(c))) {
 				i++;
 			}
@@ -220,7 +254,12 @@ export function tokenize(text: string): BlockToken[] {
 			while (i < lines.length) {
 				const m = TABLE_RE.exec(lines[i]);
 				if (m) {
-					rows.push(lines[i].split("|").filter(Boolean).map((c) => c.trim()));
+					rows.push(
+						lines[i]
+							.split("|")
+							.filter(Boolean)
+							.map((c) => c.trim()),
+					);
 					i++;
 				} else {
 					break;
