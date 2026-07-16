@@ -56,4 +56,52 @@ describe("resolveColor", () => {
 		const result = apply("OK");
 		expect(result).toMatch(/\x1b\[32m/);
 	});
+
+	describe("markdown theme slots", () => {
+		it("applies default heading1 color (#ff6e6e)", () => {
+			const { apply } = resolveColor("markdown.heading1", undefined);
+			const result = apply("H1");
+			expect(result).toMatch(/\x1b\[38;2;255;110;110m/);
+		});
+
+		it("applies default heading6 color (#b48cff)", () => {
+			const { apply } = resolveColor("markdown.heading6", undefined);
+			const result = apply("H6");
+			expect(result).toMatch(/\x1b\[38;2;180;140;255m/);
+		});
+
+		it("applies default codeInline color (#96c8ff)", () => {
+			const { apply } = resolveColor("markdown.codeInline", undefined);
+			const result = apply("chip");
+			expect(result).toMatch(/\x1b\[38;2;150;200;255m/);
+		});
+
+		it("applies default quoteBar color (#64788c)", () => {
+			const { apply } = resolveColor("markdown.quoteBar", undefined);
+			const result = apply("│");
+			expect(result).toMatch(/\x1b\[38;2;100;120;140m/);
+		});
+
+		it("applies default listCheck color (#50c878)", () => {
+			const { apply } = resolveColor("markdown.listCheck", undefined);
+			const result = apply("✔");
+			expect(result).toMatch(/\x1b\[38;2;80;200;120m/);
+		});
+
+		it("respects theme override for markdown slots", () => {
+			const theme: DuiTheme = { markdown: { heading2: "#abcdef" } };
+			const { apply } = resolveColor("markdown.heading2", theme);
+			const result = apply("H2");
+			expect(result).toMatch(/\x1b\[38;2;171;205;239m/);
+		});
+
+		it("supports fg/bg ColorStyle for inline code slot", () => {
+			const theme: DuiTheme = {
+				markdown: { codeInline: { fg: "#ffffff", bg: "#000000" } },
+			};
+			const { apply, bg } = resolveColor("markdown.codeInline", theme);
+			expect(apply("x")).toMatch(/\x1b\[38;2;255;255;255m/);
+			expect(bg!("x")).toMatch(/\x1b\[48;2;0;0;0m/);
+		});
+	});
 });

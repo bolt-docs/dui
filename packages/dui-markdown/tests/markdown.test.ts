@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { tokenize, tokenizeInline } from "../src/tokenizer";
 import { md } from "../src/renderer";
-import { stripAnsi } from "@bdocs/dui";
+import { configure, getConfig, resetConfig, setColorSupported, stripAnsi } from "@bdocs/dui";
 
 describe("tokenizeInline", () => {
 	it("parses bold text", () => {
@@ -372,5 +372,106 @@ describe("renderer", () => {
 		const clean = stripAnsi(output);
 		expect(clean).toContain("Done");
 		expect(clean).toContain("Todo");
+	});
+});
+
+describe("renderer theme integration", () => {
+	// The renderer routes color slots through DUI's `colorize()`, which
+	// does NOT gate on `isColorSupported` itself — BUT the broader DUI
+	// toolchain (e.g. `colors.dim`) does, and several cloned helpers in
+	// the renderer path read `isColorSupported` indirectly. Vitest boots
+	// without a TTY so we flip the flag on for the whole describe block
+	// to keep hex SGR assertions deterministic. Don't move this to
+	// `afterEach` — moving silently drops SGR codes on the first run.
+	beforeAll(() => {
+		setColorSupported(true);
+	});
+
+	afterEach(() => {
+		resetConfig();
+		setColorSupported(true);
+	});
+
+	it("uses default heading color when no theme override is set", async () => {
+		const output = await md("# Title");
+		// Default markdown.heading1 is `#ff6e6e` → 24-bit ANSI red.
+		expect(output).toMatch(/\x1b\[38;2;255;110;110m/);
+	});
+
+	it("honors theme override for headings", async () => {
+		configure({ theme: { markdown: { heading1: "#00ff00" } } });
+		const output = await md("# Theme Title");
+		expect(output).toMatch(/\x1b\[38;2;0;255;0m/);
+	});
+
+	it("honors theme override for inline code", async () => {
+		configure({
+			theme: { markdown: { codeInline: { fg: "#ffcc00", bg: "#202020" } } },
+		});
+		const output = await md("`chip`");
+		expect(output).toMatch(/\x1b\[38;2;255;204;0m/);
+		expect(output).toMatch(/\x1b\[48;2;32;32;32m/);
+	});
+
+	it("emits default chip background for inline code", async () => {
+		// The default `markdown.codeInline` is `{ fg: "#96c8ff",
+		// bg: "#282c34" }` so out-of-the-box inline code keeps a chip
+		// background instead of falling through to fg-only styling.
+		const output = await md("`chip`");
+		expect(output).toMatch(/\x1b\[38;2;150;200;255m/);
+		expect(output).toMatch(/\x1b\[48;2;40;44;52m/);
+	});
+
+	it("honors theme override for quote bar", async () => {
+		configure({ theme: { markdown: { quoteBar: "#abcdef" } } });
+		const output = await md("> Quoted");
+		expect(output).toMatch(/\x1b\[38;2;171;205;239m/);
+	});
+
+	it("honors theme override for list checkbox states", async () => {
+		configure({
+			theme: { markdown: { listCheck: "#11ff11", listCross: "#ff1111" } },
+		});
+		const output = await md("- [x] done\n- [ ] todo");
+		expect(output).toMatch(/\x1b\[38;2;17;255;17m/);
+		expect(output).toMatch(/\x1b\[38;2;255;17;17m/);
+	});
+
+	it("honors theme override for hyperlink text and url", async () => {
+		configure({
+			theme: { markdown: { linkText: "#112233", linkUrl: "#445566" } },
+		});
+		const output = await md("[label](https://example.com)");
+		expect(output).toMatch(/\x1b\[38;2;17;34;51m/);
+		expect(output).toMatch(/\x1b\[38;2;68;85;102m/);
+	});
+
+	it("renders default thematic break with the markdown thematic color", async () => {
+		const output = await md("---");
+		// Default `markdown.thematic` is `#888888` — represented as the
+		// 24-bit gray (136, 136, 136) once `colorize` emits its SGR.
+		expect(output).toMatch(/\x1b\[38;2;136;136;136m/);
+	});
+
+	it("honors theme override for thematic break", async () => {
+		configure({ theme: { markdown: { thematic: "#999999" } } });
+		const output = await md("---");
+		// Thematic break is rendered directly off `markdown.thematic`,
+		// so the configured hex color must appear in the SGR stream.
+		expect(output).toMatch(/\x1b\[38;2;153;153;153m/);
+	});
+
+	it("falls back to defaults when theme is empty", async () => {
+		configure({ theme: { markdown: {} } });
+		const output = await md("# Default");
+		expect(output).toMatch(/\x1b\[38;2;255;110;110m/);
+	});
+
+	it("h6 keeps its distinct slot color (#b48cff)", async () => {
+		const output = await md("###### H6");
+		// h6 maps to `markdown.heading6` which defaults to `#b48cff`
+		// (180, 140, 255) — not the h5 fallback, so a stylesheet
+		// override of `heading6` still flows through correctly.
+		expect(output).toMatch(/\x1b\[38;2;180;140;255m/);
 	});
 });

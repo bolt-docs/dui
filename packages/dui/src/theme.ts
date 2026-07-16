@@ -3,14 +3,6 @@ import { colorize, colorMap } from "./color";
 
 export type ColorStyle = ColorInput | { fg?: ColorInput; bg?: ColorInput };
 
-function _isColorStyle(
-	obj: unknown,
-): obj is { fg?: ColorInput; bg?: ColorInput } {
-	return (
-		typeof obj === "object" && obj !== null && !("startsWith" in (obj as object))
-	);
-}
-
 export interface LoggerTheme {
 	info?: ColorStyle;
 	warn?: ColorStyle;
@@ -101,6 +93,36 @@ export interface TableTheme {
 	border?: ColorStyle;
 }
 
+export interface MarkdownTheme {
+	heading1?: ColorStyle;
+	heading2?: ColorStyle;
+	heading3?: ColorStyle;
+	heading4?: ColorStyle;
+	heading5?: ColorStyle;
+	heading6?: ColorStyle;
+	codeBorder?: ColorStyle;
+	codeLang?: ColorStyle;
+	/**
+	 * Color for inline-code chips.
+	 *
+	 * Default ships as `{ fg, bg }` so the chip sidebar reads visually
+	 * consistent with the rest of the markdown palette. Pass a plain
+	 * string for fg-only styling (no background). Pass `{ fg: "..."}`
+	 * to keep the bg from the default while overriding the foreground.
+	 */
+	codeInline?: ColorStyle;
+	linkText?: ColorStyle;
+	linkUrl?: ColorStyle;
+	imageText?: ColorStyle;
+	quoteBar?: ColorStyle;
+	quoteText?: ColorStyle;
+	listBullet?: ColorStyle;
+	listNumber?: ColorStyle;
+	listCheck?: ColorStyle;
+	listCross?: ColorStyle;
+	thematic?: ColorStyle;
+}
+
 export interface DuiTheme {
 	success?: ColorStyle;
 	error?: ColorStyle;
@@ -121,31 +143,49 @@ export interface DuiTheme {
 	tree?: TreeTheme;
 	progress?: ProgressTheme;
 	table?: TableTheme;
+	markdown?: MarkdownTheme;
 }
 
 type ColorFn = (s: string) => string;
 
+// Pair-shaped spec returned by `getDefaultFn` so that compound
+// `{fg, bg}` defaults (e.g. the `markdown.codeInline` chip) expose
+// the background as a separate painter — same shape as
+// `resolveColor`'s public output.
+type DefaultSpec = { apply: ColorFn; bg?: ColorFn };
+
+// String for fg-only defaults; explicit object for compound
+// `{fg, bg}` defaults so both layers can be themed independently.
+type DefaultValue = string | { fg: string; bg: string };
+
 function resolveColorStyle(
 	style: ColorStyle | undefined,
-	defaultFn: ColorFn,
+	defaultSpec: DefaultSpec,
 ): { apply: ColorFn; bg?: ColorFn } {
-	if (!style) return { apply: defaultFn };
+	// No user/theme override → hand back the default spec verbatim so
+	// compound defaults keep their bg available to consumers of
+	// `resolveColor`.
+	if (!style) return defaultSpec;
 
 	if (typeof style === "string") {
 		return { apply: (s: string) => colorize(s, style, "fg") };
 	}
 
 	const { fg, bg } = style;
-	const apply: ColorFn = fg ? (s: string) => colorize(s, fg, "fg") : defaultFn;
+	const apply: ColorFn = fg ? (s: string) => colorize(s, fg, "fg") : defaultSpec.apply;
+	// Falsy `bg` (absent key, undefined, or empty string) falls through
+	// to the default's bg, so passing `{ fg: "..." }` keeps the chip
+	// background that ships with markdown defaults. Pass a string
+	// `codeInline` (no object) to opt out of any background.
 	const bgFn: ColorFn | undefined = bg
 		? (s: string) => colorize(s, bg, "bg")
-		: undefined;
+		: defaultSpec.bg;
 
 	return { apply, bg: bgFn };
 }
 
-function getDefaultFn(slot: string): ColorFn {
-	const map: Record<string, string> = {
+function getDefaultFn(slot: string): DefaultSpec {
+	const map: Record<string, DefaultValue> = {
 		"logger.warn": "yellow",
 		"logger.error": "red",
 		"logger.success": "green",
@@ -193,18 +233,55 @@ function getDefaultFn(slot: string): ColorFn {
 		"progress.bar": "cyan",
 		"table.header": "bold",
 		"box.title": "bold",
+		// Markdown defaults — hex colors map directly through `colorize`
+		// (which handles 24-bit ANSI itself) so each heading level keeps
+		// its distinctive palette without needing raw SGR literals.
+		// `codeInline` is a compound `{fg, bg}` default so the chip
+		// background matches the rest of the palette out of the box;
+		// consumers can still pass a plain string for fg-only chips.
+		"markdown.heading1": "#ff6e6e",
+		"markdown.heading2": "#ffb450",
+		"markdown.heading3": "#ffdc50",
+		"markdown.heading4": "#82dc82",
+		"markdown.heading5": "#64c8ff",
+		"markdown.heading6": "#b48cff",
+		"markdown.codeBorder": "#646478",
+		"markdown.codeLang": "#888888",
+		"markdown.codeInline": { fg: "#96c8ff", bg: "#282c34" },
+		"markdown.linkText": "#58a6ff",
+		"markdown.linkUrl": "#888888",
+		"markdown.imageText": "#888888",
+		"markdown.quoteBar": "#64788c",
+		"markdown.quoteText": "#a0aab4",
+		"markdown.listBullet": "#888888",
+		"markdown.listNumber": "#888888",
+		"markdown.listCheck": "#50c878",
+		"markdown.listCross": "#b4b4b4",
+		"markdown.thematic": "#888888",
 	};
 
-	const name = map[slot];
-	// `name` is statically known to be a ColorName (the map only references the
-	// canonical foreground/style names). We expose the dynamic-looking lookup
-	// through the loose `colorMap` escape hatch so callers retain the option to
-	// pass arbitrary strings to `applyStyle()` elsewhere.
-	if (name) {
-		const fn = colorMap[name];
-		if (fn) return fn;
+	const value = map[slot];
+	// Hex defaults (markdown.*) round-trip through `colorize` so we keep
+	// typed `ColorName` lookups for named colors and one consistent color
+	// path everywhere else. Compound `{fg, bg}` defaults expose fg and
+	// bg as separate `ColorFn` so callers (and the renderer's bg
+	// fallback branch) can compose them like user-supplied overrides.
+	if (value !== undefined) {
+		if (typeof value === "string") {
+			if (value.startsWith("#")) {
+				const hex = value;
+				return { apply: (s: string) => colorize(s, hex, "fg") };
+			}
+			const fn = colorMap[value];
+			if (fn) return { apply: fn };
+		} else {
+			return {
+				apply: (s: string) => colorize(s, value.fg, "fg"),
+				bg: (s: string) => colorize(s, value.bg, "bg"),
+			};
+		}
 	}
-	return (s: string) => s;
+	return { apply: (s: string) => s };
 }
 
 function getFromTheme(
@@ -240,8 +317,8 @@ export function resolveColor(
 		custom = getFromTheme(theme, globalSlot);
 	}
 
-	const defaultFn = getDefaultFn(slot);
-	return resolveColorStyle(custom, defaultFn);
+	const defaultSpec = getDefaultFn(slot);
+	return resolveColorStyle(custom, defaultSpec);
 }
 
 export function resolveColorSimple(

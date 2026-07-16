@@ -1,22 +1,24 @@
 import {
-	colors,
-	divider,
+	getConfig,
+	resolveColor,
 	table as duiTable,
 	terminalWidth,
 	visibleLength,
 	stripAnsi,
 } from "@bdocs/dui";
-import { tokenize, type BlockToken, type BlockTokenHeading, type BlockTokenCode, type BlockTokenList, type BlockTokenQuote, type BlockTokenTable, type BlockTokenParagraph, type InlineToken } from "./tokenizer";
+import {
+	tokenize,
+	type BlockToken,
+	type InlineToken,
+} from "./tokenizer";
 import { mdSyntax } from "./syntax";
 
-const headingColors = [
-	"\x1b[38;2;255;110;110m",
-	"\x1b[38;2;255;180;80m",
-	"\x1b[38;2;255;220;80m",
-	"\x1b[38;2;130;220;130m",
-	"\x1b[38;2;100;200;255m",
-	"\x1b[38;2;180;140;255m",
-];
+// Resolve a markdown theme slot against the live config so theme
+// tweaks via `configure({ theme: { markdown: … } })` are picked up
+// on the next render call without re-registering the plugin.
+function tColor(slot: string): { apply: (s: string) => string; bg?: (s: string) => string } {
+	return resolveColor(slot, getConfig().theme);
+}
 
 function renderInline(tokens: InlineToken[]): string {
 	return tokens
@@ -28,12 +30,23 @@ function renderInline(tokens: InlineToken[]): string {
 					return `\x1b[1m${t.content}\x1b[22m`;
 				case "italic":
 					return `\x1b[3m${t.content}\x1b[23m`;
-				case "code":
-					return `\x1b[48;2;40;44;52m\x1b[38;2;150;200;255m${t.content}\x1b[0m`;
-				case "link":
-					return `\x1b[4m\x1b[38;2;88;166;255m${t.content}\x1b[0m\x1b[38;2;136;136;136m (${t.url})\x1b[0m`;
-				case "image":
-					return `\x1b[38;2;136;136;136m[image: ${t.alt || t.content}]\x1b[0m`;
+				case "code": {
+					const color = tColor("markdown.codeInline");
+					const fg = color.apply(t.content);
+					// Apply the chip background only when the theme
+					// provides one. Pass `{ fg, bg }` for a chip look;
+					// pass a plain string for fg-only styling.
+					return color.bg ? color.bg(fg) : fg;
+				}
+				case "link": {
+					const linkText = tColor("markdown.linkText").apply;
+					const linkUrl = tColor("markdown.linkUrl").apply;
+					return `\x1b[4m${linkText(t.content)}\x1b[24m${linkUrl(` (${t.url})`)}`;
+				}
+				case "image": {
+					const imageText = tColor("markdown.imageText").apply;
+					return imageText(`[image: ${t.alt || t.content}]`);
+				}
 				default:
 					return t.content;
 			}
@@ -43,9 +56,12 @@ function renderInline(tokens: InlineToken[]): string {
 
 async function renderHeading(token: BlockToken & { type: "heading" }): Promise<string> {
 	const label = renderInline(token.inline);
-	const color = headingColors[Math.min(token.level - 1, headingColors.length - 1)];
 	const prefix = "#".repeat(token.level);
-	return `${color}\x1b[1m${prefix} ${label}\x1b[0m`;
+	// h6 keeps the same color as h5 — clamp the slot lookup so callers
+	// never accidentally hit an unknown slot (which would return identity).
+	const slot = `markdown.heading${Math.min(token.level, 6)}`;
+	const heading = tColor(slot).apply;
+	return heading(`\x1b[1m${prefix} ${label}\x1b[22m`);
 }
 
 async function renderCode(token: BlockToken & { type: "code" }): Promise<string> {
@@ -54,8 +70,13 @@ async function renderCode(token: BlockToken & { type: "code" }): Promise<string>
 	const highlighted = lang !== "text"
 		? await mdSyntax(token.code, lang)
 		: token.code;
-	const langTag = lang !== "text" ? ` ${colors.dim(lang)}` : "";
-	const border = "\x1b[38;2;100;100;120m";
+	// Code-fence label honors the `markdown.codeLang` slot independently
+	// from the `codeBorder` so callers can pick a contrasting color
+	// (e.g. a brighter language name without affecting the box outline).
+	const langTag = lang !== "text"
+		? ` ${tColor("markdown.codeLang").apply(lang)}`
+		: "";
+	const borderFn = tColor("markdown.codeBorder").apply;
 
 	const lines = highlighted.split("\n");
 	const wrapped = lines.map((l) => {
@@ -66,28 +87,38 @@ async function renderCode(token: BlockToken & { type: "code" }): Promise<string>
 		return l;
 	});
 
-	const top = `${border}┌${"─".repeat(width - 2)}┐\x1b[0m${langTag}`;
-	const bottom = `${border}└${"─".repeat(width - 2)}┘\x1b[0m`;
-	const body = wrapped.map((l) => {
-		const pad = width - 2 - stripAnsi(l).length;
-		return `${border}│\x1b[0m${l}${" ".repeat(Math.max(0, pad))}${border}│\x1b[0m`;
-	}).join("\n");
+	const top = `${borderFn("┌" + "─".repeat(width - 2) + "┐")}${langTag}`;
+	const bottom = `${borderFn("└" + "─".repeat(width - 2) + "┘")}`;
+	const body = wrapped
+		.map((l) => {
+			const pad = width - 2 - stripAnsi(l).length;
+			return `${borderFn("│")}${l}${" ".repeat(Math.max(0, pad))}${borderFn("│")}`;
+		})
+		.join("\n");
 
 	return `${top}\n${body}\n${bottom}`;
 }
 
 async function renderList(token: BlockToken & { type: "list" }): Promise<string> {
 	const lines: string[] = [];
+	// Split markers into bullet vs. ordinal so callers can retheme
+	// `markdown.listBullet` (unordered `•`) and `markdown.listNumber`
+	// (`1.`, `2.`, …) independently.
+	const bulletFn = tColor("markdown.listBullet").apply;
+	const numberFn = tColor("markdown.listNumber").apply;
+
 	for (let i = 0; i < token.items.length; i++) {
 		const item = token.items[i];
 		const label = renderInline(item.inline);
 		if (token.ordered) {
-			lines.push(`  \x1b[38;2;136;136;136m${i + 1}.\x1b[0m ${label}`);
+			lines.push(`  ${numberFn(`${i + 1}.`)} ${label}`);
 		} else if (item.checked !== null) {
-			const chk = item.checked ? "\x1b[38;2;80;200;120m✔\x1b[0m" : "\x1b[38;2;180;180;180m✘\x1b[0m";
-			lines.push(`  ${chk} ${label}`);
+			const checkFn = tColor(
+				item.checked ? "markdown.listCheck" : "markdown.listCross",
+			).apply;
+			lines.push(`  ${checkFn(item.checked ? "✔" : "✘")} ${label}`);
 		} else {
-			lines.push(`  \x1b[38;2;136;136;136m•\x1b[0m ${label}`);
+			lines.push(`  ${bulletFn("•")} ${label}`);
 		}
 	}
 	return lines.join("\n");
@@ -95,16 +126,19 @@ async function renderList(token: BlockToken & { type: "list" }): Promise<string>
 
 async function renderQuote(token: BlockToken & { type: "quote" }): Promise<string> {
 	const label = renderInline(token.inline);
+	const barFn = tColor("markdown.quoteBar").apply;
+	const textFn = tColor("markdown.quoteText").apply;
+
 	return label
 		.split("\n")
-		.map((l) => `\x1b[38;2;100;120;140m│\x1b[0m \x1b[38;2;160;170;180m${l}\x1b[0m`)
+		.map((l) => `${barFn("│")} ${textFn(l)}`)
 		.join("\n");
 }
 
 async function renderTable(token: BlockToken & { type: "table" }): Promise<string> {
 	const headers = token.headers;
 	const rows = token.rows;
-	const allRows = [headers.map((h) => `\x1b[1m${h}\x1b[0m`), ...rows];
+	const allRows = [headers.map((h) => `\x1b[1m${h}\x1b[22m`), ...rows];
 	const result = duiTable(allRows[0], allRows.slice(1), {
 		style: "none",
 		padding: 1,
@@ -117,7 +151,13 @@ async function renderTable(token: BlockToken & { type: "table" }): Promise<strin
 }
 
 async function renderThematicBreak(): Promise<string> {
-	return divider("─", undefined, { color: "#555" });
+	// Build the break directly off the `markdown.thematic` slot so the
+	// markdown dashboard has a dedicated retheme hook independent of the
+	// generic `divider.line` slot. `divider()` only accepts hex / rgb /
+	// oklch color formats internally, so we keep the rendering in one
+	// place and avoid the style-double-wrap trap.
+	const width = Math.min(terminalWidth(), 72);
+	return tColor("markdown.thematic").apply("─".repeat(width));
 }
 
 async function renderParagraph(token: BlockToken & { type: "paragraph" }): Promise<string> {

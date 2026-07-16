@@ -64,7 +64,7 @@ export type { StepItem } from "./steps";
 export { steps } from "./steps";
 export type { TableColumnOptions, TableOptions } from "./table";
 export { table } from "./table";
-export type { ColorStyle, DuiTheme } from "./theme";
+export type { ColorStyle, DuiTheme, MarkdownTheme } from "./theme";
 export { resolveColor, resolveColorSimple } from "./theme";
 export type { DuiPlugin, PluginAPI, PluginEvents } from "./plugin";
 export { emit, usePlugin } from "./plugin";
@@ -79,3 +79,14 @@ export {
 	visibleLength,
 	wrapAnsiWord,
 } from "./utils";
+export type { MouseEvent, ClickableArea } from "./types";
+export {
+	enableMouse,
+	disableMouse,
+	onMouseEvent,
+	registerClickableArea,
+	unregisterClickableArea,
+	getClickedItem,
+	getMousePosition,
+	parseSGRMouseData,
+} from "./mouse";
