@@ -24,3 +24,4 @@ export {
 	setTerminalCaps,
 } from "./detect";
 export type { TerminalCapabilities } from "./detect";
+export { imagePlugin } from "./plugin";

@@ -3,7 +3,20 @@ import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { countRenderLines } from "./utils";
+import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
+import {
+	disableMouse,
+	enableMouse,
+	enableMouseMove,
+	getClickedItem,
+	getHoveredItem,
+	parseSGRMouseData,
+	registerClickableArea,
+	registerHoverableArea,
+	unregisterClickableArea,
+	unregisterHoverableArea,
+} from "./mouse";
+import { applyClass } from "./style";
 
 export interface TreeNode<T = string> {
 	label: string;
@@ -39,6 +52,8 @@ interface FlatItem<T> {
 	expanded: boolean;
 	node: TreeNode<T>;
 }
+
+const MESSAGE_HELP = "(Use arrow keys, space to toggle, or click)";
 
 export async function tree<T = string>(
 	message: string,
@@ -176,6 +191,9 @@ function interactiveTree<T>(
 		const stdout = process.stdout;
 		const theme = getConfig().theme;
 
+		enableMouse();
+		enableMouseMove();
+
 		const messageColor = resolveColor(
 			"tree.message",
 			theme,
@@ -205,15 +223,20 @@ function interactiveTree<T>(
 		const expanded = new Set<TreeNode<T>>();
 		initExpanded(treeData, expanded, initialExpanded);
 
-		function getCurrentFlat(): FlatItem<T>[] {
-			return getFlat(treeData, expanded);
-		}
+		const clickableAreaIds = new Set<string>();
+		const hoverableAreaIds = new Set<string>();
 
 		let flat = getCurrentFlat();
 		let cursor = 0;
+		let hoveredIndex: number | null = null;
 		let offset = 0;
 		let done = false;
 		let linesRendered = 0;
+		let buf = "";
+
+		function getCurrentFlat(): FlatItem<T>[] {
+			return getFlat(treeData, expanded);
+		}
 
 		function rebuildFlat(fromNode?: TreeNode<T>) {
 			flat = getCurrentFlat();
@@ -230,19 +253,32 @@ function interactiveTree<T>(
 		}
 
 		function render() {
+			if (done) return;
 			const effective = Math.min(pageSize, flat.length);
 			offset = Math.max(0, Math.min(offset, flat.length - effective));
+
+			for (const id of clickableAreaIds) {
+				unregisterClickableArea(id);
+			}
+			clickableAreaIds.clear();
+			for (const id of hoverableAreaIds) {
+				unregisterHoverableArea(id);
+			}
+			hoverableAreaIds.clear();
 
 			const visible = flat.slice(offset, offset + effective);
 			const lines: string[] = [];
 
-			lines.push(
-				`${messageColor(`? ${message}`)} ${colors.dim("(Use arrow keys, space to toggle)")}`,
-			);
+			const msgLine = `${messageColor(`? ${message}`)} ${colors.dim(MESSAGE_HELP)}`;
+			lines.push(msgLine);
+
+			const msgRowDelta = Math.floor(visibleLength(msgLine) / terminalWidth());
 
 			for (let i = 0; i < visible.length; i++) {
 				const item = visible[i];
-				const isCursor = i + offset === cursor;
+				const idx = i + offset;
+				const isCursor = idx === cursor;
+				const isHovered = idx === hoveredIndex;
 				const indent = "  ".repeat(item.depth);
 				const pointer = isCursor ? `${pointerColor(POINTER)} ` : "  ";
 
@@ -258,6 +294,8 @@ function interactiveTree<T>(
 				let label: string;
 				if (item.disabled) {
 					label = colors.dim(`${indicator}${item.label} (disabled)`);
+				} else if (isHovered) {
+					label = `${indicator}${applyClass("hover", selectedColor(item.label))}`;
 				} else if (isCursor) {
 					label = `${indicator}${selectedColor(item.label)}`;
 				} else {
@@ -265,67 +303,148 @@ function interactiveTree<T>(
 				}
 
 				lines.push(`${indent}${pointer}${label}`);
+
+				const areaId = `tree-${i}`;
+				const row = 1 + msgRowDelta + 1 + i;
+				registerClickableArea({
+					id: areaId,
+					type: "tree",
+					bounds: { left: 0, top: row, width: 999, height: 1 },
+					data: { flatIndex: idx },
+				});
+				clickableAreaIds.add(areaId);
+
+				registerHoverableArea({
+					id: `hover-${areaId}`,
+					type: "tree",
+					bounds: { left: 0, top: row, width: 999, height: 1 },
+					data: { flatIndex: idx },
+				});
+				hoverableAreaIds.add(`hover-${areaId}`);
 			}
 
 			const output = lines.join("\n");
 
 			if (linesRendered > 0) {
-				stdout.write("\x1b[u");
+				stdout.write(`\x1b[${linesRendered}A`);
 			} else {
-				stdout.write("\x1b[s");
+				stdout.write("\x1b[H");
 			}
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(output);
-			linesRendered = lines.reduce((sum, l) => sum + countRenderLines(l), 0);
+			linesRendered = computeLinesRendered(lines);
 		}
 
 		function cleanup() {
 			if (done) return;
 			done = true;
+			stdin.removeListener("data", onData);
 			stdin.setRawMode(false);
-			stdin.removeListener("keypress", onKeypress);
+			disableMouse();
 		}
 
 		function finalize() {
 			cleanup();
 			const item = flat[cursor];
 			const finalLine = `${messageColor(`? ${message}`)} ${selectedColor(item.label)}\n`;
-			stdout.write("\x1b[u");
+			if (linesRendered > 0) {
+				stdout.write(`\x1b[${linesRendered}A`);
+			} else {
+				stdout.write("\x1b[H");
+			}
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(finalLine);
 			resolve(item.value);
 		}
 
-		function onKeypress(
-			_str: string,
-			key: { name?: string; ctrl?: boolean },
-		) {
+		function handleTreeClick(flatIndex: number) {
+			if (flatIndex < 0 || flatIndex >= flat.length) return;
+			const item = flat[flatIndex];
+			if (item.disabled) return;
+
+			cursor = flatIndex;
+
+			if (item.isBranch) {
+				if (item.expanded) {
+					expanded.delete(item.node);
+				} else {
+					expanded.add(item.node);
+				}
+				rebuildFlat();
+				render();
+			} else {
+				finalize();
+			}
+		}
+
+		function onData(data: string | Buffer) {
 			if (done) return;
 
-			const item = flat[cursor];
+			const text = typeof data === "string" ? data : data.toString("utf8");
+			buf += text;
 
-			if (key.name === "up") {
+			if (buf.length > 256) {
+				buf = buf.slice(-32);
+			}
+
+			const mouseEvent = parseSGRMouseData(buf);
+			if (mouseEvent) {
+				buf = "";
+				if (mouseEvent.type === "click") {
+					const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
+					if (clickedArea && clickedArea.type === "tree" && clickedArea.data) {
+						handleTreeClick(clickedArea.data.flatIndex as number);
+					}
+				} else if (mouseEvent.type === "move") {
+					const hoveredArea = getHoveredItem(mouseEvent.x, mouseEvent.y);
+					const newHovered =
+						hoveredArea && hoveredArea.data
+							? (hoveredArea.data.flatIndex as number)
+							: null;
+					if (newHovered !== hoveredIndex) {
+						hoveredIndex = newHovered;
+						render();
+					}
+				}
+				return;
+			}
+
+			if (buf.includes("\x1b[A")) {
+				buf = "";
+				hoveredIndex = null;
 				if (cursor > 0) {
 					cursor--;
 					if (cursor < offset) offset = cursor;
 				}
 				render();
-			} else if (key.name === "down") {
+				return;
+			}
+			if (buf.includes("\x1b[B")) {
+				buf = "";
+				hoveredIndex = null;
 				if (cursor < flat.length - 1) {
 					cursor++;
 					if (cursor >= offset + pageSize)
 						offset = cursor - pageSize + 1;
 				}
 				render();
-			} else if (key.name === "right") {
+				return;
+			}
+			if (buf.includes("\x1b[C")) {
+				buf = "";
+				const item = flat[cursor];
 				if (item && item.isBranch && !item.disabled && !item.expanded) {
 					expanded.add(item.node);
 					rebuildFlat();
 				}
 				render();
-			} else if (key.name === "left") {
+				return;
+			}
+			if (buf.includes("\x1b[D")) {
+				buf = "";
+				const item = flat[cursor];
 				if (item && item.isBranch && !item.disabled && item.expanded) {
 					expanded.delete(item.node);
 					rebuildFlat(item.node);
@@ -344,7 +463,27 @@ function interactiveTree<T>(
 					}
 				}
 				render();
-			} else if (key.name === "space") {
+				return;
+			}
+
+			if (buf === "\x1b") {
+				cleanup();
+				if (linesRendered > 0) {
+					stdout.write(`\x1b[${linesRendered}A`);
+				} else {
+					stdout.write("\x1b[H");
+				}
+				readline.cursorTo(stdout, 0);
+				readline.clearScreenDown(stdout);
+				reject(new Error("Cancelled"));
+				return;
+			}
+
+			const lastChar = buf[buf.length - 1];
+
+			if (lastChar === " ") {
+				buf = "";
+				const item = flat[cursor];
 				if (item && item.isBranch && !item.disabled) {
 					if (item.expanded) {
 						expanded.delete(item.node);
@@ -354,7 +493,9 @@ function interactiveTree<T>(
 					rebuildFlat();
 					render();
 				}
-			} else if (key.name === "return" || key.name === "enter") {
+			} else if (lastChar === "\r" || lastChar === "\n") {
+				buf = "";
+				const item = flat[cursor];
 				if (item && !item.isBranch && !item.disabled) {
 					finalize();
 				} else if (item && item.isBranch && !item.disabled) {
@@ -366,22 +507,21 @@ function interactiveTree<T>(
 					rebuildFlat();
 					render();
 				}
-			} else if (key.name === "escape") {
-				cleanup();
-				stdout.write("\x1b[u");
-				readline.cursorTo(stdout, 0);
-				readline.clearScreenDown(stdout);
-				reject(new Error("Cancelled"));
-			} else if (key.name === "c" && key.ctrl) {
+			} else if (lastChar === "\x03") {
 				cleanup();
 				stdout.write("\n");
 				process.exit(1);
+			} else if (
+				buf.length > 1 ||
+				(text.length > 0 && text[text.length - 1] !== "\x1b")
+			) {
+				buf = "";
 			}
 		}
 
-		readline.emitKeypressEvents(stdin);
 		stdin.setRawMode(true);
-		stdin.on("keypress", onKeypress);
+		stdin.setEncoding("utf8");
+		stdin.on("data", onData);
 		render();
 	});
 }

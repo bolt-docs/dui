@@ -115,7 +115,7 @@ describe("qrcode", () => {
 		expect(strippedRows.length).toBe(29);
 		for (const row of strippedRows) {
 			expect(row.length % 2).toBe(0);
-			expect(row).toMatch(/^(██|  )+$/);
+			expect(row).toMatch(/^(██| {2})+$/);
 		}
 
 		const result2 = await qrcode("https://example.com", {
@@ -129,7 +129,7 @@ describe("qrcode", () => {
 		expect(strippedRows2.length).toBeGreaterThan(0);
 		for (const row of strippedRows2) {
 			expect(row.length % 2).toBe(0);
-			expect(row).toMatch(/^(██|  )+$/);
+			expect(row).toMatch(/^(██| {2})+$/);
 		}
 	});
 
@@ -274,7 +274,7 @@ describe("qrcode", () => {
 		expect(stripped.length).toBe(29);
 		for (const row of stripped) {
 			expect(row.length).toBe(58);
-			expect(row).toMatch(/^(██|  )+$/);
+			expect(row).toMatch(/^(██| {2})+$/);
 		}
 	});
 
@@ -289,7 +289,7 @@ describe("qrcode", () => {
 			.split("\n");
 		for (const row of stripped) {
 			expect(row.length).toBe(58);
-			expect(row).toMatch(/^(██|  )+$/);
+			expect(row).toMatch(/^(██| {2})+$/);
 		}
 	});
 

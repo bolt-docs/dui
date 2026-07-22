@@ -16,7 +16,11 @@
 		"cli": "npx tsx 11-cli/index.ts",
 		"diff": "npx tsx 12-diff/index.ts",
 		"qrcode": "npx tsx 13-qrcode/index.ts",
-		"all": "npm run colors && npm run boxes && npm run lists && npm run tables && npm run steps && npm run progress && npm run animation && npm run image"
+		"mouse-select": "npx tsx 14-mouse-select/index.ts",
+		"mouse-multiselect": "npx tsx 15-mouse-multiselect/index.ts",
+		"plugin-stack": "npx tsx 16-plugin-stack/index.ts",
+		"hover": "npx tsx 17-hover/index.ts",
+		"all": "npm run colors && npm run boxes && npm run lists && npm run tables && npm run steps && npm run progress && npm run animation && npm run image && npm run plugin-stack"
 	},
 	"dependencies": {
 		"@bdocs/dui": "workspace:*",

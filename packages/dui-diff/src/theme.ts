@@ -103,7 +103,7 @@ function resolveSlot(
 
 	// 2. Theme-level config from `theme.diff.<slot>`.
 	const fromThemeSlice =
-		themeSlice && Object.prototype.hasOwnProperty.call(themeSlice, slot)
+		themeSlice && Object.hasOwn(themeSlice, slot)
 			? paintFromColorStyle(themeSlice[slot] as ColorStyle, defaulted)
 			: null;
 	if (fromThemeSlice) return fromThemeSlice;

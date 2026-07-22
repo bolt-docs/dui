@@ -39,6 +39,18 @@ curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/instal
 bash scripts/install-ai-agent.sh
 ```
 
+### Opciones del CLI
+
+Puedes pasar flags al script de instalación para personalizar su comportamiento:
+
+| Flag | Descripción |
+|------|-------------|
+| `--agent <nombre>` | Agente destino (`claude-code`, `claude-skill`, `cursor`, `opencode`, `.agents`, `all`). Omite el menú interactivo. |
+| `--yes` | Sobrescribe las configuraciones existentes de la skill sin pedir confirmación. Útil en CI/CD. |
+| `--help` | Muestra información de uso y sale del script. |
+
+Aliases: `todos` también se acepta como alias de `all` ("todos" en español).
+
 ---
 
 ## Qué incluye la skill
@@ -66,3 +78,14 @@ Después de instalar la skill, tu agente AI podrá responder preguntas como:
 > "Construye un asistente de configuración multi-paso con confirmación"
 
 Consulta la [Guía LLM](/docs/es/overview/llm) para plantillas de prompt listas para copiar y pegar.
+
+---
+
+## Solución de problemas
+
+- **Fallo de red / falta `curl`**: El one-liner requiere `curl`. Si tu entorno solo tiene `wget`, usa: `wget -qO- https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash`. Si faltan ambos, ejecuta desde un clon del repo para que el script lea `./.opencode/skills/dui/SKILL.md` localmente.
+- **Entornos CI/CD (sin `/dev/tty`)**: Ejecutar el script en CI sin flags falla porque los prompts interactivos requieren una terminal. Usa siempre el modo no interactivo: `--agent all --yes`.
+- **Rate-limit de GitHub (HTTP 403)**: La skill se descarga de `raw.githubusercontent.com`. Si alcanzas el límite anónimo, espera unos minutos, autentícate o ejecuta desde un clon local.
+- **`NO_COLOR` está definido**: Los logs del script se vuelven monocromáticos. Es esperado — la instalación sigue funcionando.
+- **El archivo de skill ya existe**: Sin `--yes`, el script pregunta si sobrescribir. Escribe `y` para confirmar o `n` para omitir. Volver a ejecutar con `--yes` actualiza el archivo en su lugar.
+- **Elegiste el agente equivocado**: Vuelve a ejecutar con el flag correcto. Para desinstalar, elimina los archivos en las rutas de destino mostradas en la tabla al inicio de esta página (`.agents` y `all` instalan dos archivos cada uno).

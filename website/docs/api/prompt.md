@@ -123,7 +123,7 @@ select<T = string>(message: string, options: SelectOptions<T>): Promise<T>
 <Field name="message" type="string">The question to display.</Field>
 <Field name="options" type="SelectOptions">Configuration object with choices, pageSize, and colors.</Field>
 
-Interactive prompt to pick one option from a list. Supports arrow key navigation, disabled
+Interactive prompt to pick one option from a list. Supports arrow key navigation, clickable area selection with mouse, disabled
 items, page scrolling, and a non-TTY fallback with numeric input.
 
 ```ts
@@ -134,7 +134,7 @@ const value = await select('Choose a color:', {
     { label: 'Blue',  value: '#3399ff' },
   ],
 })
-// Use ↑↓ arrows to navigate, Enter to confirm, Esc to cancel
+// Use ↑↓ arrows to navigate, click to select, Enter to confirm, Esc to cancel
 ```
 
 <Callout variant="info">
@@ -172,6 +172,20 @@ const framework = await select('Pick a framework:', {
   },
 })
 ```
+
+### Mouse Support
+
+When running in a terminal that supports mouse events (most modern terminals), `select()` automatically supports mouse clicks:
+
+- **Left-click** on a choice selects it and closes the prompt
+- Works the same as arrow navigation and Enter key
+- Automatically adapts to scroll position
+
+Mouse support is automatically enabled in TTY environments and disabled in non-TTY environments.
+
+<Callout variant="info">
+  Mouse features require SGR 1006 protocol support (most modern terminals).
+</Callout>
 
 ## tree
 

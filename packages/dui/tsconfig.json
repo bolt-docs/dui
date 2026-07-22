@@ -9,8 +9,16 @@
 		"declaration": true,
 		"outDir": "dist",
 		"rootDir": "src",
-		"paths": {}
+		"paths": {},
+		"types": [
+			"node"
+		]
 	},
-	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist"]
+	"include": [
+		"src/**/*"
+	],
+	"exclude": [
+		"node_modules",
+		"dist"
+	]
 }

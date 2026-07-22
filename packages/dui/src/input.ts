@@ -3,7 +3,7 @@ import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { stripAnsi, countRenderLines } from "./utils";
+import { stripAnsi, computeLinesRendered } from "./utils";
 
 export interface InputOptions {
 	default?: string;
@@ -108,6 +108,7 @@ function interactiveInput(
 		}
 
 		function render() {
+			if (done) return;
 			const promptLine = `${messageColor(`? ${message}`)}`;
 			const displayValue = buf
 				? valueColor(buf)
@@ -125,15 +126,22 @@ function interactiveInput(
 
 			const output = lines.join("\n");
 
+			// Move cursor to the start of our previously-drawn block.
+			// `linesRendered` tracks the terminal rows we last wrote;
+			// `\x1b[{n}A` (move up) works on every terminal, whereas
+			// `\x1b[u` (DEC restore cursor) is unreliable on tmux,
+			// screen, and several embedded terminals.
 			if (linesRendered > 0) {
-				stdout.write("\x1b[u");
+				stdout.write(`\x1b[${linesRendered}A`);
 			} else {
-				stdout.write("\x1b[s");
+				// First render only — force the prompt to row 1 so we
+				// have an absolute coordinate frame.
+				stdout.write("\x1b[H");
 			}
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(output);
-			linesRendered = lines.reduce((sum, l) => sum + countRenderLines(l), 0);
+			linesRendered = computeLinesRendered(lines);
 
 			// Position cursor after the prompt text in the input line
 			const promptPrefix = `${stripAnsi(promptLine)} `;
@@ -154,7 +162,13 @@ function interactiveInput(
 			validateBuf();
 			cleanup();
 			const finalLine = `${messageColor(`? ${message}`)} ${valueColor(buf)}\n`;
-			stdout.write("\x1b[u");
+			// Same `linesRendered`-based cursor positioning as render() —
+			// `\x1b[u` is unreliable on tmux/screen/embedded terminals.
+			if (linesRendered > 0) {
+				stdout.write(`\x1b[${linesRendered}A`);
+			} else {
+				stdout.write("\x1b[H");
+			}
 			readline.cursorTo(stdout, 0);
 			readline.clearScreenDown(stdout);
 			stdout.write(finalLine);
@@ -172,7 +186,12 @@ function interactiveInput(
 				finalize();
 			} else if (key.name === "escape") {
 				cleanup();
-				stdout.write("\x1b[u");
+				// Same `linesRendered`-based cursor positioning as render().
+				if (linesRendered > 0) {
+					stdout.write(`\x1b[${linesRendered}A`);
+				} else {
+					stdout.write("\x1b[H");
+				}
 				readline.cursorTo(stdout, 0);
 				readline.clearScreenDown(stdout);
 				reject(new Error("Cancelled"));

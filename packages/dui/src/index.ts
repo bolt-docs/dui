@@ -66,9 +66,20 @@ export type { TableColumnOptions, TableOptions } from "./table";
 export { table } from "./table";
 export type { ColorStyle, DuiTheme, MarkdownTheme } from "./theme";
 export { resolveColor, resolveColorSimple } from "./theme";
-export type { DuiPlugin, PluginAPI, PluginEvents } from "./plugin";
-export { emit, usePlugin } from "./plugin";
+export type { DuiPlugin, PluginAPI, PluginEvents, RenderContext, Renderer } from "./plugin";
 export {
+	DUI_VERSION,
+	emit,
+	emitRenderEvent,
+	renderWith,
+	runRenderHook,
+	runRenderHookAsync,
+	unregisterPlugin,
+	usePlugin,
+	usePluginAsync,
+} from "./plugin";
+export {
+	computeLinesRendered,
 	fitWidth,
 	padCenter,
 	padRight,
@@ -79,14 +90,32 @@ export {
 	visibleLength,
 	wrapAnsiWord,
 } from "./utils";
-export type { MouseEvent, ClickableArea } from "./types";
+export type { HoverableArea, MouseEvent, ClickableArea } from "./types";
 export {
-	enableMouse,
+	clearClickableAreas,
+	clearHoverableAreas,
 	disableMouse,
-	onMouseEvent,
-	registerClickableArea,
-	unregisterClickableArea,
+	disableMouseMove,
+	enableMouse,
+	enableMouseMove,
 	getClickedItem,
+	getHoveredItem,
 	getMousePosition,
+	isMouseEnabled,
+	isMouseMoveEnabled,
+	onMouseEvent,
 	parseSGRMouseData,
+	registerClickableArea,
+	registerHoverableArea,
+	unregisterClickableArea,
+	unregisterHoverableArea,
 } from "./mouse";
+export type { TerminalStyle } from "./style";
+export {
+	applyClass,
+	builtinClasses,
+	defineClass,
+	getClass,
+	removeClass,
+	resetClasses,
+} from "./style";

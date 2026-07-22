@@ -15,3 +15,4 @@ export type { SparklineOptions } from "./sparkline";
 
 export { animateChart } from "./animate";
 export type { AnimateChartConfig, AnimateChartHandle } from "./animate";
+export { chartPlugin } from "./plugin";

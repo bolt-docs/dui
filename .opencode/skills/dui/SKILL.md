@@ -1,7 +1,7 @@
 ---
 name: dui
 description: Terminal UI library for Node.js (@bdocs/dui). Use when the project imports from '@bdocs/dui' or when building CLIs with colored output, boxes, tables, spinners, progress bars, interactive prompts, etc.
-version: 0.3.0
+version: 0.5.0
 
 ---
 
@@ -33,7 +33,8 @@ import {
   multiselect, tree, animate, createProgressBar,
   stripAnsi, visibleLength, wrapAnsiWord, renderLine,
   renderStatic, terminalWidth, formatLog,
-  usePlugin, emit, countRenderLines, colorize, parseColor,
+  usePlugin, usePluginAsync, unregisterPlugin, runRenderHook,
+  emit, DUI_VERSION, countRenderLines, colorize, parseColor,
   interpolateColor, applyStyle, toAnsiFg, toAnsiBg, toAnsiFgBg,
   isColorSupported, setColorSupported, colorMap, dividerLog,
   double, single, round, createSpinner, lerp
@@ -630,35 +631,107 @@ The resolution order for a color slot is:
 
 ## Plugin system
 
+`@bdocs/dui` ships a v2 plugin API that gives the plugin a real reason to exist: theme-slot registration, render-hook chaining, and an event bus.
+
+### Bootstrapping plugins
+
 ```typescript
-import { usePlugin, emit, type DuiPlugin, type PluginAPI } from '@bdocs/dui'
+import {
+  configure, usePluginAsync, unregisterPlugin,
+  runRenderHook, emit, DUI_VERSION,
+  type DuiPlugin, type PluginAPI, type PluginEvents, type RenderContext,
+} from '@bdocs/dui'
+import { markdownPlugin } from '@dui-toolkit/plugin-markdown'
+import { diffPlugin } from '@dui-toolkit/plugin-diff'
 
+// Async + ordered: the `register` event fires once after the queue drains.
+await usePluginAsync(markdownPlugin)
+await usePluginAsync(diffPlugin)
+
+// Configure after plugins — user theme overrides plugin defaults.
+configure({
+  theme: {
+    success: '#22c55e',
+    markdown: { heading1: '#fbbf24' },
+    diff: { add: '#86efac', del: '#fca5a5' },
+  },
+})
+
+// Tear down cleanly (per-plugin cleanup, slot removal, hook filter)
+unregisterPlugin('@dui-toolkit/plugin-markdown')
+```
+
+`usePlugin(plugin)` is a synchronous wrapper kept for backwards compatibility but marked `@deprecated` — prefer the async form so the `register` event fires after `setup()` resolves.
+
+### Plugin shape
+
+```typescript
 const myPlugin: DuiPlugin = {
-  name: 'my-plugin',
-  async setup(api) {
-    // Access utilities
-    api.utils.colors
-    api.utils.configure
-    api.utils.getConfig
-    api.utils.terminalWidth
-    api.utils.visibleLength
-    api.utils.stripAnsi
-    api.utils.resolveColor
-    api.utils.countRenderLines
+  name: 'my-plugin',                                   // unique identifier
+  version: '0.1.0',                                   // surfaced for diagnostics
+  peerDependencies: { dui: '^0.5.0' },                // major mismatch → warn
 
-    // Listen to lifecycle events
-    api.on('register', () => {
-      // Fires after setup() completes
-    })
+  // `setup` receives a `PluginAPI` and may return either nothing, a
+  // sync cleanup function, or a `Promise` that resolves to a cleanup
+  // function. Cleanup runs once on `unregisterPlugin(name)`.
+  setup(api) {
+    api.registerThemeSlot('my.slot', '#ff6600')
+    api.registerRenderHook('my-channel', (input, ctx) => input.toUpperCase())
+    return () => { /* module-level cleanup */ }
+  },
+}
+```
 
-    api.on('configure', (config) => {
-      // Fires when config is updated
-    })
-  }
+### Registering theme slots
+
+`registerThemeSlot(slot, defaultColor)` registers a default that flows into `resolveColor(slot)` *before* the built-in fallback map. User-level overrides via `configure({ theme: { … } })` always win.
+
+```typescript
+api.registerThemeSlot('markdown.heading1', '#ff6e6e')
+api.registerThemeSlot('markdown.codeInline', { fg: '#96c8ff', bg: '#282c34' })
+```
+
+`defaultColor` accepts any `ColorStyle`: a hex/rgb/oklch string paints as `fg`, while `{ fg, bg }` exposes both `apply` and `bg` painters via DUI's `resolveColor`.
+
+### Render hooks + runRenderHook
+
+`registerRenderHook(name, hook)` chains hooks in registration order. `runRenderHook(name, input, ctx)` runs them sequentially; with no hooks, `runRenderHook` returns input unchanged (identity).
+
+```typescript
+api.registerRenderHook('echo', (input) => `> ${input}`)
+api.registerRenderHook('echo', (input) => `< ${input}`)   // chains after
+
+runRenderHook('echo', 'hello')   // '> < hello'
+runRenderHook('missing', 'x')   // 'x'
+```
+
+`sync` is honoured by any plugin whose render path is sync; async renderers (`md`, `qrcode`, `renderImage`, `animateGif`) continue to be called directly via `await`, deferred to a future release for a `runRenderHookAsync` channel.
+
+### Event bus
+
+```typescript
+type PluginEvents = {
+  register:        () => void
+  unregister:      () => void
+  configure:       (config: DuiConfig) => void
+  'theme-changed': (theme: DuiTheme) => void
+  'before-render': (ctx: RenderContext) => void
+  'after-render':  (ctx: RenderContext) => void
+  'terminal-resize': (cols: number, rows: number) => void
 }
 
-usePlugin(myPlugin)
+api.on('register', () => { /* fired after this plugin's setup resolves */ })
+api.on('configure', (config) => { /* fired on every configure() */ })
+api.on('theme-changed', (theme) => { /* fired only when configure() touches theme */ })
 ```
+
+The plugin bus is bridged to `configure()` via `onConfigChange` to avoid circular imports — your `register` handler intentionally fires *once* after a queued `usePluginAsync` chain drains.
+
+### Real example — what an `@dui-toolkit/plugin-*` looks like
+
+The shipped plugins opt into the v2 surface: `markdownPlugin`, `diffPlugin`, `chartPlugin`, `qrcodePlugin`, `imagePlugin` are each a `DuiPlugin` whose `setup()` registers the slots the renderer consumes. Each declares `peerDependencies: { dui: '^0.5.0' }` so a major-version mismatch warns via `logger.warn` at boot.
+
+See [`examples/16-plugin-stack`](https://github.com/bolt-docs/dui/tree/master/examples/16-plugin-stack) for a composition example that registers three plugins in one chain and applies a unified theme.
 
 ## QR Code plugin (`@dui-toolkit/plugin-qrcode`)
 
@@ -761,6 +834,67 @@ const highlighted = await mdSyntax('console.log("hello")', 'javascript')
 const tokens = tokenize('## Heading\n\nParagraph text')
 // → [{ type: 'heading', level: 2, inline: [...] }, { type: 'paragraph', inline: [...] }]
 ```
+
+## Diff plugin (`@dui-toolkit/plugin-diff`)
+
+```bash
+pnpm add @dui-toolkit/plugin-diff
+```
+
+```typescript
+import { diff, diffSideBySide, diffWordsRender, diffStat, diffFiles, diffDirectories } from '@dui-toolkit/plugin-diff'
+
+// Standard unified diff (git-style with hunk headers)
+console.log(diff('const a = 1', 'const a = 2'))
+
+// Side-by-side terminal diff (column-aligned rows)
+console.log(diffSideBySide('old text\nline 2', 'new text\nline 2', {
+  width: 80,
+  colors: { insert: '#00ff00', delete: '#ff0000' }
+}))
+
+// Word-level diff with intra-line highlighting
+console.log(diffWordsRender('the quick fox', 'the slow fox'))
+
+// Compact stats (e.g. " 3 files changed, 12 insertions(+), 4 deletions(-)")
+console.log(diffStat('a\nb', 'a\nc'))
+
+// File and directory multi-diffs (async)
+const fileDiff = await diffFiles('src/old.ts', 'src/new.ts')
+const dirDiff = await diffDirectories('./old-dir', './new-dir')
+```
+
+## Image plugin (`@dui-toolkit/plugin-image`)
+
+```bash
+pnpm add @dui-toolkit/plugin-image
+```
+
+```typescript
+import { renderImage, renderAnsi, animateGif, pixelsToAnsi, applyDither, detectTerminal } from '@dui-toolkit/plugin-image'
+
+// Render a static image (PNG, JPG) using ANSI half-blocks
+console.log(await renderImage('docs/logo.png', { width: 40 }))
+
+// Animate a GIF directly in the terminal
+const anim = await animateGif('docs/demo.gif', {
+  width: 60,
+  loop: true,        // loop infinitely
+})
+anim.stop()
+
+// Lower-level: ANSI half-block conversion (no filesystem)
+const ansi = pixelsToAnsi(pixels, { bg: true, dither: true })
+
+// Apply ordered dithering to reduce blocking artifacts
+const dithered = applyDither(rgba, 'bayer4x4')
+
+// Detect terminal capabilities (Kitty, iTerm, Sixel, etc.)
+const caps = detectTerminal()
+// → TerminalCapabilities { truecolor, sixel, kitty, iterm2, columns, rows, bestFormat }
+```
+
+Options: `width`, `bg` (use background blocks), `dither` (algorithm), `preserveAspectRatio`, `loop`, `fps`. Pass per-call `colors` to override palette; otherwise terminal defaults are used.
 
 ## Best practices
 

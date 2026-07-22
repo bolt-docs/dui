@@ -95,3 +95,4 @@ export async function qrcode(
 
 /** Re-export the upstream encoder for advanced matrix access. */
 export { QRCode };
+export { qrcodePlugin } from "./plugin";

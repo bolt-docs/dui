@@ -1,19 +1,39 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { PassThrough } from "node:stream";
-import readline from "node:readline";
-import { select, resetConfig } from "../src/index";
+import { resetConfig, select } from "../src/index";
 
-const ORIG_STDIN_IS_TTY = process.stdin.isTTY;
-const ORIG_STDOUT_IS_TTY = process.stdout.isTTY;
+// Node 22+ exposes `isTTY` as a getter-only inherited property, so direct
+// assignment throws. Override safely with Object.defineProperty and undo
+// the override in afterEach via `delete` so the prototype getter takes over.
+function setTTY(value: boolean): void {
+	Object.defineProperty(process.stdin, "isTTY", {
+		value,
+		writable: true,
+		configurable: true,
+	});
+	Object.defineProperty(process.stdout, "isTTY", {
+		value,
+		writable: true,
+		configurable: true,
+	});
+}
+
+function clearTTYOverride(): void {
+	delete (process.stdin as { isTTY?: boolean }).isTTY;
+	delete (process.stdout as { isTTY?: boolean }).isTTY;
+}
 
 describe("select", () => {
 	beforeEach(() => {
 		resetConfig();
+
+		if (typeof (process.stdin as any).setRawMode !== "function") {
+			(process.stdin as any).setRawMode = vi.fn();
+		}
 	});
 
 	afterEach(() => {
-		process.stdin.isTTY = ORIG_STDIN_IS_TTY as any;
-		process.stdout.isTTY = ORIG_STDOUT_IS_TTY as any;
+		clearTTYOverride();
 		vi.restoreAllMocks();
 	});
 
@@ -27,8 +47,7 @@ describe("select", () => {
 				writable: true,
 				configurable: true,
 			});
-			process.stdin.isTTY = false;
-			process.stdout.isTTY = false;
+			setTTY(false);
 			vi.spyOn(console, "log").mockImplementation(() => {});
 
 			const promise = select("Pick", {
@@ -60,8 +79,7 @@ describe("select", () => {
 				writable: true,
 				configurable: true,
 			});
-			process.stdin.isTTY = false;
-			process.stdout.isTTY = false;
+			setTTY(false);
 			vi.spyOn(console, "log").mockImplementation(() => {});
 
 			const promise = select("Pick", {
@@ -92,8 +110,7 @@ describe("select", () => {
 				writable: true,
 				configurable: true,
 			});
-			process.stdin.isTTY = false;
-			process.stdout.isTTY = false;
+			setTTY(false);
 			vi.spyOn(console, "log").mockImplementation(() => {});
 
 			const promise = select("Pick", {
@@ -124,8 +141,7 @@ describe("select", () => {
 				writable: true,
 				configurable: true,
 			});
-			process.stdin.isTTY = false;
-			process.stdout.isTTY = false;
+			setTTY(false);
 			vi.spyOn(console, "log").mockImplementation(() => {});
 
 			const promise = select("Pick", {
@@ -149,41 +165,34 @@ describe("select", () => {
 	});
 
 	describe("interactive (TTY)", () => {
-		let keypressHandler:
-			| ((str: string, key: { name?: string; ctrl?: boolean }) => void)
-			| undefined;
-		let stdinSetRawMode: any;
+		let dataHandler: ((data: string | Buffer) => void) | undefined;
+		let stdinSetRawMode: ReturnType<typeof vi.fn>;
 
 		beforeEach(() => {
-			process.stdin.isTTY = true;
-			process.stdout.isTTY = true;
-			keypressHandler = undefined;
+			setTTY(true);
+			dataHandler = undefined;
 
 			vi.spyOn(process.stdin, "on").mockImplementation(
 				(event: any, handler: any) => {
-					if (event === "keypress") {
-						keypressHandler = handler;
+					if (event === "data") {
+						dataHandler = handler;
 					}
 					return process.stdin;
 				},
 			);
 
-			if (typeof (process.stdin as any).setRawMode !== "function") {
-				(process.stdin as any).setRawMode = vi.fn();
-			}
 			stdinSetRawMode = vi
 				.spyOn(process.stdin as any, "setRawMode")
 				.mockImplementation(() => {});
 
 			vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-			vi.spyOn(readline, "emitKeypressEvents").mockImplementation(() => {});
-			vi.spyOn(readline, "cursorTo").mockImplementation(() => {});
-			vi.spyOn(readline, "moveCursor").mockImplementation(() => {});
-			vi.spyOn(readline, "clearScreenDown").mockImplementation(() => {});
+			vi.spyOn(process.stdout, "isTTY", "get").mockReturnValue(true);
 		});
 
-		function press(key: string, ctrl?: boolean) {
-			keypressHandler!("", { name: key, ctrl });
+		function writeData(str: string) {
+			if (dataHandler) {
+				dataHandler(Buffer.from(str, "utf8"));
+			}
 		}
 
 		it("selects the first choice on enter", async () => {
@@ -194,7 +203,7 @@ describe("select", () => {
 				],
 			});
 
-			press("enter");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("red");
 		});
@@ -208,8 +217,8 @@ describe("select", () => {
 				],
 			});
 
-			press("down");
-			press("enter");
+			writeData("\x1b[B");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("green");
 		});
@@ -222,8 +231,8 @@ describe("select", () => {
 				],
 			});
 
-			press("up");
-			press("enter");
+			writeData("\x1b[A");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("green");
 		});
@@ -237,8 +246,8 @@ describe("select", () => {
 				],
 			});
 
-			press("down");
-			press("enter");
+			writeData("\x1b[B");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("green");
 		});
@@ -252,8 +261,8 @@ describe("select", () => {
 				],
 			});
 
-			press("up");
-			press("enter");
+			writeData("\x1b[A");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("blue");
 		});
@@ -267,8 +276,8 @@ describe("select", () => {
 				],
 			});
 
-			press("down");
-			press("enter");
+			writeData("\x1b[B");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("blue");
 		});
@@ -282,8 +291,8 @@ describe("select", () => {
 				],
 			});
 
-			press("up");
-			press("enter");
+			writeData("\x1b[A");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("red");
 		});
@@ -296,9 +305,9 @@ describe("select", () => {
 				],
 			});
 
-			press("down");
-			press("down");
-			press("escape");
+			writeData("\x1b[B");
+			writeData("\x1b[B");
+			writeData("\x1b");
 
 			await expect(promise).rejects.toThrow("Cancelled");
 		});
@@ -311,15 +320,15 @@ describe("select", () => {
 				],
 			});
 
-			press("escape");
+			writeData("\x1b");
 
 			await expect(promise).rejects.toThrow("Cancelled");
 		});
 
 		it("throws on empty choices", async () => {
-			await expect(
-				select("Pick", { choices: [] }),
-			).rejects.toThrow("Select requires at least one choice");
+			await expect(select("Pick", { choices: [] })).rejects.toThrow(
+				"Select requires at least one choice",
+			);
 		});
 
 		it("supports non-string values", async () => {
@@ -330,8 +339,8 @@ describe("select", () => {
 				],
 			});
 
-			press("down");
-			press("enter");
+			writeData("\x1b[B");
+			writeData("\r");
 
 			await expect(promise).resolves.toBe(2);
 		});
@@ -349,7 +358,7 @@ describe("select", () => {
 				choices: [{ label: "A", value: "a" }],
 			});
 
-			press("enter");
+			writeData("\r");
 			await promise;
 
 			expect(stdinSetRawMode).toHaveBeenCalledWith(false);
@@ -360,10 +369,195 @@ describe("select", () => {
 				choices: [{ label: "A", value: "a" }],
 			});
 
-			press("escape");
+			writeData("\x1b");
 			await expect(promise).rejects.toThrow("Cancelled");
 
 			expect(stdinSetRawMode).toHaveBeenCalledWith(false);
+		});
+
+		describe("mouse", () => {
+			it("selects a row when a valid sgr click arrives", async () => {
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green" },
+						{ label: "Blue", value: "blue" },
+					],
+				});
+
+				// Row 2 → choiceIndex 2 (Blue). Bounds: y=2+i → choice 2 sits at y=4.
+				writeData("\x1b[<0;5;4M");
+				writeData("\x1b[<0;5;4m");
+
+				await expect(promise).resolves.toBe("blue");
+			});
+
+			it("ignores clicks that fall outside any registered row", async () => {
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green" },
+					],
+				});
+
+				writeData("\x1b[<0;5;99M");
+				writeData("\x1b[<0;5;99m");
+
+				// Now exit via Escape so the promise settles.
+				writeData("\x1b");
+				await expect(promise).rejects.toThrow("Cancelled");
+			});
+
+			it("ignores clicks on disabled rows", async () => {
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green", disabled: true },
+						{ label: "Blue", value: "blue" },
+					],
+				});
+
+				// Click the disabled second row (choice 1 → y = 2 + 1 = 3).
+				writeData("\x1b[<0;1;3M");
+				writeData("\x1b[<0;1;3m");
+
+				// Confirm via Enter → should still be on the first row
+				writeData("\r");
+				await expect(promise).resolves.toBe("red");
+			});
+
+			it("emits the SGR enable sequences on entry", () => {
+				const spy = vi.spyOn(process.stdout, "write");
+				select("Pick", { choices: [{ label: "A", value: "a" }] });
+				expect(spy).toHaveBeenCalledWith("\x1b[?1000h");
+				expect(spy).toHaveBeenCalledWith("\x1b[?1006h");
+			});
+
+			it("emits the SGR disable sequences on finalize", async () => {
+				const promise = select("Pick", {
+					choices: [{ label: "A", value: "a" }],
+				});
+
+				const spy = vi.spyOn(process.stdout, "write");
+				writeData("\r");
+				await promise;
+
+				expect(spy).toHaveBeenCalledWith("\x1b[?1006l");
+				expect(spy).toHaveBeenCalledWith("\x1b[?1000l");
+			});
+
+			// Regression: tmux/screen/embedded terminals don't honor
+			// `\x1b[u` (DEC restore cursor), so each render was stacking
+			// below the previous one. We use `\x1b[H` on first render and
+			// `\x1b[{n}A` (move up N lines) on subsequent renders instead.
+			it("uses \\x1b[H on first render and \\x1b[{n}A on re-renders, never \\x1b[u", async () => {
+				const spy = vi.spyOn(process.stdout, "write");
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green" },
+					],
+				});
+
+				// Trigger a re-render with an arrow key.
+				writeData("\x1b[B");
+				// Finalize.
+				writeData("\r");
+				await promise;
+
+				const written = spy.mock.calls.map((c) => String(c[0])).join("");
+
+				// First render positions cursor at row 1.
+				expect(written).toContain("\x1b[H");
+				// Subsequent render moves cursor UP N lines instead of using
+				// the unreliable `\x1b[u` DEC restore-cursor sequence.
+				expect(written).toMatch(/\x1b\[\d+A/);
+				expect(written).not.toContain("\x1b[u");
+			});
+
+			it("enables motion tracking on entry", () => {
+				const spy = vi.spyOn(process.stdout, "write");
+				select("Pick", { choices: [{ label: "A", value: "a" }] });
+				expect(spy).toHaveBeenCalledWith("\x1b[?1003h");
+			});
+
+			it("disables motion tracking on finalize", async () => {
+				const promise = select("Pick", {
+					choices: [{ label: "A", value: "a" }],
+				});
+
+				const spy = vi.spyOn(process.stdout, "write");
+				writeData("\r");
+				await promise;
+
+				expect(spy).toHaveBeenCalledWith("\x1b[?1003l");
+			});
+
+			it("re-renders on hover move event", async () => {
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green" },
+					],
+				});
+
+				// First render triggers some writes. Reset the spy count.
+				// Send a motion event targeting row 1 (y=2).
+				const spy = vi.spyOn(process.stdout, "write");
+				writeData("\x1b[<32;1;3M");
+
+				// Motion events should trigger a render (which writes the
+				// cursor-positioning escape sequence and the content).
+				expect(spy.mock.calls.length).toBeGreaterThan(0);
+
+				// Cleanup
+				writeData("\x1b");
+				await expect(promise).rejects.toThrow("Cancelled");
+			});
+
+			it("does not re-render when hovering same item", async () => {
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green" },
+					],
+				});
+
+				// First motion onto row 1 (y=3) triggers render.
+				writeData("\x1b[<32;1;3M");
+
+				const spy = vi.spyOn(process.stdout, "write");
+				const initialCalls = spy.mock.calls.length;
+
+				// Same motion again — hoveredIndex doesn't change, no render.
+				writeData("\x1b[<32;1;3M");
+
+				expect(spy.mock.calls.length).toBe(initialCalls);
+
+				writeData("\x1b");
+				await expect(promise).rejects.toThrow("Cancelled");
+			});
+
+			it("renders hover class output on motion", async () => {
+				const promise = select("Pick", {
+					choices: [
+						{ label: "Red", value: "red" },
+						{ label: "Green", value: "green" },
+					],
+				});
+
+				// Motion event over row 1 (y=3)
+				const spy = vi.spyOn(process.stdout, "write");
+				writeData("\x1b[<32;1;3M");
+
+				const written = spy.mock.calls.map((c) => String(c[0])).join("");
+
+				// The hover class applies background color escape.
+				expect(written).toContain("\x1b[48");
+
+				writeData("\x1b");
+				await expect(promise).rejects.toThrow("Cancelled");
+			});
 		});
 	});
 });

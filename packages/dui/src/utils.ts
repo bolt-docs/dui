@@ -41,6 +41,25 @@ export function countRenderLines(line: string): number {
 	return Math.max(1, Math.ceil(len / width));
 }
 
+/**
+ * Compute the number of terminal rows the cursor moves down when writing
+ * `lines.join("\n")`. Unlike `countRenderLines` (which counts visual rows
+ * per line), this accounts for the fact that `floor(len/width)` rows of
+ * cursor movement happen per line, plus one row per `\n` separator.
+ *
+ * Use this for tracking how far to move the cursor back up on re-render.
+ */
+export function computeLinesRendered(lines: string[]): number {
+	const width = terminalWidth();
+	if (width <= 0 || lines.length === 0) return 0;
+	let rows = 0;
+	for (const line of lines) {
+		const len = visibleLength(line);
+		rows += Math.floor(len / width);
+	}
+	return rows + (lines.length - 1);
+}
+
 interface Token {
 	type: "ansi" | "word" | "space" | "newline";
 	value: string;

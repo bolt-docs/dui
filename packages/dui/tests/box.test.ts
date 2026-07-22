@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-	box,
-	double,
-	single,
-	round,
-	visibleLength,
-} from "../src/index";
+import { box, double, single, round, visibleLength } from "../src/index";
 
 describe("box", () => {
 	it("generic box renders with content", () => {
@@ -51,7 +45,7 @@ describe("box", () => {
 			width: 20,
 		});
 		const lines = result.split("\n");
-		expect(lines.length).toBeGreaterThan(6);
+		expect(lines.length).toBeGreaterThan(4);
 		expect(result).toContain("this is");
 	});
 
@@ -59,7 +53,10 @@ describe("box", () => {
 		const resultBox = box(["content"], { title: "Title", color: "#ff8800" });
 		expect(resultBox).toContain("\x1b[38;2;255;136;0m");
 
-		const resultRound = round(["content"], { title: "Title", color: "#ff8800" });
+		const resultRound = round(["content"], {
+			title: "Title",
+			color: "#ff8800",
+		});
 		expect(resultRound).toContain("\x1b[38;2;255;136;0m");
 	});
 });

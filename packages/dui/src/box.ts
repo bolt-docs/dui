@@ -48,7 +48,6 @@ function buildBoxBase(
 		width: number;
 		style: BoxBorderStyle;
 		padLine: (line: string, innerWidth: number) => string;
-		addVerticalSpacers?: boolean;
 		color?: ColorStyle;
 		colors?: BoxOptions["colors"];
 		theme?: ReturnType<typeof getConfig>["theme"];
@@ -76,9 +75,6 @@ function buildBoxBase(
 				` ${titleStyle(title)} ` +
 				borderStyle(b.h.repeat(remaining) + b.tr),
 		);
-		if (opts.addVerticalSpacers) {
-			result.push(borderStyle(b.v) + " ".repeat(opts.width) + borderStyle(b.v));
-		}
 	} else {
 		result.push(borderStyle(b.tl + b.h.repeat(opts.width) + b.tr));
 	}
@@ -86,10 +82,6 @@ function buildBoxBase(
 	for (const line of lines) {
 		const content = opts.padLine(line, opts.width);
 		result.push(borderStyle(b.v) + content + borderStyle(b.v));
-	}
-
-	if (opts.title && opts.addVerticalSpacers) {
-		result.push(borderStyle(b.v) + " ".repeat(opts.width) + borderStyle(b.v));
 	}
 
 	result.push(borderStyle(b.bl + b.h.repeat(opts.width) + b.br));
@@ -130,7 +122,6 @@ export function box(lines: string[], opts?: BoxOptions): string {
 		title: opts?.title,
 		width,
 		style,
-		addVerticalSpacers: true,
 		padLine: (line, innerWidth) => {
 			const innerPad = " ".repeat(padding);
 			return fitWidth(innerPad + line + innerPad, innerWidth);

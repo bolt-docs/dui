@@ -109,13 +109,13 @@ const EASING_FNS: Record<string, EasingFn> = {
 	"ease-in-out-sine": (t) => -(Math.cos(Math.PI * t) - 1) / 2,
 
 	// Exponential
-	"ease-in-expo": (t) => (t === 0 ? 0 : Math.pow(2, 10 * (t - 1))),
-	"ease-out-expo": (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+	"ease-in-expo": (t) => (t === 0 ? 0 : 2 ** (10 * (t - 1))),
+	"ease-out-expo": (t) => (t === 1 ? 1 : 1 - 2 ** (-10 * t)),
 	"ease-in-out-expo": (t) => {
 		if (t === 0 || t === 1) return t;
 		return t < 0.5
-			? Math.pow(2, 20 * t - 10) / 2
-			: (2 - Math.pow(2, -20 * t + 10)) / 2;
+			? 2 ** (20 * t - 10) / 2
+			: (2 - 2 ** (-20 * t + 10)) / 2;
 	},
 
 	// Circular
@@ -146,19 +146,19 @@ const EASING_FNS: Record<string, EasingFn> = {
 	"ease-in-elastic": (t) => {
 		if (t === 0 || t === 1) return t;
 		const c4 = (2 * Math.PI) / 3;
-		return -Math.pow(2, 10 * (t - 1)) * Math.sin((t * 10 - 10.75) * c4);
+		return -(2 ** (10 * (t - 1))) * Math.sin((t * 10 - 10.75) * c4);
 	},
 	"ease-out-elastic": (t) => {
 		if (t === 0 || t === 1) return t;
 		const c4 = (2 * Math.PI) / 3;
-		return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+		return 2 ** (-10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
 	},
 	"ease-in-out-elastic": (t) => {
 		if (t === 0 || t === 1) return t;
 		const c5 = (2 * Math.PI) / 4.5;
 		return t < 0.5
-			? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2
-			: (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+			? -(2 ** (20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2
+			: (2 ** (-20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
 	},
 
 	// Bounce
@@ -623,7 +623,7 @@ interface TimelineEntry {
  */
 export function createTimeline() {
 	const entries: TimelineEntry[] = [];
-	let doneCallbacks: (() => void)[] = [];
+	const doneCallbacks: (() => void)[] = [];
 
 	function add(
 		config: AnimateProgressConfig,

@@ -148,6 +148,20 @@ export interface DuiTheme {
 
 type ColorFn = (s: string) => string;
 
+// Plugin-registered theme defaults. Consulted by `getDefaultFn` BEFORE the
+// hardcoded built-in map, but only when the user hasn't explicitly set a
+// value via `configure({ theme: { … } })`. Per-slot teardown happens via
+// `clearThemeDefault(slot)` from `plugin.ts`'s `unregisterPlugin`.
+const themeDefaultsFromPlugins = new Map<string, ColorStyle>();
+
+export function registerThemeDefault(slot: string, value: ColorStyle): void {
+	themeDefaultsFromPlugins.set(slot, value);
+}
+
+export function clearThemeDefault(slot: string): void {
+	themeDefaultsFromPlugins.delete(slot);
+}
+
 // Pair-shaped spec returned by `getDefaultFn` so that compound
 // `{fg, bg}` defaults (e.g. the `markdown.codeInline` chip) expose
 // the background as a separate painter — same shape as
@@ -185,6 +199,31 @@ function resolveColorStyle(
 }
 
 function getDefaultFn(slot: string): DefaultSpec {
+	// Plugin defaults take precedence over the hardcoded built-in map.
+	// User-supplied theme values are handled by `resolveColor` itself
+	// (passed via `theme`), so they always win regardless of this fallback.
+	const pluginVal = themeDefaultsFromPlugins.get(slot);
+	if (pluginVal !== undefined) {
+		if (typeof pluginVal === "string") {
+			if (pluginVal.startsWith("#")) {
+				const hex = pluginVal;
+				return { apply: (s: string) => colorize(s, hex, "fg") };
+			}
+			const fn = colorMap[pluginVal as keyof typeof colorMap];
+			if (fn) return { apply: fn };
+		} else if (pluginVal.fg !== undefined || pluginVal.bg !== undefined) {
+			return {
+				apply: pluginVal.fg
+					? (s: string) => colorize(s, pluginVal.fg as string, "fg")
+					: (s: string) => s,
+				bg:
+					pluginVal.bg !== undefined
+						? (s: string) => colorize(s, pluginVal.bg as string, "bg")
+						: undefined,
+			};
+		}
+	}
+
 	const map: Record<string, DefaultValue> = {
 		"logger.warn": "yellow",
 		"logger.error": "red",

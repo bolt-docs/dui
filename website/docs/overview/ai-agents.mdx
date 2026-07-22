@@ -39,6 +39,18 @@ curl -fsSL https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/instal
 bash scripts/install-ai-agent.sh
 ```
 
+### CLI Options
+
+You can pass flags to the install script to customize behavior:
+
+| Flag | Description |
+|------|-------------|
+| `--agent <name>` | Target agent (`claude-code`, `claude-skill`, `cursor`, `opencode`, `.agents`, `all`). Skips the interactive prompt. |
+| `--yes` | Overwrite existing skill configurations without asking for confirmation. Useful in CI/CD. |
+| `--help` | Show usage information and exit. |
+
+Aliases: `todos` is also accepted as an alias for `all` (Spanish for "all").
+
 ---
 
 ## What the skill includes
@@ -66,3 +78,14 @@ After installing the skill, your AI agent can answer questions like:
 > "Build a multi-step setup wizard with confirmation"
 
 See the [LLM Guide](/docs/overview/llm) for copy-paste prompt templates.
+
+---
+
+## Troubleshooting
+
+- **Network failure / `curl` missing**: The one-liner requires `curl`. If your environment only has `wget`, pipe via wget instead: `wget -qO- https://raw.githubusercontent.com/bolt-docs/dui/master/scripts/install-ai-agent.sh | bash`. If both are missing, run from a clone of the repo so the script can read `./.opencode/skills/dui/SKILL.md` locally.
+- **CI/CD environments (no `/dev/tty`)**: Running the script in a CI pipeline without flags will fail because interactive prompts need a TTY. Always use non-interactive mode: `--agent all --yes`.
+- **GitHub rate limiting (HTTP 403)**: The skill is fetched from `raw.githubusercontent.com`. If you hit the anonymous rate limit, wait a few minutes, authenticate, or run from a local clone.
+- **`NO_COLOR` is set**: The install script's log output becomes monochrome. This is expected — installation still works.
+- **Skill file already exists**: Without `--yes`, the script prompts to overwrite. Type `y` to confirm or `n` to skip. Running again with `--yes` upgrades in place.
+- **Wrong agent picked**: Re-run with the flag for the right agent. To uninstall, delete the files at the destination paths shown in the destinations table at the top of this page (`.agents` and `all` install two files each).

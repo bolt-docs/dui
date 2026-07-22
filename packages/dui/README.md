@@ -362,21 +362,49 @@ MIT
 
 ### Plugin System
 
-Register plugins to extend DUI's functionality:
+Register plugins to extend DUI's functionality. Plugins can register
+renderers, hook into lifecycle events, and compose with other plugins.
 
 ```ts
-import { usePlugin, type DuiPlugin } from '@bdocs/dui'
+import { usePluginAsync, renderWith, type DuiPlugin } from '@bdocs/dui'
 
 const myPlugin: DuiPlugin = {
   name: 'my-plugin',
-  async setup(api) {
-    api.utils.colors
+  setup(api) {
+    api.registerRenderer('myplugin.hello', async (input) => {
+      return `Hello, ${input}!`
+    })
     api.on('configure', (config) => { /* ... */ })
   }
 }
 
-usePlugin(myPlugin)
+await usePluginAsync(myPlugin)
+
+// Call through the plugin API
+const msg = await renderWith('myplugin.hello', 'World')
+console.log(msg) // "Hello, World!"
 ```
+
+**API functions:**
+
+| Function | Description |
+|---|---|
+| `usePluginAsync(plugin)` | Register a plugin (async, preferred). Chained calls run in order; `register` event fires once after queue drains. |
+| `usePlugin(plugin)` | Register a plugin (sync, deprecated). |
+| `unregisterPlugin(name)` | Tear down a plugin: runs cleanup, removes slots/hooks/renderers/handlers. |
+| `renderWith(name, input, opts?)` | Invoke a renderer registered by any plugin. |
+| `runRenderHookAsync(name, input, ctx?)` | Run the chain of render hooks for a channel (sync & async). |
+| `emitRenderEvent(event, ctx?)` | Emit `before-render` or `after-render` lifecycle events. |
+
+**PluginAPI methods:**
+
+| Method | Description |
+|---|---|
+| `api.on(event, handler)` | Subscribe to lifecycle events (`register`, `configure`, `theme-changed`, `before-render`, `after-render`). |
+| `api.registerThemeSlot(slot, color)` | Register theme default color for a slot. |
+| `api.registerRenderHook(name, hook)` | Register a sync/async render hook for a channel. |
+| `api.registerRenderer(name, renderer)` | Register a renderer for discovery by other plugins. |
+| `api.getRenderer(name)` | Get a renderer registered by any plugin. |
 
 ### Chart Plugin
 

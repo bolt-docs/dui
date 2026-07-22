@@ -45,12 +45,19 @@ fetch_skill() {
 		return 0
 	fi
 
+	# Prefer curl, but fall through to wget even if curl IS installed but the
+	# network request itself failed. Using `if curl ... then return 0; fi`
+	# (instead of `&&`) keeps the chain alive on request failure.
 	if command -v curl &>/dev/null; then
-		curl -fsSL "$SKILL_SOURCE_URL" 2>/dev/null && return 0
+		if curl -fsSL "$SKILL_SOURCE_URL" 2>/dev/null; then
+			return 0
+		fi
 	fi
 
 	if command -v wget &>/dev/null; then
-		wget -qO- "$SKILL_SOURCE_URL" 2>/dev/null && return 0
+		if wget -qO- "$SKILL_SOURCE_URL" 2>/dev/null; then
+			return 0
+		fi
 	fi
 
 	err "Could not fetch the skill from:\n  $SKILL_SOURCE_URL\n  Make sure you have curl or wget installed, or run the script from the repository root."
@@ -58,6 +65,7 @@ fetch_skill() {
 }
 
 # ─── Install at destination ───
+# Assumes $SKILL_CONTENT has already been populated by `fetch_skill`.
 install_skill() {
 	local dest="$1"
 	local label="$2"
@@ -65,7 +73,10 @@ install_skill() {
 	if [[ -f "$dest" ]]; then
 		if [[ "$FORCE_YES" != "true" ]]; then
 			echo -n "  ${dest} already exists. Overwrite? [y/N] "
-			read -r answer
+			# Read from the controlling terminal so the script works
+			# correctly when piped via `curl ... | bash` (where stdin
+			# is the script body itself, not user input).
+			read -r answer < /dev/tty
 			if [[ ! "$answer" =~ ^[Yy]$ ]]; then
 				warn "Skipped: ${dest}"
 				return
@@ -74,24 +85,9 @@ install_skill() {
 	fi
 
 	mkdir -p "$(dirname "$dest")"
-
-	# Try downloading; if it fails, try local copy; if both fail, exit
-	if command -v curl &>/dev/null; then
-		content=$(curl -fsSL "$SKILL_SOURCE_URL" 2>/dev/null) || true
-	elif command -v wget &>/dev/null; then
-		content=$(wget -qO- "$SKILL_SOURCE_URL" 2>/dev/null) || true
-	fi
-
-	if [[ -z "${content:-}" && -f "$SKILL_LOCAL" ]]; then
-		content=$(cat "$SKILL_LOCAL")
-	fi
-
-	if [[ -z "${content:-}" ]]; then
-		err "Could not retrieve the skill content."
-		exit 1
-	fi
-
-	echo "$content" > "$dest"
+	# `printf` preserves backslashes / special bytes that `echo -e`
+	# would otherwise interpret.
+	printf "%s\n" "$SKILL_CONTENT" > "$dest"
 	ok "Installed for ${label}: ${dest}"
 }
 
@@ -131,7 +127,8 @@ if [[ -z "$SELECTED_AGENT" ]]; then
 	echo "  6) all           → all of the above"
 	echo ""
 	echo -n "Select an option [1-6]: "
-	read -r opt
+	# See comment in install_skill() above re: /dev/tty.
+	read -r opt < /dev/tty
 	echo ""
 
 	case "$opt" in
@@ -143,6 +140,13 @@ if [[ -z "$SELECTED_AGENT" ]]; then
 		6) SELECTED_AGENT="all" ;;
 		*) err "Invalid option: $opt"; exit 1 ;;
 	esac
+fi
+
+# ─── Fetch content ONCE before branching ───
+SKILL_CONTENT=$(fetch_skill)
+if [[ -z "${SKILL_CONTENT:-}" ]]; then
+	err "Could not retrieve the skill content."
+	exit 1
 fi
 
 # ─── Run installation ───
@@ -165,6 +169,7 @@ case "$SELECTED_AGENT" in
 
 	.agents)
 		install_skill ".agents/skills/dui/SKILL.md" ".agents (standard)"
+		install_skill ".agents/skill/dui/SKILL.md" ".agents (alternative)"
 		;;
 
 	all|todos)

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { PassThrough } from "node:stream";
-import readline from "node:readline";
 import { tree, resetConfig } from "../src/index";
 
 const ORIG_STDIN_IS_TTY = process.stdin.isTTY;
@@ -190,20 +189,18 @@ describe("tree", () => {
 	});
 
 	describe("interactive (TTY)", () => {
-		let keypressHandler:
-			| ((str: string, key: { name?: string; ctrl?: boolean }) => void)
-			| undefined;
-		let stdinSetRawMode: any;
+		let dataHandler: ((data: string | Buffer) => void) | undefined;
+		let stdinSetRawMode: ReturnType<typeof vi.fn>;
 
 		beforeEach(() => {
 			process.stdin.isTTY = true;
 			process.stdout.isTTY = true;
-			keypressHandler = undefined;
+			dataHandler = undefined;
 
 			vi.spyOn(process.stdin, "on").mockImplementation(
 				(event: any, handler: any) => {
-					if (event === "keypress") {
-						keypressHandler = handler;
+					if (event === "data") {
+						dataHandler = handler;
 					}
 					return process.stdin;
 				},
@@ -217,22 +214,20 @@ describe("tree", () => {
 				.mockImplementation(() => {});
 
 			vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-			vi.spyOn(readline, "emitKeypressEvents").mockImplementation(() => {});
-			vi.spyOn(readline, "cursorTo").mockImplementation(() => {});
-			vi.spyOn(readline, "moveCursor").mockImplementation(() => {});
-			vi.spyOn(readline, "clearScreenDown").mockImplementation(() => {});
 		});
 
-		function press(key: string, ctrl?: boolean) {
-			keypressHandler!("", { name: key, ctrl });
+		function writeData(str: string) {
+			if (dataHandler) {
+				dataHandler(Buffer.from(str, "utf8"));
+			}
 		}
 
 		it("selects a leaf on enter", async () => {
 			const promise = tree("Pick", { tree: SAMPLE_TREE });
 
-			press("down"); // skip Fruits (branch) → Colors (branch)
-			press("down"); // skip Colors (branch) → Plain (leaf)
-			press("enter");
+			writeData("\x1b[B"); // down past Fruits (branch) → Colors (branch)
+			writeData("\x1b[B"); // down past Colors (branch) → Plain (leaf)
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("plain");
 		});
@@ -240,9 +235,9 @@ describe("tree", () => {
 		it("expands a collapsed branch with right arrow", async () => {
 			const promise = tree("Pick", { tree: SAMPLE_TREE });
 
-			press("right"); // expand Fruits
-			press("down"); // Apple
-			press("enter");
+			writeData("\x1b[C"); // right → expand Fruits
+			writeData("\x1b[B"); // down → Apple
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("apple");
 		});
@@ -253,11 +248,11 @@ describe("tree", () => {
 				initialExpanded: true,
 			});
 
-			press("left"); // collapse Fruits
-			press("down"); // Colors
-			press("right"); // expand Colors
-			press("down"); // Red
-			press("enter");
+			writeData("\x1b[D"); // left → collapse Fruits
+			writeData("\x1b[B"); // down → Colors
+			writeData("\x1b[C"); // right → expand Colors
+			writeData("\x1b[B"); // down → Red
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("red");
 		});
@@ -265,9 +260,9 @@ describe("tree", () => {
 		it("toggles branch with space", async () => {
 			const promise = tree("Pick", { tree: SAMPLE_TREE });
 
-			press("space"); // expand Fruits
-			press("down"); // Apple
-			press("enter");
+			writeData(" "); // space → expand Fruits
+			writeData("\x1b[B"); // down → Apple
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("apple");
 		});
@@ -278,10 +273,10 @@ describe("tree", () => {
 				initialExpanded: true,
 			});
 
-			press("space"); // collapse Fruits
-			press("space"); // expand Fruits again
-			press("down"); // Apple
-			press("enter"); // select Apple
+			writeData(" "); // space → collapse Fruits
+			writeData(" "); // space → expand Fruits again
+			writeData("\x1b[B"); // down → Apple
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("apple");
 		});
@@ -289,9 +284,9 @@ describe("tree", () => {
 		it("toggles branch with enter", async () => {
 			const promise = tree("Pick", { tree: SAMPLE_TREE });
 
-			press("enter"); // toggle Fruits (expand)
-			press("down"); // Apple (now visible)
-			press("enter"); // select Apple
+			writeData("\r"); // enter → toggle Fruits (expand)
+			writeData("\x1b[B"); // down → Apple (now visible)
+			writeData("\r"); // enter → select Apple
 
 			await expect(promise).resolves.toBe("apple");
 		});
@@ -302,10 +297,10 @@ describe("tree", () => {
 				initialExpanded: true,
 			});
 
-			press("enter"); // collapse Fruits
-			press("enter"); // expand Fruits
-			press("down"); // Apple
-			press("enter"); // select Apple
+			writeData("\r"); // enter → collapse Fruits
+			writeData("\r"); // enter → expand Fruits
+			writeData("\x1b[B"); // down → Apple
+			writeData("\r"); // enter → select Apple
 
 			await expect(promise).resolves.toBe("apple");
 		});
@@ -316,12 +311,12 @@ describe("tree", () => {
 				initialExpanded: true,
 			});
 
-			// Fruits (d0), Apple (d1), Banana (d1), Colors (d0), Red (d1), Green (d2, disabled), Blue (d1), Plain (d0)
-			press("down"); // Apple
-			press("down"); // Banana
-			press("down"); // Colors
-			press("down"); // Red (leaf)
-			press("enter");
+			// Fruits(d0), Apple(d1), Banana(d1), Colors(d0), Red(d1), Green(d2,disabled), Blue(d1), Plain(d0)
+			writeData("\x1b[B"); // down → Apple
+			writeData("\x1b[B"); // down → Banana
+			writeData("\x1b[B"); // down → Colors
+			writeData("\x1b[B"); // down → Red (leaf)
+			writeData("\r");
 
 			await expect(promise).resolves.toBe("red");
 		});
@@ -332,17 +327,17 @@ describe("tree", () => {
 				initialExpanded: true,
 			});
 
-			press("down"); // Apple
-			press("down"); // Banana
-			press("down"); // Colors
-			press("down"); // Red
-			press("up"); // Colors
-			press("up"); // Banana
-			press("up"); // Apple
-			press("up"); // Fruits
-			press("right"); // nothing (Fruits already expanded)
-			press("down"); // Apple
-			press("enter"); // select Apple
+			writeData("\x1b[B"); // down → Apple
+			writeData("\x1b[B"); // down → Banana
+			writeData("\x1b[B"); // down → Colors
+			writeData("\x1b[B"); // down → Red
+			writeData("\x1b[A"); // up → Colors
+			writeData("\x1b[A"); // up → Banana
+			writeData("\x1b[A"); // up → Apple
+			writeData("\x1b[A"); // up → Fruits
+			writeData("\x1b[C"); // right → nothing (Fruits already expanded)
+			writeData("\x1b[B"); // down → Apple
+			writeData("\r"); // enter → select Apple
 
 			await expect(promise).resolves.toBe("apple");
 		});
@@ -350,7 +345,7 @@ describe("tree", () => {
 		it("rejects on escape", async () => {
 			const promise = tree("Pick", { tree: SAMPLE_TREE });
 
-			press("escape");
+			writeData("\x1b");
 
 			await expect(promise).rejects.toThrow("Cancelled");
 		});
@@ -374,10 +369,10 @@ describe("tree", () => {
 				],
 			});
 
-			press("right"); // expand Numbers
-			press("down"); // One
-			press("down"); // Two
-			press("enter"); // select Two
+			writeData("\x1b[C"); // right → expand Numbers
+			writeData("\x1b[B"); // down → One
+			writeData("\x1b[B"); // down → Two
+			writeData("\r"); // enter → select Two
 
 			await expect(promise).resolves.toBe(2);
 		});
@@ -389,9 +384,9 @@ describe("tree", () => {
 			});
 
 			// All branches expanded by default
-			press("down"); // Apple (depth 1)
-			press("down"); // Banana (depth 1)
-			press("enter"); // select Banana
+			writeData("\x1b[B"); // down → Apple (depth 1)
+			writeData("\x1b[B"); // down → Banana (depth 1)
+			writeData("\r"); // enter → select Banana
 
 			await expect(promise).resolves.toBe("banana");
 		});
@@ -401,9 +396,9 @@ describe("tree", () => {
 
 			expect(stdinSetRawMode).toHaveBeenCalledWith(true);
 
-			press("down");
-			press("down");
-			press("enter");
+			writeData("\x1b[B");
+			writeData("\x1b[B");
+			writeData("\r");
 			await promise;
 
 			expect(stdinSetRawMode).toHaveBeenCalledWith(false);
@@ -412,7 +407,7 @@ describe("tree", () => {
 		it("restores raw mode on cancel", async () => {
 			const promise = tree("Pick", { tree: SAMPLE_TREE });
 
-			press("escape");
+			writeData("\x1b");
 			await expect(promise).rejects.toThrow("Cancelled");
 
 			expect(stdinSetRawMode).toHaveBeenCalledWith(false);
@@ -434,10 +429,10 @@ describe("tree", () => {
 			});
 
 			// Red, Green(disabled), Blue — Green is visible but can't be selected
-			press("down"); // Red
-			press("down"); // Green (disabled — can't select via enter)
-			press("down"); // Blue
-			press("enter"); // select Blue
+			writeData("\x1b[B"); // down → Red
+			writeData("\x1b[B"); // down → Green (can't select via enter)
+			writeData("\x1b[B"); // down → Blue
+			writeData("\r"); // enter → select Blue
 
 			await expect(promise).resolves.toBe("blue");
 		});
@@ -456,8 +451,8 @@ describe("tree", () => {
 				],
 			});
 
-			press("down"); // Plain
-			press("enter"); // select Plain
+			writeData("\x1b[B"); // down → Plain
+			writeData("\r"); // enter → select Plain
 
 			await expect(promise).resolves.toBe("plain");
 		});
@@ -481,9 +476,9 @@ describe("tree", () => {
 			});
 
 			// Root, Nested, Deep
-			press("down"); // Nested
-			press("down"); // Deep
-			press("enter"); // select Deep
+			writeData("\x1b[B"); // down → Nested
+			writeData("\x1b[B"); // down → Deep
+			writeData("\r"); // enter → select Deep
 
 			await expect(promise).resolves.toBe("deep");
 		});
@@ -503,10 +498,10 @@ describe("tree", () => {
 				initialExpanded: true,
 			});
 
-			press("down"); // Apple
-			press("left"); // collapse Fruits — cursor moves to Fruits
-			press("down"); // Done
-			press("enter");
+			writeData("\x1b[B"); // down → Apple
+			writeData("\x1b[D"); // left → collapse Fruits, cursor moves to Fruits
+			writeData("\x1b[B"); // down → Done
+			writeData("\r"); // enter → select Done
 
 			await expect(promise).resolves.toBe("done");
 		});

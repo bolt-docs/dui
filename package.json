@@ -8,7 +8,9 @@
 		"release": "pnpm build && pnpm changeset publish",
 		"version-packages": "changeset version",
 		"format": "pnpm exec biome format --write .",
-		"lint": "pnpm exec biome lint --write ."
+		"lint": "pnpm exec biome lint --write .",
+		"sync-skills": "bash scripts/sync-skills.sh",
+		"lint:skills": "bash scripts/sync-skills.sh --check"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.9",

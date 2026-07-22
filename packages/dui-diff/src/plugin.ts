@@ -1,22 +1,40 @@
-/**
- * Plugin integration for `@dui-toolkit/plugin-diff`.
- *
- * Registering this with DUI's `usePlugin()` is optional — the renderer
- * works fine without it. Registering merely lets future hooks
- * (e.g. global diff listeners, shared cache) tap into the same lifecycle.
- */
-
 import type { DuiPlugin } from "@bdocs/dui";
+import { diff } from "./core";
+import type { DiffOptions } from "./types";
+import { SLOTS } from "./theme";
+
+const DEFAULTS: Record<keyof typeof SLOTS, string> = {
+	add: "#22c55e",
+	del: "#dc2626",
+	context: "#888888",
+	hunk: "#06b6d4",
+	linenum: "#94a3b8",
+	gutter: "#94a3b8",
+	fileHeader: "#f8fafc",
+	stat: "#94a3b8",
+	wordAdd: "#22c55e",
+	wordDel: "#dc2626",
+};
 
 export const diffPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-diff",
+	version: "0.5.0",
+	peerDependencies: { dui: "^0.5.0" },
 	setup(api) {
-		api.on("register", () => {
-			// Reserved for future global setup (e.g. shared hunk cache).
+		for (const [key, defaultColor] of Object.entries(DEFAULTS) as Array<
+			[keyof typeof SLOTS, string]
+		>) {
+			api.registerThemeSlot(SLOTS[key], defaultColor);
+		}
+
+		api.registerRenderer("diff", async (input, options) => {
+			const opts = { ...(options ?? {}) } as DiffOptions & { old?: string };
+			const oldStr = opts.old ?? "";
+			delete (opts as Record<string, unknown>).old;
+			const result = diff(oldStr, input, opts);
+			return result.output;
 		});
-		api.on("configure", () => {
-			// Theme changes take effect automatically through `resolveColor`;
-			// no restart needed.
-		});
+
+		return () => {};
 	},
 };

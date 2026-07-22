@@ -126,7 +126,7 @@ select<T = string>(message: string, options: SelectOptions<T>): Promise<T>
 <Field name="options" type="SelectOptions">Objeto de configuración con choices, pageSize y colors.</Field>
 
 Prompt interactivo para elegir una opción de una lista. Soporta navegación con flechas,
-elementos deshabilitados, scroll por páginas, y un fallback non-TTY con entrada numérica.
+navegación con clic del ratón, elementos deshabilitados, scroll por páginas, y un fallback non-TTY con entrada numérica.
 
 ```ts
 const valor = await select('Elige un color:', {
@@ -136,7 +136,7 @@ const valor = await select('Elige un color:', {
     { label: 'Azul',  value: '#3399ff' },
   ],
 })
-// Usa ↑↓ para navegar, Enter para confirmar, Esc para cancelar
+// Usa ↑↓ para navegar, clic para seleccionar, Enter para confirmar, Esc para cancelar
 ```
 
 <Callout variant="info">
@@ -174,6 +174,20 @@ const framework = await select('Elige un framework:', {
   },
 })
 ```
+
+### Soporte de Mouse
+
+Cuando se ejecuta en un terminal que soporta eventos de mouse (la mayoría de terminales modernos), `select()` soporta automáticamente clics con mouse:
+
+- **Click izquierdo** en una opción la selecciona y cierra el prompt
+- Funciona igual que la navegación con flechas y Enter
+- Se adapta automáticamente al scroll
+
+El soporte de mouse se habilita automáticamente en entornos TTY y se desactiva en entornos non-TTY.
+
+<Callout variant="info">
+  Las características de mouse requieren soporte del protocolo SGR 1006 (la mayoría de terminales modernos).
+</Callout>
 
 ## tree
 
