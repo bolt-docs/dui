@@ -1,7 +1,7 @@
-import { Clipboard, ClipboardCheck, ChevronDown } from "lucide-react";
-import { Button, Menu } from "boltdocs/primitives";
-import { useState } from "react";
 import { copyToClipboard } from "boltdocs/client";
+import { Button, Menu } from "boltdocs/primitives";
+import { ChevronDown, Clipboard, ClipboardCheck } from "lucide-react";
+import { useState } from "react";
 
 interface TerminalCopyMarkdownProps {
 	content?: string;

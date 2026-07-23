@@ -58,7 +58,9 @@ function extractAnsiColor(line: string): string | undefined {
 }
 
 function Divider({ char, color }: { char: string; color?: string }) {
-	const hexColor = color ? TERMINAL_COLORS[color] || color : "var(--color-strong)";
+	const hexColor = color
+		? TERMINAL_COLORS[color] || color
+		: "var(--color-strong)";
 
 	let borderStyle = "solid";
 	let borderWidth = "1px";
@@ -110,7 +112,9 @@ export default function TerminalPreview({
 		<div className="my-6 overflow-hidden rounded-lg border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs sm:text-sm">
 			{/* Terminal Top Bar */}
 			<div className="flex items-center border-b dark:border-neutral-900 border-strong dark:bg-neutral-900/60 bg-neutral-100 text-neutral-700 dark:text-black px-4 py-2 select-none">
-				<div className="text-xs text-neutral-500 dark:text-neutral-500 font-semibold">{title}</div>
+				<div className="text-xs text-neutral-500 dark:text-neutral-500 font-semibold">
+					{title}
+				</div>
 			</div>
 
 			{/* Terminal Screen */}
@@ -119,7 +123,9 @@ export default function TerminalPreview({
 			>
 				{command && (
 					<div className="mb-2 text-neutral-500 dark:text-neutral-400 select-none">
-						<span className="text-green-600 dark:text-green-500 font-bold">$ </span>
+						<span className="text-green-600 dark:text-green-500 font-bold">
+							${" "}
+						</span>
 						{command}
 					</div>
 				)}

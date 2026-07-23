@@ -1,17 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-	pixelsToAnsi,
 	applyDither,
-	renderAnsi,
 	detectTerminal,
+	pixelsToAnsi,
+	renderAnsi,
 	resetTerminalDetection,
 	setTerminalCaps,
 } from "../src/index";
-import {
-	createTestPixels,
-	stripAnsi,
-	createMinimalPng,
-} from "./helpers";
+import { createMinimalPng, createTestPixels, stripAnsi } from "./helpers";
 
 // ── Tests ──────────────────────────────────────────────────────
 

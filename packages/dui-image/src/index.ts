@@ -5,23 +5,20 @@
  * en la terminal usando ANSI half-blocks y soporte para animaciones.
  */
 
-// ── ANSI half-block rendering ──────────────────────────────────
-export { pixelsToAnsi, applyDither } from "./ansi";
 export type { AnsiImageOptions } from "./ansi";
-
-// ── High-level rendering ───────────────────────────────────────
-export { renderImage, renderAnsi } from "./render";
-export type { ImageRenderOptions } from "./render";
-
-// ── GIF animation ──────────────────────────────────────────────
-export { renderGifFrames, animateGif } from "./gif";
-export type { GifFrame, GifOptions } from "./gif";
-
+// ── ANSI half-block rendering ──────────────────────────────────
+export { applyDither, pixelsToAnsi } from "./ansi";
+export type { TerminalCapabilities } from "./detect";
 // ── Terminal detection ─────────────────────────────────────────
 export {
 	detectTerminal,
 	resetTerminalDetection,
 	setTerminalCaps,
 } from "./detect";
-export type { TerminalCapabilities } from "./detect";
+export type { GifFrame, GifOptions } from "./gif";
+// ── GIF animation ──────────────────────────────────────────────
+export { animateGif, renderGifFrames } from "./gif";
 export { imagePlugin } from "./plugin";
+export type { ImageRenderOptions } from "./render";
+// ── High-level rendering ───────────────────────────────────────
+export { renderAnsi, renderImage } from "./render";

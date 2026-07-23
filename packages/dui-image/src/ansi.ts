@@ -67,9 +67,25 @@ export function pixelsToAnsi(
 		let line = "";
 		for (let col = 0; col < finalWidth; col++) {
 			// Sample upper pixel
-			const pxUpper = samplePixel(pixels, imgWidth, imgHeight, col, row * 2, scaleX, scaleY);
+			const pxUpper = samplePixel(
+				pixels,
+				imgWidth,
+				imgHeight,
+				col,
+				row * 2,
+				scaleX,
+				scaleY,
+			);
 			// Sample lower pixel
-			const pxLower = samplePixel(pixels, imgWidth, imgHeight, col, row * 2 + 1, scaleX, scaleY);
+			const pxLower = samplePixel(
+				pixels,
+				imgWidth,
+				imgHeight,
+				col,
+				row * 2 + 1,
+				scaleX,
+				scaleY,
+			);
 
 			line += renderBlockPixel(
 				pxUpper,

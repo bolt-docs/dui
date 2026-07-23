@@ -31,7 +31,9 @@ const VALID_KEYS: (keyof DuiConfig)[] = ["prefix", "theme"];
 export function configure(opts: Partial<DuiConfig>): void {
 	for (const key of Object.keys(opts)) {
 		if (!VALID_KEYS.includes(key as keyof DuiConfig)) {
-			console.warn(`[dui] Unknown config key: "${key}". Valid keys: ${VALID_KEYS.join(", ")}`);
+			console.warn(
+				`[dui] Unknown config key: "${key}". Valid keys: ${VALID_KEYS.join(", ")}`,
+			);
 		}
 	}
 	if (opts.prefix !== undefined && opts.prefix.trim() === "") {

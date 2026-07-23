@@ -1,22 +1,22 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
-import type { ColorStyle } from "./theme";
-import { resolveColor } from "./theme";
-import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 import {
 	disableMouse,
 	enableMouse,
 	enableMouseMove,
 	getClickedItem,
 	getHoveredItem,
-	parseSGRMouseData,
+	parseSGRMouseDataAll,
 	registerClickableArea,
 	registerHoverableArea,
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
 import { applyClass } from "./style";
+import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
+import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 
 export interface TreeNode<T = string> {
 	label: string;
@@ -30,6 +30,15 @@ export interface TreeOptions<T = string> {
 	tree: TreeNode<T>[];
 	pageSize?: number;
 	initialExpanded?: boolean;
+	/**
+	 * How many rows the cursor advances per wheel tick. Defaults
+	 * to 1 (one tick = one row). Values `< 1` (including 0 and
+	 * negatives) are coerced to 1, so 3 means one tick moves the
+	 * cursor three rows. The tree cursor is bounded at the ends
+	 * (no wrap), so high values simply hit the ceiling faster.
+	 * Fractional values are floored; use integer values only.
+	 */
+	wheelSensitivity?: number;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
@@ -64,6 +73,7 @@ export async function tree<T = string>(
 		pageSize = 10,
 		initialExpanded = false,
 		colors: colorsOverride,
+		wheelSensitivity: wheelSensitivityOption,
 	} = options;
 
 	if (!treeData.length) {
@@ -74,12 +84,14 @@ export async function tree<T = string>(
 		return nonInteractiveTree(message, treeData);
 	}
 
+	const wheelSensitivity = Math.max(1, Math.floor(wheelSensitivityOption ?? 1));
 	return interactiveTree(
 		message,
 		treeData,
 		pageSize,
 		initialExpanded,
 		colorsOverride,
+		wheelSensitivity,
 	);
 }
 
@@ -116,7 +128,8 @@ function initExpanded<T>(
 	for (const node of nodes) {
 		if (node.children?.length) {
 			const expand =
-				initialExpanded || (node.expanded === undefined ? false : node.expanded);
+				initialExpanded ||
+				(node.expanded === undefined ? false : node.expanded);
 			if (expand) expanded.add(node);
 			initExpanded(node.children, expanded, initialExpanded);
 		}
@@ -159,23 +172,16 @@ function nonInteractiveTree<T>(
 			console.log(`  ${i + 1}. ${c.label}${d}`);
 		}
 
-		rl.question(
-			`Enter number (1-${leaves.length}): `,
-			(answer) => {
-				rl.close();
-				const idx = parseInt(answer.trim(), 10) - 1;
-				if (
-					idx >= 0 &&
-					idx < leaves.length &&
-					!leaves[idx].disabled
-				) {
-					resolve(leaves[idx].value);
-				} else {
-					const first = leaves.find((c) => !c.disabled);
-					resolve(first ? first.value : undefined);
-				}
-			},
-		);
+		rl.question(`Enter number (1-${leaves.length}): `, (answer) => {
+			rl.close();
+			const idx = parseInt(answer.trim(), 10) - 1;
+			if (idx >= 0 && idx < leaves.length && !leaves[idx].disabled) {
+				resolve(leaves[idx].value);
+			} else {
+				const first = leaves.find((c) => !c.disabled);
+				resolve(first ? first.value : undefined);
+			}
+		});
 	});
 }
 
@@ -185,6 +191,7 @@ function interactiveTree<T>(
 	pageSize: number,
 	initialExpanded: boolean,
 	colorsOverride: TreeOptions["colors"],
+	wheelSensitivity: number,
 ): Promise<T | undefined> {
 	return new Promise<T | undefined>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -389,24 +396,119 @@ function interactiveTree<T>(
 				buf = buf.slice(-32);
 			}
 
-			const mouseEvent = parseSGRMouseData(buf);
-			if (mouseEvent) {
+			// Process every SGR mouse sequence in arrival order so a
+			// single chunk with several wheel ticks (fast scroll in
+			// a deep tree) advances the cursor by the full burst
+			// count rather than just the last tick. Note that
+			// `parseSGRMouseDataAll` calls internal emitMouseEvent
+			// for each parsed sequence as a side effect, so external
+			// subscribers via onMouseEvent see every tick too.
+			const mouseEvents = parseSGRMouseDataAll(buf);
+			if (mouseEvents.length > 0) {
 				buf = "";
-				if (mouseEvent.type === "click") {
-					const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
-					if (clickedArea && clickedArea.type === "tree" && clickedArea.data) {
-						handleTreeClick(clickedArea.data.flatIndex as number);
+
+				let wheelUp = 0;
+				let wheelDown = 0;
+				let lastMove: (typeof mouseEvents)[number] | null = null;
+				// Multiple clicks in one chunk toggle each in order;
+				// each click looks up the freshly-rebuilt flat so a
+				// branch-click that opens new items does not point
+				// at a stale index.
+				const clickCoordinates: Array<{ x: number; y: number }> = [];
+
+				for (const mouseEvent of mouseEvents) {
+					if (mouseEvent.type === "click") {
+						clickCoordinates.push({ x: mouseEvent.x, y: mouseEvent.y });
+					} else if (mouseEvent.type === "move") {
+						lastMove = mouseEvent;
+					} else if (mouseEvent.type === "wheel") {
+						// Tree cursor is bounded [0, flat.length-1] (no
+						// wrap). Each wheel tick still advances one
+						// row, so a fast scroll cascades with no upper
+						// bound on the burst size other than the array
+						// end.
+						if (mouseEvent.wheel === "up") wheelUp++;
+						else if (mouseEvent.wheel === "down") wheelDown++;
 					}
-				} else if (mouseEvent.type === "move") {
-					const hoveredArea = getHoveredItem(mouseEvent.x, mouseEvent.y);
+				}
+
+				// Track whether anything visible actually changed so a
+				// chunk of repeated motion events landing on the same
+				// coordinate does NOT re-render (matches the legacy
+				// `does not re-render when hovering same item` contract
+				// that select and multiselect pin in their tests).
+				let renderNeeded = false;
+
+				if (lastMove) {
+					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
 					const newHovered =
 						hoveredArea && hoveredArea.data
 							? (hoveredArea.data.flatIndex as number)
 							: null;
 					if (newHovered !== hoveredIndex) {
 						hoveredIndex = newHovered;
-						render();
+						renderNeeded = true;
 					}
+				}
+
+				const wheelNet = wheelDown - wheelUp;
+				if (wheelNet !== 0) {
+					hoveredIndex = null;
+					// Tree has no wrap-around — cursor is bounded at
+					// [0, flat.length - 1]. With sensitivity=N, one
+					// tick advances (or retreats) N rows unless the
+					// boundary is hit, in which case the remaining
+					// steps are no-ops (clamped by `cursor > 0` /
+					// `cursor < flat.length - 1`).
+					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
+					const dir = wheelNet < 0 ? -1 : 1;
+					for (let i = 0; i < magnitude; i++) {
+						if (dir < 0) {
+							if (cursor <= 0) break;
+							cursor--;
+							if (cursor < offset) offset = cursor;
+						} else {
+							if (cursor >= flat.length - 1) break;
+							cursor++;
+							if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+						}
+					}
+					renderNeeded = true;
+				}
+
+				// Apply clicks in arrival order. Each click looks up
+				// the current clickable area at that coordinate, so a
+				// branch expansion triggered by the first click makes
+				// newly-visible items reachable by subsequent clicks
+				// in the same chunk. Branch-click handlers call
+				// render() inline because rebuildFlat mutates the
+				// visible list immediately.
+				let lastLeafClicked = -1;
+				for (const { x, y } of clickCoordinates) {
+					const clickedArea = getClickedItem(x, y);
+					if (!clickedArea || clickedArea.type !== "tree" || !clickedArea.data)
+						continue;
+					const flatIndex = clickedArea.data.flatIndex as number;
+					if (flatIndex < 0 || flatIndex >= flat.length) continue;
+					const item = flat[flatIndex];
+					if (item.disabled) continue;
+					cursor = flatIndex;
+					if (item.isBranch) {
+						if (item.expanded) expanded.delete(item.node);
+						else expanded.add(item.node);
+						rebuildFlat();
+						render();
+					} else {
+						lastLeafClicked = flatIndex;
+					}
+				}
+				if (lastLeafClicked >= 0) {
+					finalize();
+					return;
+				}
+
+				if (renderNeeded) {
+					render();
 				}
 				return;
 			}
@@ -426,8 +528,7 @@ function interactiveTree<T>(
 				hoveredIndex = null;
 				if (cursor < flat.length - 1) {
 					cursor++;
-					if (cursor >= offset + pageSize)
-						offset = cursor - pageSize + 1;
+					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 				}
 				render();
 				return;
@@ -452,7 +553,12 @@ function interactiveTree<T>(
 					let ancestor: FlatItem<T> | undefined;
 					for (let i = cursor - 1; i >= 0; i--) {
 						const a = flat[i];
-						if (a.isBranch && !a.disabled && a.expanded && a.depth < item.depth) {
+						if (
+							a.isBranch &&
+							!a.disabled &&
+							a.expanded &&
+							a.depth < item.depth
+						) {
 							ancestor = a;
 							break;
 						}

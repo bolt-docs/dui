@@ -1,6 +1,9 @@
 const Table = (props: React.HTMLAttributes<HTMLTableElement>) => (
 	<div className="my-6 w-full overflow-x-auto border border-strong bg-main font-mono text-sm">
-		<table className="w-full min-w-max table-auto border-collapse text-left" {...props} />
+		<table
+			className="w-full min-w-max table-auto border-collapse text-left"
+			{...props}
+		/>
 	</div>
 );
 
@@ -27,7 +30,10 @@ const TableHeader = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
 );
 
 const TableCell = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
-	<td className="px-4 py-2.5 text-paragraph whitespace-normal break-words" {...props} />
+	<td
+		className="px-4 py-2.5 text-paragraph whitespace-normal break-words"
+		{...props}
+	/>
 );
 
 export const table = {

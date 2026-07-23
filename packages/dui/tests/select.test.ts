@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { PassThrough } from "node:stream";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetConfig, select } from "../src/index";
 
 // Node 22+ exposes `isTTY` as a getter-only inherited property, so direct
@@ -557,6 +557,124 @@ describe("select", () => {
 
 				writeData("\x1b");
 				await expect(promise).rejects.toThrow("Cancelled");
+			});
+		});
+
+		describe("wheelSensitivity", () => {
+			// 0,1,2,3,4,5,6 — six fully-enabled rows. The default
+			// sensitivity=1 was already covered by other wheel tests
+			// (each tick = one row). Here we exercise the
+			// multi-row-per-tick code path and the defensive
+			// coercion of `< 1` to 1.
+			const items = ["a", "b", "c", "d", "e", "f", "g"];
+
+			it("wheelSensitivity: 3 advances the cursor 3 rows per single wheel tick", async () => {
+				const promise = select("Pick", {
+					choices: items.map((label, i) => ({
+						label,
+						value: label,
+					})),
+					wheelSensitivity: 3,
+				});
+
+				// Single wheel-down tick. Net magnitude = 1 * 3 = 3 rows.
+				writeData("\x1b[<65;1;1~");
+				writeData("\r");
+
+				// Cursor: 0 → 1 → 2 → 3 → 'd'.
+				await expect(promise).resolves.toBe("d");
+			});
+
+			it("wheelSensitivity: 4 still wraps when going past the last item", async () => {
+				// With sensitivity=4 and 7 items one tick wraps
+				// around twice and ends at index 4 ('e'). This proves
+				// the multiplication is applied per row (clampCursor
+				// is called once per row inside the loop), not as a
+				// single optimised jump that could skip disabled
+				// items.
+				const promise = select("Pick", {
+					choices: items.map((label, i) => ({
+						label,
+						value: label,
+					})),
+					wheelSensitivity: 4,
+				});
+
+				writeData("\x1b[<65;1;1~");
+				writeData("\r");
+
+				// Cursor: 0 → 1 → 2 → 3 → 4 (lands on 'e').
+				await expect(promise).resolves.toBe("e");
+			});
+
+			it("wheelSensitivity: 0 falls back to default 1-tick behavior", async () => {
+				// Defensive clamp: passing 0 must not produce a
+				// divide-by-zero or a reverse-direction bug. Coerced
+				// to 1, a single tick still moves one row. Note: 0
+				// does NOT disable wheel scrolling — there is no
+				// opt-out at the moment, omit the option or pass
+				// undefined to get default behavior.
+				const promise = select("Pick", {
+					choices: items.map((label) => ({ label, value: label })),
+					wheelSensitivity: 0,
+				});
+
+				writeData("\x1b[<65;1;1~");
+				writeData("\r");
+
+				// Cursor: 0 → 1 → 'b'.
+				await expect(promise).resolves.toBe("b");
+			});
+
+			it("wheelSensitivity × disabled items: skips disabled rows per step inside the magnitude loop", async () => {
+				// Regression guard for the disabled-skip semantics
+				// surviving the magnitude multiplication. With
+				// sensitivity=3 and one wheel-down tick over
+				// [A, B-disabled, C, D, E], the loop calls
+				// clampCursor(cursor + 1) three times:
+				//   iter 0: clampCursor(1) skips disabled B → lands on C (idx 2)
+				//   iter 1: clampCursor(3) → lands on D (idx 3)
+				//   iter 2: clampCursor(4) → lands on E (idx 4)
+				// Final cursor lands on E — proving that per-row
+				// `clampCursor` still skips disabled items inside
+				// the magnitude loop (B was never selected even
+				// though the magnitude exceeded its index).
+				const withDisabled: Array<{
+					label: string;
+					value: string;
+					disabled?: boolean;
+				}> = [
+					{ label: "A", value: "a" },
+					{ label: "B", value: "b", disabled: true },
+					{ label: "C", value: "c" },
+					{ label: "D", value: "d" },
+					{ label: "E", value: "e" },
+				];
+				const promise = select("Pick", {
+					choices: withDisabled,
+					wheelSensitivity: 3,
+				});
+
+				writeData("\x1b[<65;1;1~");
+				writeData("\r");
+
+				await expect(promise).resolves.toBe("e");
+			});
+
+			it("wheelSensitivity: 3 also propagates through wheel bursts (multi-tick)", async () => {
+				// Mirrors the multi-tick fix: 2 wheel-down ticks at
+				// sensitivity=3 produce a net magnitude of 2*3 = 6,
+				// landing on the last item ('g').
+				const promise = select("Pick", {
+					choices: items.map((label) => ({ label, value: label })),
+					wheelSensitivity: 3,
+				});
+
+				writeData("\x1b[<65;1;1~\x1b[<65;1;2~");
+				writeData("\r");
+
+				// Cursor: 0 → 1 → ... → 6 ('g').
+				await expect(promise).resolves.toBe("g");
 			});
 		});
 	});

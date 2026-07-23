@@ -29,9 +29,8 @@ export async function loadResizedPixels(
 	dither?: boolean,
 	page?: number,
 ): Promise<ResizedPixels> {
-	const img = page !== undefined
-		? sharp(imagePath, { page })
-		: sharp(imagePath);
+	const img =
+		page !== undefined ? sharp(imagePath, { page }) : sharp(imagePath);
 
 	const { data, info } = await img
 		.resize(width, height, {

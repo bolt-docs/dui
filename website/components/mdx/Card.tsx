@@ -24,7 +24,9 @@ export function Card({ href, title, icon, children }: CardProps) {
 				)}
 				<h3 className="text-sm font-semibold text-body group-hover:text-terminal-green transition-colors">
 					{title}
-					<span className="hidden group-hover:inline animate-pulse text-terminal-green ml-0.5">▌</span>
+					<span className="hidden group-hover:inline animate-pulse text-terminal-green ml-0.5">
+						▌
+					</span>
 				</h3>
 			</div>
 			<div className="text-xs text-muted leading-relaxed">{children}</div>

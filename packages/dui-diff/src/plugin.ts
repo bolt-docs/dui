@@ -1,7 +1,7 @@
 import type { DuiPlugin } from "@bdocs/dui";
 import { diff } from "./core";
-import type { DiffOptions } from "./types";
 import { SLOTS } from "./theme";
+import type { DiffOptions } from "./types";
 
 const DEFAULTS: Record<keyof typeof SLOTS, string> = {
 	add: "#22c55e",
@@ -19,6 +19,11 @@ const DEFAULTS: Record<keyof typeof SLOTS, string> = {
 export const diffPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-diff",
 	version: "0.5.0",
+	description:
+		"Unified and side-by-side diff renderer with themable add/del/hunk colors, gutter and per-line stats.",
+	tags: ["renderer", "diff", "text", "vcs"],
+	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-diff",
+	author: "DUI Toolkit",
 	peerDependencies: { dui: "^0.5.0" },
 	setup(api) {
 		for (const [key, defaultColor] of Object.entries(DEFAULTS) as Array<
@@ -34,6 +39,8 @@ export const diffPlugin: DuiPlugin = {
 			const result = diff(oldStr, input, opts);
 			return result.output;
 		});
+
+		api.shared.set("renderer", "diff");
 
 		return () => {};
 	},

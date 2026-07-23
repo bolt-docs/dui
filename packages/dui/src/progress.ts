@@ -1,9 +1,9 @@
 import readline from "node:readline";
-import { colors, colorize, interpolateColor } from "./color";
 import type { ColorInput } from "./color";
+import { colorize, colors, interpolateColor } from "./color";
 import { getConfig } from "./config";
-import { resolveColor } from "./theme";
 import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
 
 export interface ProgressBarOptions {
 	width?: number;

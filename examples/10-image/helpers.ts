@@ -3,7 +3,13 @@ import { deflateSync } from "node:zlib";
 /**
  * Creates a minimal single-color PNG buffer.
  */
-export function createMinimalPng(r: number, g: number, b: number, w = 1, h = 1): Buffer {
+export function createMinimalPng(
+	r: number,
+	g: number,
+	b: number,
+	w = 1,
+	h = 1,
+): Buffer {
 	const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 	const ihdrData = Buffer.alloc(13);

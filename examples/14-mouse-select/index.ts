@@ -11,7 +11,7 @@
  * (most modern terminals: iTerm2, VS Code terminal, Kitty, Alacritty, etc.)
  */
 
-import { select, colors, success, info } from "@bdocs/dui";
+import { colors, info, select, success } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  🖱️  Mouse-Enabled Select"));

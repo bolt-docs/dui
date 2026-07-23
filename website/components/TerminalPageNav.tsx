@@ -1,5 +1,5 @@
-import { PageNav } from "boltdocs/primitives";
 import { usePageNav } from "boltdocs/client";
+import { PageNav } from "boltdocs/primitives";
 
 export function TerminalPageNav() {
 	const { prevPage, nextPage } = usePageNav();

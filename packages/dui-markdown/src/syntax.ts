@@ -55,7 +55,10 @@ export async function mdSyntax(code: string, lang?: string): Promise<string> {
 
 	try {
 		const hl = await getHighlighter();
-		const result = hl.codeToTokens(code, { lang: def.shikiLang, theme: "min-dark" });
+		const result = hl.codeToTokens(code, {
+			lang: def.shikiLang,
+			theme: "min-dark",
+		});
 
 		const lines: string[] = [];
 		for (const lineTokens of result.tokens) {

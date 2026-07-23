@@ -1,7 +1,7 @@
-import { fitWidth, terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
 import { getConfig } from "./config";
-import { resolveColor } from "./theme";
 import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
+import { fitWidth, terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
 
 export type BoxBorderStyle = "single" | "double" | "round";
 

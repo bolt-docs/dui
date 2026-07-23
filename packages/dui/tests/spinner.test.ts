@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSpinner } from "../src/index";
 
 vi.mock("node:readline", async (importActual) => {
@@ -61,7 +61,9 @@ describe("spinner", () => {
 
 			spinner.stop("fail", "Failed!");
 			const allCalls = writeSpy.mock.calls.map((c: any[]) => c[0] as string);
-			const hasFailMsg = allCalls.some((s: string) => s.includes("✖") && s.includes("Failed!"));
+			const hasFailMsg = allCalls.some(
+				(s: string) => s.includes("✖") && s.includes("Failed!"),
+			);
 			expect(hasFailMsg).toBe(true);
 			expect(writeSpy).toHaveBeenCalledWith("\u001b[?25h");
 		} finally {

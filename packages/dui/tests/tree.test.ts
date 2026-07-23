@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { PassThrough } from "node:stream";
-import { tree, resetConfig } from "../src/index";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetConfig, tree } from "../src/index";
 
 const ORIG_STDIN_IS_TTY = process.stdin.isTTY;
 const ORIG_STDOUT_IS_TTY = process.stdout.isTTY;
@@ -22,7 +22,8 @@ const SAMPLE_TREE = [
 		],
 	},
 	{
-		label: "Plain", value: "plain",
+		label: "Plain",
+		value: "plain",
 	},
 ];
 
@@ -166,9 +167,7 @@ describe("tree", () => {
 						children: [
 							{
 								label: "B",
-								children: [
-									{ label: "C", value: "deep" },
-								],
+								children: [{ label: "C", value: "deep" }],
 							},
 						],
 					},
@@ -351,9 +350,9 @@ describe("tree", () => {
 		});
 
 		it("throws on empty tree", async () => {
-			await expect(
-				tree("Pick", { tree: [] }),
-			).rejects.toThrow("Tree requires at least one node");
+			await expect(tree("Pick", { tree: [] })).rejects.toThrow(
+				"Tree requires at least one node",
+			);
 		});
 
 		it("supports non-string values", async () => {
@@ -443,9 +442,7 @@ describe("tree", () => {
 					{
 						label: "Disabled Branch",
 						disabled: true,
-						children: [
-							{ label: "Hidden", value: "hidden" },
-						],
+						children: [{ label: "Hidden", value: "hidden" }],
 					},
 					{ label: "Plain", value: "plain" },
 				],
@@ -465,9 +462,7 @@ describe("tree", () => {
 						children: [
 							{
 								label: "Nested",
-								children: [
-									{ label: "Deep", value: "deep" },
-								],
+								children: [{ label: "Deep", value: "deep" }],
 							},
 						],
 					},
@@ -482,7 +477,6 @@ describe("tree", () => {
 
 			await expect(promise).resolves.toBe("deep");
 		});
-
 		it("handles collapsing parent branch when cursor is inside it", async () => {
 			const promise = tree("Pick", {
 				tree: [
@@ -504,6 +498,70 @@ describe("tree", () => {
 			writeData("\r"); // enter → select Done
 
 			await expect(promise).resolves.toBe("done");
+		});
+
+		describe("wheelSensitivity", () => {
+			// Tree has no wrap — cursor clamps at flat.length - 1.
+			// With sensitivity=2 and 4 leaves expanded, one
+			// wheel-down tick moves the cursor 2 rows, another tick
+			// moves 2 more rows (hitting the ceiling on the third
+			// step of the second tick).
+			const SAMPLE_FLAT_TREE = {
+				tree: [
+					{
+						label: "Root",
+						children: [
+							{ label: "A", value: "a" },
+							{ label: "B", value: "b" },
+							{ label: "C", value: "c" },
+							{ label: "D", value: "d" },
+						],
+					},
+				],
+				initialExpanded: true,
+			};
+
+			// Flat list order with initialExpanded above:
+			// 0 Root (branch), 1 A, 2 B, 3 C, 4 D — five rows.
+			it("wheelSensitivity: 2 advances the cursor 2 rows per single wheel tick", async () => {
+				const promise = tree("Pick", {
+					...SAMPLE_FLAT_TREE,
+					wheelSensitivity: 2,
+				});
+
+				writeData("\x1b[<65;1;1~"); // 1 tick × 2 = 2 rows; cursor 0 → 2 (B)
+				writeData("\r"); // enter → select B
+
+				await expect(promise).resolves.toBe("b");
+			});
+
+			it("wheelSensitivity: 3 with a multi-tick burst clamps at the ceiling", async () => {
+				// Cursor 0 → 3 (single wheel-down × sensitivity=3 →
+				// C). Then second wheel-down × 3 → would move past D
+				// but flat.length=5 and cursor clamps at 4 (D).
+				const promise = tree("Pick", {
+					...SAMPLE_FLAT_TREE,
+					wheelSensitivity: 3,
+				});
+
+				writeData("\x1b[<65;1;1~"); // C (idx 3)
+				writeData("\x1b[<65;1;1~"); // D (idx 4, no further movement)
+				writeData("\r"); // enter → select D
+
+				await expect(promise).resolves.toBe("d");
+			});
+
+			it("wheelSensitivity: 0 falls back to default 1-tick behavior", async () => {
+				const promise = tree("Pick", {
+					...SAMPLE_FLAT_TREE,
+					wheelSensitivity: 0,
+				});
+
+				writeData("\x1b[<65;1;1~"); // 1 tick (clamped from 0) → A (idx 1)
+				writeData("\r"); // enter → select A
+
+				await expect(promise).resolves.toBe("a");
+			});
 		});
 	});
 });

@@ -1,16 +1,16 @@
+import { type BoltdocsLocale, useI18n } from "boltdocs/client";
 import { Link } from "boltdocs/primitives";
-import { useI18n, type BoltdocsLocale } from "boltdocs/client";
 import { AnimatedTerminal } from "../../components/AnimatedTerminal";
 import { Card } from "../../components/mdx/Card";
 import PackageManager from "../../components/PackageManager";
-import { TerminalBackground } from "../../components/TerminalBackground";
 import {
-	ProgressBarDemo,
 	ColorsDemo,
+	ProgressBarDemo,
 	SpinnerDemo,
 	StepsDemo,
 	TableDemo,
 } from "../../components/ShowcasePreviews";
+import { TerminalBackground } from "../../components/TerminalBackground";
 
 const t = (strings: Record<BoltdocsLocale, string>, locale: BoltdocsLocale) =>
 	strings[locale] || strings.en;

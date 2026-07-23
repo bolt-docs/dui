@@ -1,11 +1,11 @@
 import { colorize, colors } from "@bdocs/dui";
 import {
+	barColor,
 	clamp,
 	formatNumber,
 	getWidth,
-	repeat,
 	padEnd,
-	barColor,
+	repeat,
 } from "./utils";
 
 export interface BarOptions {
@@ -31,9 +31,7 @@ export function bar(data: number[], options: BarOptions = {}): string {
 
 	const p = clamp(progress, 0, 1);
 	const max = Math.max(...data);
-	const maxLabelLen = labels
-		? Math.max(...labels.map((l) => l.length))
-		: 0;
+	const maxLabelLen = labels ? Math.max(...labels.map((l) => l.length)) : 0;
 
 	const valueWidth = Math.max(...data.map((v) => format(v).length)) + 1;
 	const available = getWidth(preferredWidth) - maxLabelLen - valueWidth - 4;

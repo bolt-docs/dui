@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { PassThrough } from "node:stream";
 import readline from "node:readline";
+import { PassThrough } from "node:stream";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { input, resetConfig } from "../src/index";
 
 const ORIG_STDIN_IS_TTY = process.stdin.isTTY;
@@ -113,7 +113,7 @@ describe("input", () => {
 			vi.spyOn(console, "log").mockImplementation(() => {});
 
 			const promise = input("Enter:", {
-				validate: (v) => v.length >= 3 ? true : "Too short",
+				validate: (v) => (v.length >= 3 ? true : "Too short"),
 			});
 
 			inputStream.write("ab\n");

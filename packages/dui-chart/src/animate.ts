@@ -22,7 +22,12 @@ export interface AnimateChartHandle {
  * cubic-bezier easings via `createEasing()`.
  */
 export function animateChart(config: AnimateChartConfig): AnimateChartHandle {
-	const { duration = 1000, loop = false, easing = "ease-out", onFrame } = config;
+	const {
+		duration = 1000,
+		loop = false,
+		easing = "ease-out",
+		onFrame,
+	} = config;
 
 	const handle = animateProgress({
 		duration,

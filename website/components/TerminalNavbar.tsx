@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { Navbar, Menu, Button } from "boltdocs/primitives";
 import {
-	useNavbar,
-	useTheme,
-	useUI,
 	useI18n,
 	useLocalizedTo,
 	useLocation,
+	useNavbar,
+	useTheme,
+	useUI,
 } from "boltdocs/client";
+import { Button, Menu, Navbar } from "boltdocs/primitives";
 import { Menu as MenuIcon } from "lucide-react";
+import { useState } from "react";
 import TerminalSearchDialog from "./TerminalSearchDialog";
 
 export function TerminalNavbar() {
@@ -24,13 +24,13 @@ export function TerminalNavbar() {
 				<Navbar.Left>
 					{showSidebarToggle ? (
 						<Button
-						onPress={toggleSidebar}
-						className="mr-2 lg:hidden p-1.5 text-muted hover:text-body rounded-lg hover:bg-soft transition-colors"
-					>
-						<MenuIcon size={20} />
-					</Button>
-				) : null}
-				<Navbar.Logo src={logo} {...logoProps} />
+							onPress={toggleSidebar}
+							className="mr-2 lg:hidden p-1.5 text-muted hover:text-body rounded-lg hover:bg-soft transition-colors"
+						>
+							<MenuIcon size={20} />
+						</Button>
+					) : null}
+					<Navbar.Logo src={logo} {...logoProps} />
 					<Navbar.Title className="font-mono text-sm font-semibold hidden sm:inline">
 						{title}
 					</Navbar.Title>
@@ -84,7 +84,7 @@ export function TerminalNavbar() {
 			</Navbar.Content>
 
 			<Navbar.MobileMenu
-			className="bg-main"
+				className="bg-main"
 				isOpen={mobileOpen}
 				onClose={() => setMobileOpen(false)}
 			>

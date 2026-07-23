@@ -5,9 +5,9 @@
  * and provides utilities for animated display via frame cycling.
  */
 
-import sharp from "sharp";
-import { pixelsToAnsi, type AnsiImageOptions } from "./ansi";
 import { terminalWidth } from "@bdocs/dui";
+import sharp from "sharp";
+import { type AnsiImageOptions, pixelsToAnsi } from "./ansi";
 import { loadResizedPixels, resolveDimensions } from "./utils";
 
 export interface GifFrame {
@@ -34,7 +34,7 @@ export interface GifOptions extends AnsiImageOptions {
  * @param gifPath - Path to the GIF file or Buffer
  * @param options - Rendering options
  * @returns Array of rendered frames
- */	export async function renderGifFrames(
+ */ export async function renderGifFrames(
 	gifPath: string | Buffer,
 	options: GifOptions = {},
 ): Promise<GifFrame[]> {
@@ -44,24 +44,33 @@ export interface GifOptions extends AnsiImageOptions {
 	const pages = metadata.pages ?? 1;
 	const totalFrames = maxFrames ? Math.min(pages, maxFrames) : pages;
 
-	const dims = resolveDimensions(terminalWidth(), options.width, options.height);
+	const dims = resolveDimensions(
+		terminalWidth(),
+		options.width,
+		options.height,
+	);
 	const delays = extractDelays(metadata, pages);
 
 	const frames: Promise<GifFrame>[] = [];
 
 	for (let page = 0; page < totalFrames; page++) {
 		frames.push(
-			loadResizedPixels(gifPath, dims.width, dims.height * 2, dither, page)
-				.then(({ pixels, width: actualWidth, height: actualHeight }) => ({
-					ansi: pixelsToAnsi(pixels, actualWidth, actualHeight, {
-						...ansiOpts,
-						width: dims.width,
-						height: dims.height,
-					}),
-					delay: Math.round((delays[page] ?? 100) * delayScale),
+			loadResizedPixels(
+				gifPath,
+				dims.width,
+				dims.height * 2,
+				dither,
+				page,
+			).then(({ pixels, width: actualWidth, height: actualHeight }) => ({
+				ansi: pixelsToAnsi(pixels, actualWidth, actualHeight, {
+					...ansiOpts,
 					width: dims.width,
 					height: dims.height,
-				})),
+				}),
+				delay: Math.round((delays[page] ?? 100) * delayScale),
+				width: dims.width,
+				height: dims.height,
+			})),
 		);
 	}
 
@@ -72,10 +81,7 @@ export interface GifOptions extends AnsiImageOptions {
  * Extract frame delays from GIF metadata.
  * sharp exposes page delay via `metadata.delay` (array of centiseconds).
  */
-function extractDelays(
-	metadata: sharp.Metadata,
-	pages: number,
-): number[] {
+function extractDelays(metadata: sharp.Metadata, pages: number): number[] {
 	if (metadata.delay && Array.isArray(metadata.delay)) {
 		return metadata.delay.map((d: number) => d * 10); // centiseconds → ms
 	}

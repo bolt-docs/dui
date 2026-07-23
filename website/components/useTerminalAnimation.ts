@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 
 export function useInterval(fn: () => void, ms: number | null) {
 	const saved = useRef(fn);
-	useEffect(() => { saved.current = fn; });
+	useEffect(() => {
+		saved.current = fn;
+	});
 	useEffect(() => {
 		if (ms === null) return;
 		const t = setInterval(() => saved.current(), ms);
@@ -13,7 +15,9 @@ export function useInterval(fn: () => void, ms: number | null) {
 export function useTimeout(fn: () => void, ms: number | null) {
 	const saved = useRef(fn);
 	const [tick, setTick] = useState(0);
-	useEffect(() => { saved.current = fn; });
+	useEffect(() => {
+		saved.current = fn;
+	});
 	useEffect(() => {
 		if (ms === null) return;
 		const t = setTimeout(() => {

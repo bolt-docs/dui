@@ -1,22 +1,21 @@
 import {
+	table as duiTable,
 	getConfig,
 	resolveColor,
-	table as duiTable,
+	stripAnsi,
 	terminalWidth,
 	visibleLength,
-	stripAnsi,
 } from "@bdocs/dui";
-import {
-	tokenize,
-	type BlockToken,
-	type InlineToken,
-} from "./tokenizer";
 import { mdSyntax } from "./syntax";
+import { type BlockToken, type InlineToken, tokenize } from "./tokenizer";
 
 // Resolve a markdown theme slot against the live config so theme
 // tweaks via `configure({ theme: { markdown: … } })` are picked up
 // on the next render call without re-registering the plugin.
-function tColor(slot: string): { apply: (s: string) => string; bg?: (s: string) => string } {
+function tColor(slot: string): {
+	apply: (s: string) => string;
+	bg?: (s: string) => string;
+} {
 	return resolveColor(slot, getConfig().theme);
 }
 
@@ -54,28 +53,56 @@ function renderInline(tokens: InlineToken[]): string {
 		.join("");
 }
 
-async function renderHeading(token: BlockToken & { type: "heading" }): Promise<string> {
+async function renderHeading(
+	token: BlockToken & { type: "heading" },
+): Promise<string> {
+	const level = token.level;
 	const label = renderInline(token.inline);
-	const prefix = "#".repeat(token.level);
 	// h6 keeps the same color as h5 — clamp the slot lookup so callers
 	// never accidentally hit an unknown slot (which would return identity).
-	const slot = `markdown.heading${Math.min(token.level, 6)}`;
+	const slot = `markdown.heading${Math.min(level, 6)}`;
 	const heading = tColor(slot).apply;
-	return heading(`\x1b[1m${prefix} ${label}\x1b[22m`);
+
+	// Markdown heading rendering no longer includes the literal `#` marker
+	// — the renderer is responsible for conveying hierarchy through style
+	// so the output reads as rendered prose, not raw markdown. The visual
+	// rule is:
+	//   • Every level gets a left accent bar (`▌ `) painted in the
+	//     heading's own color, dwarfing any lingering visual need for
+	//     `#` / `##` characters.
+	//   • H1 + H2 carry bold to mark the top tiers.
+	//   • H3-H6 progressively indent (2 spaces per level past H3) so the
+	//     document's depth reads visually without taking horizontal
+	//     real-estate away from the title text itself.
+	//   • H1 gets a horizontal underline beneath the title so the most
+	//     important heading is unmistakable at a glance.
+	const indent = "  ".repeat(Math.max(0, level - 3));
+	const bar = "▌ ";
+	const body =
+		level <= 2
+			? heading(`\x1b[1m${bar}${label}\x1b[22m`)
+			: heading(`${bar}${label}`);
+
+	if (level === 1) {
+		const width = Math.min(terminalWidth(), 60);
+		const underline = heading(`\x1b[1m${"═".repeat(width)}\x1b[22m`);
+		return `${indent}${body}\n${indent}${underline}`;
+	}
+	return `${indent}${body}`;
 }
 
-async function renderCode(token: BlockToken & { type: "code" }): Promise<string> {
+async function renderCode(
+	token: BlockToken & { type: "code" },
+): Promise<string> {
 	const width = Math.min(terminalWidth(), 80);
 	const lang = token.lang || "text";
-	const highlighted = lang !== "text"
-		? await mdSyntax(token.code, lang)
-		: token.code;
+	const highlighted =
+		lang !== "text" ? await mdSyntax(token.code, lang) : token.code;
 	// Code-fence label honors the `markdown.codeLang` slot independently
 	// from the `codeBorder` so callers can pick a contrasting color
 	// (e.g. a brighter language name without affecting the box outline).
-	const langTag = lang !== "text"
-		? ` ${tColor("markdown.codeLang").apply(lang)}`
-		: "";
+	const langTag =
+		lang !== "text" ? ` ${tColor("markdown.codeLang").apply(lang)}` : "";
 	const borderFn = tColor("markdown.codeBorder").apply;
 
 	const lines = highlighted.split("\n");
@@ -99,7 +126,9 @@ async function renderCode(token: BlockToken & { type: "code" }): Promise<string>
 	return `${top}\n${body}\n${bottom}`;
 }
 
-async function renderList(token: BlockToken & { type: "list" }): Promise<string> {
+async function renderList(
+	token: BlockToken & { type: "list" },
+): Promise<string> {
 	const lines: string[] = [];
 	// Split markers into bullet vs. ordinal so callers can retheme
 	// `markdown.listBullet` (unordered `•`) and `markdown.listNumber`
@@ -124,7 +153,9 @@ async function renderList(token: BlockToken & { type: "list" }): Promise<string>
 	return lines.join("\n");
 }
 
-async function renderQuote(token: BlockToken & { type: "quote" }): Promise<string> {
+async function renderQuote(
+	token: BlockToken & { type: "quote" },
+): Promise<string> {
 	const label = renderInline(token.inline);
 	const barFn = tColor("markdown.quoteBar").apply;
 	const textFn = tColor("markdown.quoteText").apply;
@@ -135,7 +166,9 @@ async function renderQuote(token: BlockToken & { type: "quote" }): Promise<strin
 		.join("\n");
 }
 
-async function renderTable(token: BlockToken & { type: "table" }): Promise<string> {
+async function renderTable(
+	token: BlockToken & { type: "table" },
+): Promise<string> {
 	const headers = token.headers;
 	const rows = token.rows;
 	const allRows = [headers.map((h) => `\x1b[1m${h}\x1b[22m`), ...rows];
@@ -160,7 +193,9 @@ async function renderThematicBreak(): Promise<string> {
 	return tColor("markdown.thematic").apply("─".repeat(width));
 }
 
-async function renderParagraph(token: BlockToken & { type: "paragraph" }): Promise<string> {
+async function renderParagraph(
+	token: BlockToken & { type: "paragraph" },
+): Promise<string> {
 	const label = renderInline(token.inline);
 	const width = terminalWidth();
 	if (visibleLength(label) > width) {

@@ -3,10 +3,28 @@ import { TERMINAL_COLORS } from "./constants";
 
 const SPINNER_CHARS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const BOX_CHARS = [
-	"┌", "┐", "└", "┘", "─", "│",
-	"┏", "┓", "┗", "┛", "━", "┃",
-	"╔", "╗", "╚", "╝", "═", "║",
-	"╭", "╮", "╰", "╯",
+	"┌",
+	"┐",
+	"└",
+	"┘",
+	"─",
+	"│",
+	"┏",
+	"┓",
+	"┗",
+	"┛",
+	"━",
+	"┃",
+	"╔",
+	"╗",
+	"╚",
+	"╝",
+	"═",
+	"║",
+	"╭",
+	"╮",
+	"╰",
+	"╯",
 ];
 const PROGRESS_CHARS = ["█", "░"];
 const RAW_CHAR_PATTERN = /([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏┌┐└┘─│┏┓┗┛━┃╔╗╚╝═║╭╮╰╯█░])/g;
@@ -22,19 +40,31 @@ function charType(ch: string): CharType {
 function AnimatedSpinner({
 	initialChar,
 	style,
-}: { initialChar: string; style?: React.CSSProperties }) {
+}: {
+	initialChar: string;
+	style?: React.CSSProperties;
+}) {
 	const startIndex = SPINNER_CHARS.indexOf(initialChar);
 	const [frameIndex, setFrameIndex] = React.useState(
 		startIndex >= 0 ? startIndex : 0,
 	);
 
 	React.useEffect(() => {
-		const t = setInterval(() => setFrameIndex((p) => (p + 1) % SPINNER_CHARS.length), 80);
+		const t = setInterval(
+			() => setFrameIndex((p) => (p + 1) % SPINNER_CHARS.length),
+			80,
+		);
 		return () => clearInterval(t);
 	}, []);
 
 	return (
-		<span style={{ color: "var(--color-terminal-cyan)", fontWeight: "bold", ...style }}>
+		<span
+			style={{
+				color: "var(--color-terminal-cyan)",
+				fontWeight: "bold",
+				...style,
+			}}
+		>
 			{SPINNER_CHARS[frameIndex]}
 		</span>
 	);
@@ -45,7 +75,12 @@ function AnimatedProgressBar({
 	color,
 	bgColor,
 	width,
-}: { pct: number; color: string; bgColor: string; width: number }) {
+}: {
+	pct: number;
+	color: string;
+	bgColor: string;
+	width: number;
+}) {
 	const [progress, setProgress] = React.useState(0);
 
 	React.useEffect(() => {
@@ -82,7 +117,14 @@ interface ActiveStyles {
 }
 
 function emptyStyles(): ActiveStyles {
-	return { color: "", bgColor: "", bold: false, dim: false, italic: false, underline: false };
+	return {
+		color: "",
+		bgColor: "",
+		bold: false,
+		dim: false,
+		italic: false,
+		underline: false,
+	};
 }
 
 function toCSS(s: ActiveStyles): React.CSSProperties {
@@ -118,21 +160,81 @@ function applyAnsiCode(styles: ActiveStyles, seq: string): ActiveStyles {
 			continue;
 		}
 		switch (code) {
-			case 0: return emptyStyles();
-			case 1: s.bold = true; break;
-			case 2: s.dim = true; break;
-			case 3: s.italic = true; break;
-			case 4: s.underline = true; break;
-			case 22: s.bold = false; s.dim = false; break;
-			case 23: s.italic = false; break;
-			case 24: s.underline = false; break;
-			case 39: s.color = ""; break;
-			case 49: s.bgColor = ""; break;
+			case 0:
+				return emptyStyles();
+			case 1:
+				s.bold = true;
+				break;
+			case 2:
+				s.dim = true;
+				break;
+			case 3:
+				s.italic = true;
+				break;
+			case 4:
+				s.underline = true;
+				break;
+			case 22:
+				s.bold = false;
+				s.dim = false;
+				break;
+			case 23:
+				s.italic = false;
+				break;
+			case 24:
+				s.underline = false;
+				break;
+			case 39:
+				s.color = "";
+				break;
+			case 49:
+				s.bgColor = "";
+				break;
 			default:
-				if (code >= 30 && code <= 37) s.color = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"][code - 30];
-				else if (code >= 90 && code <= 97) s.color = ["gray", "bright-red", "bright-green", "bright-yellow", "bright-blue", "bright-magenta", "bright-cyan", "bright-white"][code - 90];
-				else if (code >= 40 && code <= 47) s.bgColor = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"][code - 40];
-				else if (code >= 100 && code <= 107) s.bgColor = ["gray", "bright-red", "bright-green", "bright-yellow", "bright-blue", "bright-magenta", "bright-cyan", "bright-white"][code - 100];
+				if (code >= 30 && code <= 37)
+					s.color = [
+						"black",
+						"red",
+						"green",
+						"yellow",
+						"blue",
+						"magenta",
+						"cyan",
+						"white",
+					][code - 30];
+				else if (code >= 90 && code <= 97)
+					s.color = [
+						"gray",
+						"bright-red",
+						"bright-green",
+						"bright-yellow",
+						"bright-blue",
+						"bright-magenta",
+						"bright-cyan",
+						"bright-white",
+					][code - 90];
+				else if (code >= 40 && code <= 47)
+					s.bgColor = [
+						"black",
+						"red",
+						"green",
+						"yellow",
+						"blue",
+						"magenta",
+						"cyan",
+						"white",
+					][code - 40];
+				else if (code >= 100 && code <= 107)
+					s.bgColor = [
+						"gray",
+						"bright-red",
+						"bright-green",
+						"bright-yellow",
+						"bright-blue",
+						"bright-magenta",
+						"bright-cyan",
+						"bright-white",
+					][code - 100];
 				break;
 		}
 	}
@@ -142,14 +244,18 @@ function applyAnsiCode(styles: ActiveStyles, seq: string): ActiveStyles {
 type AnsiToken = { text: string; styles: ActiveStyles };
 
 function tokenizeAnsi(text: string): AnsiToken[] {
-	const tokenRe = /^(?:[\u001b\u009b](?:\[[0-9;:<=>?]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)|[@-Z\\-_]))/;
+	const tokenRe =
+		/^(?:[\u001b\u009b](?:\[[0-9;:<=>?]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)|[@-Z\\-_]))/;
 	const tokens: AnsiToken[] = [];
 	let buf = "";
 	let styles = emptyStyles();
 	let i = 0;
 
 	function flush() {
-		if (buf) { tokens.push({ text: buf, styles }); buf = ""; }
+		if (buf) {
+			tokens.push({ text: buf, styles });
+			buf = "";
+		}
 	}
 
 	while (i < text.length) {
@@ -167,7 +273,11 @@ function tokenizeAnsi(text: string): AnsiToken[] {
 	return tokens;
 }
 
-function renderToken(text: string, css: React.CSSProperties, keyBase: string): React.ReactNode[] {
+function renderToken(
+	text: string,
+	css: React.CSSProperties,
+	keyBase: string,
+): React.ReactNode[] {
 	const parts = text.split(RAW_CHAR_PATTERN);
 	const nodes: React.ReactNode[] = [];
 	let idx = 0;
@@ -178,11 +288,26 @@ function renderToken(text: string, css: React.CSSProperties, keyBase: string): R
 		if (ct === "spinner") {
 			nodes.push(<AnimatedSpinner key={k} initialChar={p} style={css} />);
 		} else if (ct === "box") {
-			nodes.push(<span key={k} style={{ ...css, color: css.color || "var(--color-dim)" }}>{p}</span>);
+			nodes.push(
+				<span
+					key={k}
+					style={{ ...css, color: css.color || "var(--color-dim)" }}
+				>
+					{p}
+				</span>,
+			);
 		} else if (ct === "progress") {
-			nodes.push(<span key={k} style={{ ...css, letterSpacing: "0.05em" }}>{p}</span>);
+			nodes.push(
+				<span key={k} style={{ ...css, letterSpacing: "0.05em" }}>
+					{p}
+				</span>,
+			);
 		} else {
-			nodes.push(<span key={k} style={css}>{p}</span>);
+			nodes.push(
+				<span key={k} style={css}>
+					{p}
+				</span>,
+			);
 		}
 	}
 	return nodes;
@@ -192,7 +317,9 @@ export function ansiToReact(text: string): React.ReactNode[] {
 	const tokens = tokenizeAnsi(text);
 	const nodes: React.ReactNode[] = [];
 	for (let i = 0; i < tokens.length; i++) {
-		nodes.push(...renderToken(tokens[i].text, toCSS(tokens[i].styles), String(i)));
+		nodes.push(
+			...renderToken(tokens[i].text, toCSS(tokens[i].styles), String(i)),
+		);
 	}
 	return nodes;
 }

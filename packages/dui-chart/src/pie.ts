@@ -1,5 +1,5 @@
 import { colorize, colors } from "@bdocs/dui";
-import { clamp, barColor, padEnd } from "./utils";
+import { barColor, clamp, padEnd } from "./utils";
 
 export interface PieSlice {
 	label: string;

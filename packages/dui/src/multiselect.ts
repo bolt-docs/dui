@@ -1,22 +1,22 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
-import type { ColorStyle } from "./theme";
-import { resolveColor } from "./theme";
-import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 import {
 	disableMouse,
 	enableMouse,
 	enableMouseMove,
 	getClickedItem,
 	getHoveredItem,
-	parseSGRMouseData,
+	parseSGRMouseDataAll,
 	registerClickableArea,
 	registerHoverableArea,
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
 import { applyClass } from "./style";
+import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
+import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 
 export interface MultiselectChoice<T = string> {
 	label: string;
@@ -29,6 +29,15 @@ export interface MultiselectOptions<T = string> {
 	choices: MultiselectChoice<T>[];
 	pageSize?: number;
 	required?: boolean;
+	/**
+	 * How many rows the cursor advances per wheel tick. Defaults
+	 * to 1 (one tick = one row). Values `< 1` (including 0 and
+	 * negatives) are coerced to 1, so 3 means one tick moves the
+	 * cursor three rows. Wheel never toggles the checkbox — it
+	 * only scrolls. Fractional values are floored; use integer
+	 * values only.
+	 */
+	wheelSensitivity?: number;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
@@ -51,6 +60,7 @@ export async function multiselect<T = string>(
 		pageSize = 10,
 		required = false,
 		colors: colorsOverride,
+		wheelSensitivity: wheelSensitivityOption,
 	} = options;
 
 	if (!choices.length) {
@@ -61,12 +71,14 @@ export async function multiselect<T = string>(
 		return nonInteractiveMultiselect(message, choices, required);
 	}
 
+	const wheelSensitivity = Math.max(1, Math.floor(wheelSensitivityOption ?? 1));
 	return interactiveMultiselect(
 		message,
 		choices,
 		pageSize,
 		required,
 		colorsOverride,
+		wheelSensitivity,
 	);
 }
 
@@ -96,8 +108,7 @@ function nonInteractiveMultiselect<T>(
 					.split(",")
 					.map((s) => parseInt(s.trim(), 10) - 1)
 					.filter(
-						(idx) =>
-							idx >= 0 && idx < choices.length && !choices[idx].disabled,
+						(idx) => idx >= 0 && idx < choices.length && !choices[idx].disabled,
 					);
 
 				if (parts.length === 0 && required) {
@@ -119,6 +130,7 @@ function interactiveMultiselect<T>(
 	pageSize: number,
 	required: boolean,
 	colorsOverride: MultiselectOptions["colors"],
+	wheelSensitivity: number,
 ): Promise<T[]> {
 	return new Promise<T[]>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -235,7 +247,12 @@ function interactiveMultiselect<T>(
 				registerClickableArea({
 					id: areaId,
 					type: "multiselect",
-					bounds: { left: 0, top: 1 + msgRowDelta + 1 + i, width: 999, height: 1 },
+					bounds: {
+						left: 0,
+						top: 1 + msgRowDelta + 1 + i,
+						width: 999,
+						height: 1,
+					},
 					data: { choiceIndex: idx },
 				});
 				clickableAreaIds.add(areaId);
@@ -243,7 +260,12 @@ function interactiveMultiselect<T>(
 				registerHoverableArea({
 					id: `hover-${areaId}`,
 					type: "multiselect",
-					bounds: { left: 0, top: 1 + msgRowDelta + 1 + i, width: 999, height: 1 },
+					bounds: {
+						left: 0,
+						top: 1 + msgRowDelta + 1 + i,
+						width: 999,
+						height: 1,
+					},
 					data: { choiceIndex: idx },
 				});
 				hoverableAreaIds.add(`hover-${areaId}`);
@@ -303,43 +325,104 @@ function interactiveMultiselect<T>(
 				buf = buf.slice(-32);
 			}
 
-			const mouseEvent = parseSGRMouseData(buf);
-			if (mouseEvent) {
+			// Process every SGR mouse sequence in arrival order so a
+			// single chunk with several wheel ticks (fast scroll)
+			// advances the cursor by the full burst count rather
+			// than just the last tick.
+			const mouseEvents = parseSGRMouseDataAll(buf);
+			if (mouseEvents.length > 0) {
 				buf = "";
-				if (mouseEvent.type === "click") {
-					const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
-					if (
-						clickedArea &&
-						clickedArea.type === "multiselect" &&
-						clickedArea.data
-					) {
-						const actualIndex = clickedArea.data.choiceIndex as number;
-						if (!choices[actualIndex].disabled) {
-							cursor = actualIndex;
-							if (cursor < offset) offset = cursor;
-							if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
-							if (checked.has(cursor)) {
-								if (required && checked.size <= 1) {
-									render();
-									return;
-								}
-								checked.delete(cursor);
-							} else {
-								checked.add(cursor);
+
+				let wheelUp = 0;
+				let wheelDown = 0;
+				let lastMove: (typeof mouseEvents)[number] | null = null;
+				// Multiple clicks in one chunk toggle each in order;
+				// the cursor lands on the LAST clicked index.
+				const clickedIndices: number[] = [];
+
+				for (const mouseEvent of mouseEvents) {
+					if (mouseEvent.type === "click") {
+						const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
+						if (
+							clickedArea &&
+							clickedArea.type === "multiselect" &&
+							clickedArea.data
+						) {
+							const actualIndex = clickedArea.data.choiceIndex as number;
+							if (!choices[actualIndex].disabled) {
+								clickedIndices.push(actualIndex);
 							}
-							render();
 						}
+					} else if (mouseEvent.type === "move") {
+						lastMove = mouseEvent;
+					} else if (mouseEvent.type === "wheel") {
+						// Wheel scrolls the cursor; it does NOT toggle
+						// checkboxes — only space and click do.
+						if (mouseEvent.wheel === "up") wheelUp++;
+						else if (mouseEvent.wheel === "down") wheelDown++;
 					}
-				} else if (mouseEvent.type === "move") {
-					const hoveredArea = getHoveredItem(mouseEvent.x, mouseEvent.y);
+				}
+
+				// Track whether anything visible actually changed so a
+				// chunk of repeated motion events landing on the same
+				// coordinate does NOT re-render (the legacy contract
+				// that the `does not re-render when hovering same item`
+				// test pins).
+				let renderNeeded = false;
+
+				if (lastMove) {
+					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
 					const newHovered =
 						hoveredArea && hoveredArea.data
 							? (hoveredArea.data.choiceIndex as number)
 							: null;
 					if (newHovered !== hoveredIndex) {
 						hoveredIndex = newHovered;
-						render();
+						renderNeeded = true;
 					}
+				}
+
+				const wheelNet = wheelDown - wheelUp;
+				if (wheelNet !== 0) {
+					hoveredIndex = null;
+					// Same sensitivity-multiplied magnitude as `select`.
+					// Wheel here only scrolls the cursor; it never
+					// toggles checkboxes, so sensitivity only affects
+					// navigation speed, not selection semantics.
+					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
+					const dir = wheelNet < 0 ? -1 : 1;
+					for (let i = 0; i < magnitude; i++) {
+						cursor = clampCursor(cursor + dir);
+					}
+					if (cursor < offset) offset = cursor;
+					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+					renderNeeded = true;
+				}
+
+				// Apply each click in order. Each click sets the
+				// cursor and toggles its checkbox; multiple clicks
+				// in one chunk honour the order they arrived in.
+				// The `renderNeeded = true` line lives at the TOP of
+				// the loop body, BEFORE the toggle's `if (required
+				// && checked.size <= 1) continue` early-return, so a
+				// click that updates the cursor but skips the toggle
+				// (the required + last-item + already-checked guard)
+				// still triggers a render of the new cursor position.
+				for (const idx of clickedIndices) {
+					cursor = idx;
+					if (cursor < offset) offset = cursor;
+					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+					renderNeeded = true;
+					if (checked.has(cursor)) {
+						if (required && checked.size <= 1) continue;
+						checked.delete(cursor);
+					} else {
+						checked.add(cursor);
+					}
+				}
+
+				if (renderNeeded) {
+					render();
 				}
 				return;
 			}

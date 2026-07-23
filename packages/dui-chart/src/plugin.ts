@@ -9,6 +9,11 @@ const PALETTE = ["#00d4aa", "#ff8c42", "#6c5ce7", "#f72c5b", "#00b4d8"];
 export const chartPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-chart",
 	version: "0.5.0",
+	description:
+		"Bar, line, pie and sparkline renderers with a themable color palette for quick terminal visualizations.",
+	tags: ["renderer", "chart", "visualization", "data"],
+	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-chart",
+	author: "DUI Toolkit",
 	peerDependencies: { dui: "^0.5.0" },
 	setup(api) {
 		api.registerThemeSlot("chart.bar", PALETTE[0]);
@@ -38,6 +43,13 @@ export const chartPlugin: DuiPlugin = {
 			const data = JSON.parse(input) as number[];
 			return sparkline(data, options);
 		});
+
+		api.shared.set("renderers", [
+			"chart.bar",
+			"chart.line",
+			"chart.pie",
+			"chart.sparkline",
+		]);
 
 		return () => {};
 	},

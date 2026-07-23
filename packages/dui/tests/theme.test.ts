@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { resolveColor } from "../src/theme";
+import { beforeAll, describe, expect, it } from "vitest";
 import { setColorSupported } from "../src/color";
 import type { DuiTheme } from "../src/theme";
+import { resolveColor } from "../src/theme";
 
 beforeAll(() => {
 	setColorSupported(true);

@@ -186,7 +186,9 @@ function resolveColorStyle(
 	}
 
 	const { fg, bg } = style;
-	const apply: ColorFn = fg ? (s: string) => colorize(s, fg, "fg") : defaultSpec.apply;
+	const apply: ColorFn = fg
+		? (s: string) => colorize(s, fg, "fg")
+		: defaultSpec.apply;
 	// Falsy `bg` (absent key, undefined, or empty string) falls through
 	// to the default's bg, so passing `{ fg: "..." }` keeps the chip
 	// background that ships with markdown defaults. Pass a string

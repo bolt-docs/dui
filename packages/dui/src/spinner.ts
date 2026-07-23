@@ -1,10 +1,10 @@
 import readline from "node:readline";
+import type { AnimationHandle } from "./animation";
+import { animate } from "./animation";
 import { colors } from "./color";
 import { getConfig } from "./config";
-import { resolveColor } from "./theme";
 import type { ColorStyle } from "./theme";
-import { animate } from "./animation";
-import type { AnimationHandle } from "./animation";
+import { resolveColor } from "./theme";
 
 export interface SpinnerOptions {
 	prefix?: string;
@@ -40,16 +40,38 @@ export function createSpinner(message: string, opts?: SpinnerOptions): Spinner {
 	let anim: AnimationHandle | null = null;
 	let currentMessage = message;
 
-	const { apply: frameStyle } = resolveColor("spinner.frame", theme, colorsOverride?.frame);
-	const { apply: successStyle } = resolveColor("spinner.success", theme, colorsOverride?.success);
-	const { apply: failStyle } = resolveColor("spinner.fail", theme, colorsOverride?.fail);
-	const { apply: warnStyle } = resolveColor("spinner.warn", theme, colorsOverride?.warn);
-	const { apply: infoStyle } = resolveColor("spinner.info", theme, colorsOverride?.info);
+	const { apply: frameStyle } = resolveColor(
+		"spinner.frame",
+		theme,
+		colorsOverride?.frame,
+	);
+	const { apply: successStyle } = resolveColor(
+		"spinner.success",
+		theme,
+		colorsOverride?.success,
+	);
+	const { apply: failStyle } = resolveColor(
+		"spinner.fail",
+		theme,
+		colorsOverride?.fail,
+	);
+	const { apply: warnStyle } = resolveColor(
+		"spinner.warn",
+		theme,
+		colorsOverride?.warn,
+	);
+	const { apply: infoStyle } = resolveColor(
+		"spinner.info",
+		theme,
+		colorsOverride?.info,
+	);
 
 	const renderLine = (frame: string) => {
 		readline.clearLine(process.stdout, 0);
 		readline.cursorTo(process.stdout, 0);
-		process.stdout.write(`${formattedPrefix} ${frameStyle(frame)} ${currentMessage}`);
+		process.stdout.write(
+			`${formattedPrefix} ${frameStyle(frame)} ${currentMessage}`,
+		);
 	};
 
 	const start = () => {

@@ -187,6 +187,36 @@ Mouse support is automatically enabled in TTY environments and disabled in non-T
   Mouse features require SGR 1006 protocol support (most modern terminals).
 </Callout>
 
+### Wheel Scrolling
+
+In addition to clicks, `select()` reads mouse-wheel events from the SGR 1006 stream and converts them into cursor moves:
+
+- **Wheel up** is equivalent to pressing `↑` — moves the cursor up, skipping disabled items
+- **Wheel down** is equivalent to pressing `↓` — moves the cursor down, skipping disabled items
+- Each wheel tick moves the cursor by one row; when the cursor reaches the page boundary the visible window scrolls in lock-step
+- Wheel scrolling does **not** auto-confirm the prompt — press `Enter` or click to commit the choice
+
+Wheel support ships automatically with `select()` — no extra opt-in required. Modifier state is captured through the standard event but v1 maps every tick to a single row; faster scrolling just produces more ticks.
+
+<Callout variant="info">
+  Scrolling on `multiselect()` and `tree()` is also supported with the same semantics — wheel moves the cursor only, it does not toggle checkboxes or expand branches. Use `Space` (multiselect) or `→`/`Space` (tree) for those actions.
+</Callout>
+
+#### Wheel Sensitivity
+
+Pass `wheelSensitivity` on the options object for `select`, `multiselect`, or `tree` to make a single wheel tick advance the cursor by `N` rows instead of just one. Defaults to `1`. Values below `1` are coerced to `1` (fractional negatives or zero cannot disable wheel scrolling).
+
+```ts
+// One tick = 3 rows. Useful for long lists where a single
+// notch feels too granular.
+const value = await select("Pick", {
+  choices: [...allItems],
+  wheelSensitivity: 3,
+});
+```
+
+The multiplier composes with multi-tick bursts: with `wheelSensitivity: 3` and a chunk of two consecutive wheel ticks, the cursor advances by `2 × 3 = 6` rows in a single render. Disabled items are still skipped per row (the loop calls `clampCursor` once per step). `multiselect` wheel scrolling never toggles checkboxes regardless of sensitivity, and `tree` cursor clamps at the ends (no wrap).
+
 ## tree
 
 ```ts

@@ -15,7 +15,9 @@ import { qrcode } from "@dui-toolkit/plugin-qrcode";
 console.log(`\n${colors.bold("  📱 @dui-toolkit/plugin-qrcode")}\n`);
 
 // ── 1. Default URL — natural size, transparent bg ─────────────────────
-console.log(`${colors.gray("  ─── 1. default URL (natural size) —————————")}\n`);
+console.log(
+	`${colors.gray("  ─── 1. default URL (natural size) —————————")}\n`,
+);
 console.log(await qrcode("https://github.com/bolt-docs/dui"));
 
 // ── 2. Custom fg + bg colors — branded palette ───────────────────────

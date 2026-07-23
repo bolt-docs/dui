@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { hexToAnsi, mdSyntax } from "../src/syntax";
+import { describe, expect, it } from "vitest";
 import { getLanguage } from "../src/language";
+import { hexToAnsi, mdSyntax } from "../src/syntax";
 
 describe("getLanguage", () => {
 	it("maps common languages", () => {

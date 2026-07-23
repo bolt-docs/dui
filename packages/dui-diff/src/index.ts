@@ -11,6 +11,18 @@
  * systems so its visuals can be themed project-wide.
  */
 
+// ── Renderers ─────────────────────────────────────────────────
+export { diff } from "./core";
+// ── Plugin entry point ────────────────────────────────────────
+export { diffPlugin } from "./plugin";
+export {
+	diffDirectories,
+	diffFiles,
+	diffStat,
+	diffWordsRender,
+} from "./render";
+export { diffSideBySide } from "./side-by-side";
+export { DIFF_THEME_SLOTS, getPalette } from "./theme";
 // ── Public types ──────────────────────────────────────────────
 export type {
 	DiffColorPalette,
@@ -22,22 +34,10 @@ export type {
 	MultiFileDiffEntry,
 	MultiFileDiffInput,
 	MultiFileDiffResult,
-	PatchOptions,
 	PagerOptions,
+	PatchOptions,
 	WordDiffSegment,
 } from "./types";
-
-export { DIFF_THEME_SLOTS } from "./theme";
-
-// ── Renderers ─────────────────────────────────────────────────
-export { diff } from "./core";
-export { diffSideBySide } from "./side-by-side";
-export { diffWordsRender, diffStat, diffFiles, diffDirectories } from "./render";
-
-// ── Plugin entry point ────────────────────────────────────────
-export { diffPlugin } from "./plugin";
-
+export { splitLines, truncateTo } from "./utils";
 // ── Lower-level utilities (re-exported for advanced users) ─────
 export { diffWords } from "./word";
-export { getPalette } from "./theme";
-export { splitLines, truncateTo } from "./utils";

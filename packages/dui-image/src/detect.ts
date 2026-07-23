@@ -52,8 +52,7 @@ export function detectTerminal(): TerminalCapabilities {
 	const term = getTermProgram();
 	const columns =
 		(typeof process !== "undefined" && process.stdout?.columns) || 80;
-	const rows =
-		(typeof process !== "undefined" && process.stdout?.rows) || 24;
+	const rows = (typeof process !== "undefined" && process.stdout?.rows) || 24;
 
 	const colorterm = process.env.COLORTERM?.toLowerCase() ?? "";
 	const truecolor = colorterm === "truecolor" || colorterm === "24bit";

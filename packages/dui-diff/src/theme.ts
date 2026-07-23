@@ -41,8 +41,8 @@
  * and inherits correctly to every worker.
  */
 
-import { colorize, getConfig } from "@bdocs/dui";
 import type { ColorStyle } from "@bdocs/dui";
+import { colorize, getConfig } from "@bdocs/dui";
 import type { DiffColorPalette, DiffOptions } from "./types";
 
 export const SLOTS = {

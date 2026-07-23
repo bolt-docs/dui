@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgressBar } from "../src/index";
 
 describe("progress", () => {
@@ -35,14 +35,10 @@ describe("progress", () => {
 		try {
 			const bar = createProgressBar({ width: 10 });
 			bar.start(100);
-			expect(writeSpy).toHaveBeenCalledWith(
-				expect.stringContaining("░"),
-			);
+			expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining("░"));
 
 			bar.update(50, "halfway");
-			expect(writeSpy).toHaveBeenCalledWith(
-				expect.stringContaining("50%"),
-			);
+			expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining("50%"));
 
 			bar.update(100);
 			bar.stop("done");

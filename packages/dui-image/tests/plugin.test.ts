@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import {
 	configure,
 	getConfig,
@@ -6,6 +5,7 @@ import {
 	unregisterPlugin,
 	usePluginAsync,
 } from "@bdocs/dui";
+import { describe, expect, it } from "vitest";
 import { imagePlugin } from "../src/plugin";
 
 const PLUGIN_NAME = "@dui-toolkit/plugin-image";

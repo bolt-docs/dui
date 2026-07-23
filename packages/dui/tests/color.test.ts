@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
-	parseColor,
-	colorize,
-	interpolateColor,
-	toAnsiFg,
-	toAnsiBg,
-	colors,
-	colorMap,
 	applyStyle,
+	colorize,
+	colorMap,
+	colors,
+	interpolateColor,
+	parseColor,
 	setColorSupported,
+	toAnsiBg,
+	toAnsiFg,
 } from "../src/color";
 
 beforeAll(() => {
@@ -149,9 +149,7 @@ describe("deep nesting (close+reopen)", () => {
 	});
 
 	it("chainable with multiple inner styled segments", () => {
-		const result = colors.red(
-			"a" + colors.blue("b") + colors.green("c") + "d",
-		);
+		const result = colors.red("a" + colors.blue("b") + colors.green("c") + "d");
 		const expected =
 			"\x1b[31ma\x1b[34mb\x1b[39m\x1b[31m\x1b[32mc\x1b[39m\x1b[31md\x1b[39m";
 		expect(result).toBe(expected);

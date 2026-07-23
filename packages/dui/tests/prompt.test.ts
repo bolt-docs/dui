@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import readline from "node:readline";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { confirm, resetConfig } from "../src/index";
 
 const ORIG_STDIN_IS_TTY = process.stdin.isTTY;

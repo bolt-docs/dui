@@ -42,55 +42,12 @@ export {
 export type { DuiConfig } from "./config";
 export { configure, getConfig, resetConfig } from "./config";
 export { divider, dividerLog } from "./divider";
+export type { InputOptions } from "./input";
+export { input } from "./input";
 export type { TaskItem } from "./list";
 export { bullet, ordered, tasks } from "./list";
 export type { LoggerInstance } from "./logger";
 export { createLogger, debug, error, info, success, warn } from "./logger";
-export type { ProgressBar, ProgressBarOptions } from "./progress";
-export { createProgressBar } from "./progress";
-export type { ConfirmOptions } from "./prompt";
-export { confirm, formatLog } from "./prompt";
-export { input } from "./input";
-export type { InputOptions } from "./input";
-export type { SelectChoice, SelectOptions } from "./select";
-export { select } from "./select";
-export type { MultiselectChoice, MultiselectOptions } from "./multiselect";
-export { multiselect } from "./multiselect";
-export type { TreeOptions, TreeNode } from "./tree";
-export { tree } from "./tree";
-export type { Spinner, SpinnerOptions } from "./spinner";
-export { createSpinner } from "./spinner";
-export type { StepItem } from "./steps";
-export { steps } from "./steps";
-export type { TableColumnOptions, TableOptions } from "./table";
-export { table } from "./table";
-export type { ColorStyle, DuiTheme, MarkdownTheme } from "./theme";
-export { resolveColor, resolveColorSimple } from "./theme";
-export type { DuiPlugin, PluginAPI, PluginEvents, RenderContext, Renderer } from "./plugin";
-export {
-	DUI_VERSION,
-	emit,
-	emitRenderEvent,
-	renderWith,
-	runRenderHook,
-	runRenderHookAsync,
-	unregisterPlugin,
-	usePlugin,
-	usePluginAsync,
-} from "./plugin";
-export {
-	computeLinesRendered,
-	fitWidth,
-	padCenter,
-	padRight,
-	renderLine,
-	renderStatic,
-	stripAnsi,
-	terminalWidth,
-	visibleLength,
-	wrapAnsiWord,
-} from "./utils";
-export type { HoverableArea, MouseEvent, ClickableArea } from "./types";
 export {
 	clearClickableAreas,
 	clearHoverableAreas,
@@ -105,11 +62,51 @@ export {
 	isMouseMoveEnabled,
 	onMouseEvent,
 	parseSGRMouseData,
+	parseSGRMouseDataAll,
 	registerClickableArea,
 	registerHoverableArea,
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
+export type { MultiselectChoice, MultiselectOptions } from "./multiselect";
+export { multiselect } from "./multiselect";
+export type {
+	DuiPlugin,
+	PluginAPI,
+	PluginCapabilities,
+	PluginEvents,
+	PluginMeta,
+	PluginSharedState,
+	PluginStatus,
+	RenderContext,
+	Renderer,
+	RenderHookOptions,
+} from "./plugin";
+export {
+	awaitPluginsReady,
+	DUI_VERSION,
+	emit,
+	emitRenderEvent,
+	getPlugin,
+	isPluginReady,
+	listPlugins,
+	renderWith,
+	runRenderHook,
+	runRenderHookAsync,
+	unregisterPlugin,
+	usePlugin,
+	usePluginAsync,
+} from "./plugin";
+export type { ProgressBar, ProgressBarOptions } from "./progress";
+export { createProgressBar } from "./progress";
+export type { ConfirmOptions } from "./prompt";
+export { confirm, formatLog } from "./prompt";
+export type { SelectChoice, SelectOptions } from "./select";
+export { select } from "./select";
+export type { Spinner, SpinnerOptions } from "./spinner";
+export { createSpinner } from "./spinner";
+export type { StepItem } from "./steps";
+export { steps } from "./steps";
 export type { TerminalStyle } from "./style";
 export {
 	applyClass,
@@ -119,3 +116,28 @@ export {
 	removeClass,
 	resetClasses,
 } from "./style";
+export type { TableColumnOptions, TableOptions } from "./table";
+export { table } from "./table";
+export type { ColorStyle, DuiTheme, MarkdownTheme } from "./theme";
+export { resolveColor, resolveColorSimple } from "./theme";
+export type { TreeNode, TreeOptions } from "./tree";
+export { tree } from "./tree";
+export type {
+	ClickableArea,
+	HoverableArea,
+	MouseEvent,
+	MouseEventBase,
+	MouseWheelEvent,
+} from "./types";
+export {
+	computeLinesRendered,
+	fitWidth,
+	padCenter,
+	padRight,
+	renderLine,
+	renderStatic,
+	stripAnsi,
+	terminalWidth,
+	visibleLength,
+	wrapAnsiWord,
+} from "./utils";

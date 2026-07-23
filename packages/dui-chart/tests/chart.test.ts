@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { stripAnsi } from "@bdocs/dui";
-import { bar, column, line, pie, sparkline, animateChart } from "../src/index";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { animateChart, bar, column, line, pie, sparkline } from "../src/index";
 import {
-	clamp,
-	scale,
-	formatNumber,
-	repeat,
-	padEnd,
-	barColor,
 	applyColor,
+	barColor,
+	clamp,
+	formatNumber,
+	padEnd,
+	repeat,
+	scale,
 } from "../src/utils";
 
 // ── Utility functions ───────────────────────────────────────────
@@ -246,7 +246,10 @@ describe("line", () => {
 	});
 
 	it("renders with longer datasets", () => {
-		const data = Array.from({ length: 20 }, (_, i) => Math.sin(i * 0.5) * 10 + 10);
+		const data = Array.from(
+			{ length: 20 },
+			(_, i) => Math.sin(i * 0.5) * 10 + 10,
+		);
 		const result = line(data, { width: 16, height: 6 });
 		expect(stripAnsi(result).length).toBeGreaterThan(0);
 	});
@@ -275,10 +278,13 @@ describe("pie", () => {
 	});
 
 	it("respects progress", () => {
-		const result = pie([
-			{ label: "A", value: 60 },
-			{ label: "B", value: 40 },
-		], { progress: 0.5 });
+		const result = pie(
+			[
+				{ label: "A", value: 60 },
+				{ label: "B", value: 40 },
+			],
+			{ progress: 0.5 },
+		);
 		const clean = stripAnsi(result);
 		expect(clean).toContain("%");
 	});
@@ -291,10 +297,13 @@ describe("pie", () => {
 	});
 
 	it("renders with progress at 0", () => {
-		const result = pie([
-			{ label: "A", value: 60 },
-			{ label: "B", value: 40 },
-		], { progress: 0 });
+		const result = pie(
+			[
+				{ label: "A", value: 60 },
+				{ label: "B", value: 40 },
+			],
+			{ progress: 0 },
+		);
 		expect(stripAnsi(result)).toContain("0.0%");
 	});
 });
@@ -379,7 +388,11 @@ describe("animateChart", () => {
 	it("accepts custom easing function", () => {
 		const onFrame = vi.fn();
 		const customEasing = (t: number) => t * t * t;
-		const handle = animateChart({ duration: 100, easing: customEasing, onFrame });
+		const handle = animateChart({
+			duration: 100,
+			easing: customEasing,
+			onFrame,
+		});
 		vi.advanceTimersByTime(16);
 		expect(onFrame).toHaveBeenCalled();
 		handle.stop();

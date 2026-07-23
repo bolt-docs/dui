@@ -12,16 +12,16 @@
  * painters via the per-call options / theme config.
  */
 
+import { diff } from "./core";
+import { getPalette } from "./theme";
 import type {
-	DiffResult,
 	DiffOptions,
+	DiffResult,
 	MultiFileDiffInput,
 	MultiFileDiffResult,
 	WordDiffSegment,
 } from "./types";
-import { diff } from "./core";
 import { diffWords } from "./word";
-import { getPalette } from "./theme";
 
 export type { WordDiffSegment };
 
@@ -41,9 +41,7 @@ const badgeYellow = (s: string): string => `\x1b[43;30m${s}\x1b[49;39m`;
 /**
  * Render a one-line summary widget like `2 files changed, +12, -3`.
  */
-export function diffStat(
-	result: DiffResult | MultiFileDiffResult,
-): string {
+export function diffStat(result: DiffResult | MultiFileDiffResult): string {
 	if ("totals" in result) {
 		const t = result.totals;
 		return (
@@ -183,7 +181,11 @@ export function diffFiles(
 	return {
 		output,
 		files: results,
-		totals: { files: sorted.length, additions: totalAdds, deletions: totalDels },
+		totals: {
+			files: sorted.length,
+			additions: totalAdds,
+			deletions: totalDels,
+		},
 	};
 }
 
@@ -196,11 +198,13 @@ export async function diffDirectories(
 	options: Parameters<typeof diffFiles>[1] = {},
 ): Promise<MultiFileDiffResult> {
 	const fs = await import("node:fs/promises");
-	const path = await import("node:path")
+	const path = await import("node:path");
 
 	async function* walk(root: string, rel = ""): AsyncGenerator<string> {
 		const dir = path.join(root, rel);
-		const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
+		const entries = await fs
+			.readdir(dir, { withFileTypes: true })
+			.catch(() => null);
 		if (!entries) return;
 		for (const entry of entries) {
 			const childRel = rel ? `${rel}/${entry.name}` : entry.name;

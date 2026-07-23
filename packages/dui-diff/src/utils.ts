@@ -4,8 +4,8 @@
  * Pure functions, zero side effects.
  */
 
-import { visibleLength, colorize } from "@bdocs/dui";
 import type { ColorStyle } from "@bdocs/dui";
+import { colorize, visibleLength } from "@bdocs/dui";
 import type { GutterStyle } from "./types";
 
 // ── Line splitting ────────────────────────────────────────────
@@ -158,4 +158,3 @@ export function resolveStyle(
 	}
 	return fallback;
 }
-

@@ -1,6 +1,6 @@
 import { getConfig } from "./config";
-import { resolveColor } from "./theme";
 import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
 
 export interface StepItem {
 	label: string;

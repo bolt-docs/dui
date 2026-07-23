@@ -69,6 +69,19 @@ api.on('before-render', (ctx) => { /* called before render */ })
 api.on('after-render', (ctx) => { /* called after render */ })
 ```
 
+#### Wheel Scroll Hooks
+
+For dashboards that scroll-counter or animate scroll feedback, plugins can subscribe to wheel direction keys directly through the same event bus:
+
+```ts
+let ups = 0;
+let downs = 0;
+api.on('wheel-up', () => { ups++; /* redraw counter */ });
+api.on('wheel-down', () => { downs++; /* redraw counter */ });
+```
+
+The handler receives the full [`MouseWheelEvent`](#) (the `wheel` field is `"up"` or `"down"`). These hooks reuse DUI's existing event bus — they fire exactly when a wheel SGR sequence is parsed from stdin (so multi-tick bursts fan out to multiple handler calls). `unregisterPlugin(name)` removes the subscriptions.
+
 ### registerThemeSlot
 
 Register a default color for a theme slot (e.g. `"markdown.heading1"`).

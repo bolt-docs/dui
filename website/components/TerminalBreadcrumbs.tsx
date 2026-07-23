@@ -22,7 +22,9 @@ export function TerminalBreadcrumbs() {
 								<span className="text-muted">/</span>
 							)}
 							{crumb.href === activeRoute?.path ? (
-								<span className="font-medium block truncate max-w-full">{crumb.label}</span>
+								<span className="font-medium block truncate max-w-full">
+									{crumb.label}
+								</span>
 							) : (
 								<Breadcrumbs.Link
 									href={crumb.href}

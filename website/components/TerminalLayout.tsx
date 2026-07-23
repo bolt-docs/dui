@@ -1,14 +1,11 @@
-import {
-	DocsLayout,
-	ErrorBoundary,
-} from "boltdocs/primitives";
 import { useRoutes } from "boltdocs/client";
-import { TerminalNavbar } from "./TerminalNavbar";
-import { TerminalSidebar } from "./TerminalSidebar";
-import { TerminalPageNav } from "./TerminalPageNav";
+import { DocsLayout, ErrorBoundary } from "boltdocs/primitives";
 import { TerminalBreadcrumbs } from "./TerminalBreadcrumbs";
 import { TerminalCopyMarkdown } from "./TerminalCopyMarkdown";
+import { TerminalNavbar } from "./TerminalNavbar";
 import { TerminalOnThisPage } from "./TerminalOnThisPage";
+import { TerminalPageNav } from "./TerminalPageNav";
+import { TerminalSidebar } from "./TerminalSidebar";
 
 interface LayoutProps {
 	children?: React.ReactNode;

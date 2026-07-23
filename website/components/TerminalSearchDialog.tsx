@@ -1,13 +1,13 @@
-import { useEffect, useCallback } from "react";
-import { Button, SearchDialog } from "boltdocs/primitives";
 import {
-	useSearch,
-	useRoutes,
 	type BoltdocsLocale,
 	useI18n,
+	useRoutes,
+	useSearch,
 } from "boltdocs/client";
-import { useNavigate } from "react-router-dom";
+import { Button, SearchDialog } from "boltdocs/primitives";
 import { Search } from "lucide-react";
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface SearchItem {
 	id: string;

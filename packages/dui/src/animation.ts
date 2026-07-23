@@ -1,5 +1,5 @@
-import { interpolateColor } from "./color";
 import type { ColorInput } from "./color";
+import { interpolateColor } from "./color";
 
 // ── Easing system ───────────────────────────────────────────────
 
@@ -72,14 +72,12 @@ const EASING_FNS: Record<string, EasingFn> = {
 	// Standard (same as CSS)
 	"ease-in": (t) => t * t,
 	"ease-out": (t) => t * (2 - t),
-	"ease-in-out": (t) =>
-		t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+	"ease-in-out": (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
 
 	// Quad
 	"ease-in-quad": (t) => t * t,
 	"ease-out-quad": (t) => t * (2 - t),
-	"ease-in-out-quad": (t) =>
-		t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+	"ease-in-out-quad": (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
 
 	// Cubic
 	"ease-in-cubic": (t) => t * t * t,
@@ -91,17 +89,13 @@ const EASING_FNS: Record<string, EasingFn> = {
 	"ease-in-quart": (t) => t * t * t * t,
 	"ease-out-quart": (t) => 1 - --t * t * t * t,
 	"ease-in-out-quart": (t) =>
-		t < 0.5
-			? 8 * t * t * t * t
-			: 1 - 8 * --t * t * t * t,
+		t < 0.5 ? 8 * t * t * t * t : 1 - 8 * --t * t * t * t,
 
 	// Quint
 	"ease-in-quint": (t) => t * t * t * t * t,
 	"ease-out-quint": (t) => 1 + --t * t * t * t * t,
 	"ease-in-out-quint": (t) =>
-		t < 0.5
-			? 16 * t * t * t * t * t
-			: 1 + 16 * --t * t * t * t * t,
+		t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t,
 
 	// Sine
 	"ease-in-sine": (t) => 1 - Math.cos((t * Math.PI) / 2),
@@ -113,9 +107,7 @@ const EASING_FNS: Record<string, EasingFn> = {
 	"ease-out-expo": (t) => (t === 1 ? 1 : 1 - 2 ** (-10 * t)),
 	"ease-in-out-expo": (t) => {
 		if (t === 0 || t === 1) return t;
-		return t < 0.5
-			? 2 ** (20 * t - 10) / 2
-			: (2 - 2 ** (-20 * t + 10)) / 2;
+		return t < 0.5 ? 2 ** (20 * t - 10) / 2 : (2 - 2 ** (-20 * t + 10)) / 2;
 	},
 
 	// Circular
@@ -138,7 +130,7 @@ const EASING_FNS: Record<string, EasingFn> = {
 	"ease-in-out-back": (t) => {
 		const c2 = 1.70158 * 1.525;
 		return t < 0.5
-			? ((2 * t) * (2 * t) * ((c2 + 1) * 2 * t - c2)) / 2
+			? (2 * t * (2 * t) * ((c2 + 1) * 2 * t - c2)) / 2
 			: ((2 * t - 2) * (2 * t - 2) * ((c2 + 1) * (2 * t - 2) + c2) + 2) / 2;
 	},
 
@@ -165,9 +157,7 @@ const EASING_FNS: Record<string, EasingFn> = {
 	"ease-in-bounce": (t) => 1 - bounceOut(1 - t),
 	"ease-out-bounce": bounceOut,
 	"ease-in-out-bounce": (t) =>
-		t < 0.5
-			? (1 - bounceOut(1 - 2 * t)) / 2
-			: (1 + bounceOut(2 * t - 1)) / 2,
+		t < 0.5 ? (1 - bounceOut(1 - 2 * t)) / 2 : (1 + bounceOut(2 * t - 1)) / 2,
 };
 
 /** Helper: bounce-out curve (used by all bounce variants). */
@@ -263,17 +253,13 @@ export function createEasing(
 
 	function sampleCurveX(t: number): number {
 		return (
-			3 * (1 - t) * (1 - t) * t * x1 +
-			3 * (1 - t) * t * t * x2 +
-			t * t * t
+			3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t
 		);
 	}
 
 	function sampleCurveY(t: number): number {
 		return (
-			3 * (1 - t) * (1 - t) * t * y1 +
-			3 * (1 - t) * t * t * y2 +
-			t * t * t
+			3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t
 		);
 	}
 
@@ -547,12 +533,7 @@ export interface AnimateProgressHandle {
 export function animateProgress(
 	config: AnimateProgressConfig,
 ): AnimateProgressHandle {
-	const {
-		duration = 1000,
-		loop = false,
-		fps = 60,
-		onFrame,
-	} = config;
+	const { duration = 1000, loop = false, fps = 60, onFrame } = config;
 	const easingFn = resolveEasing(config.easing ?? "ease-out");
 	const startTime = performance.now();
 	const frameInterval = 1000 / fps;

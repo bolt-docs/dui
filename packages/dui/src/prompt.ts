@@ -1,8 +1,8 @@
 import readline from "node:readline";
-import { getConfig } from "./config";
-import { resolveColor } from "./theme";
-import type { ColorStyle } from "./theme";
 import { colors } from "./color";
+import { getConfig } from "./config";
+import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
 
 export interface ConfirmOptions {
 	default?: boolean;
@@ -17,7 +17,8 @@ export function confirm(
 	options?: ConfirmOptions | boolean,
 ): Promise<boolean> {
 	const defaultVal = typeof options === "boolean" ? options : options?.default;
-	const colorsOverride = typeof options === "boolean" ? undefined : options?.colors;
+	const colorsOverride =
+		typeof options === "boolean" ? undefined : options?.colors;
 
 	if (!process.stdin.isTTY || !process.stdout.isTTY) {
 		return Promise.resolve(defaultVal ?? false);
@@ -30,8 +31,16 @@ export function confirm(
 
 	return new Promise((resolve) => {
 		const theme = getConfig().theme;
-		const { apply: messageStyle } = resolveColor("prompt.message", theme, colorsOverride?.message);
-		const { apply: suffixStyle } = resolveColor("prompt.suffix", theme, colorsOverride?.suffix);
+		const { apply: messageStyle } = resolveColor(
+			"prompt.message",
+			theme,
+			colorsOverride?.message,
+		);
+		const { apply: suffixStyle } = resolveColor(
+			"prompt.suffix",
+			theme,
+			colorsOverride?.suffix,
+		);
 		const p = messageStyle(colors.bold(`[${getConfig().prefix}] ${message}`));
 		const suffix = defaultVal === true ? "(Y/n)" : "(y/N)";
 

@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	configure,
 	getConfig,
-	resetConfig,
 	info,
+	resetConfig,
 	stripAnsi,
 } from "../src/index";
 
@@ -31,7 +31,9 @@ describe("configure", () => {
 
 	it("throws an error when setting an empty prefix", () => {
 		expect(() => configure({ prefix: "" })).toThrow("Prefix cannot be empty");
-		expect(() => configure({ prefix: "   " })).toThrow("Prefix cannot be empty");
+		expect(() => configure({ prefix: "   " })).toThrow(
+			"Prefix cannot be empty",
+		);
 	});
 
 	it("resetConfig restores defaults", () => {

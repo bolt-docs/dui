@@ -15,10 +15,10 @@
  *    5│-L5 │   5│+L5       ← modified pair, word-diff highlighted
  */
 
-import { structuredPatch, type Hunk } from "diff";
 import { terminalWidth, visibleLength } from "@bdocs/dui";
-import type { DiffOptions, DiffResult } from "./types";
+import { type Hunk, structuredPatch } from "diff";
 import { getPalette } from "./theme";
+import type { DiffOptions, DiffResult } from "./types";
 import { formatLineNo, padVisible, truncateTo } from "./utils";
 import { diffWords } from "./word";
 
@@ -46,15 +46,10 @@ export function diffSideBySide(
 	const usable = Math.max(20, maxCols - sepLen - pad);
 	const colWidth = Math.max(8, Math.floor(usable / 2));
 
-	const patch = structuredPatch(
-		"old",
-		"new",
-		oldStr,
-		newStr,
-		"",
-		"",
-		{ context, ignoreNewlineAtEof: true },
-	);
+	const patch = structuredPatch("old", "new", oldStr, newStr, "", "", {
+		context,
+		ignoreNewlineAtEof: true,
+	});
 
 	const rows = buildRows(patch.hunks);
 
@@ -109,7 +104,8 @@ export function diffSideBySide(
 				palette,
 				separator,
 				wordHighlight,
-			)) out.push(line);
+			))
+				out.push(line);
 		}
 	}
 
@@ -130,7 +126,13 @@ export function diffSideBySide(
 // ── Row builder ───────────────────────────────────────────────
 
 type Row =
-	| { kind: "context"; left: string; right: string; oldNo: number; newNo: number }
+	| {
+			kind: "context";
+			left: string;
+			right: string;
+			oldNo: number;
+			newNo: number;
+	  }
 	| { kind: "removed"; left: string; oldNo: number }
 	| { kind: "added"; right: string; newNo: number }
 	| {
@@ -226,8 +228,10 @@ function renderContextRow(
 	palette: ReturnType<typeof getPalette>,
 	separator: string,
 ): string {
-	const leftLine = formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colWidth - 7);
-	const rightLine = formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colWidth - 7);
+	const leftLine =
+		formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colWidth - 7);
+	const rightLine =
+		formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colWidth - 7);
 	return (
 		"  " +
 		palette.context(padVisible(leftLine, colWidth)) +
@@ -242,7 +246,8 @@ function renderRemovedRow(
 	palette: ReturnType<typeof getPalette>,
 	separator: string,
 ): string {
-	const leftLine = formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colWidth - 7);
+	const leftLine =
+		formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colWidth - 7);
 	const empty = formatLineNo(null, 4) + " │ ";
 	return (
 		"  " +
@@ -259,7 +264,8 @@ function renderAddedRow(
 	separator: string,
 ): string {
 	const empty = formatLineNo(null, 4) + " │ ";
-	const rightLine = formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colWidth - 7);
+	const rightLine =
+		formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colWidth - 7);
 	return (
 		"  " +
 		palette.context(padVisible(empty, colWidth)) +
@@ -305,8 +311,10 @@ function renderModifiedPair(
 			}
 		}
 
-		const leftFull = formatLineNo(oldNo, 4) + " │ " + truncateTo(leftRendered, colWidth - 7);
-		const rightFull = formatLineNo(newNo, 4) + " │ " + truncateTo(rightRendered, colWidth - 7);
+		const leftFull =
+			formatLineNo(oldNo, 4) + " │ " + truncateTo(leftRendered, colWidth - 7);
+		const rightFull =
+			formatLineNo(newNo, 4) + " │ " + truncateTo(rightRendered, colWidth - 7);
 
 		out.push(
 			"  " +

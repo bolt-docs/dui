@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { cn, copyToClipboard } from "boltdocs/client";
-import { NPM, Pnpm, Yarn, Bun } from "./icons";
-import { Clipboard, ClipboardCheck } from "lucide-react";
 import { Tooltip } from "boltdocs/primitives";
+import { Clipboard, ClipboardCheck } from "lucide-react";
+import { useState } from "react";
+import { Bun, NPM, Pnpm, Yarn } from "./icons";
 
 interface PackageManagerProps {
 	className?: string;
@@ -93,7 +93,9 @@ export default function PackageManager({
 	title,
 }: PackageManagerProps) {
 	const pkg = pkgProp ?? "@bdocs/dui";
-	const known = (PACKAGES as Record<string, (typeof PACKAGES)[keyof typeof PACKAGES]>)[pkg];
+	const known = (
+		PACKAGES as Record<string, (typeof PACKAGES)[keyof typeof PACKAGES]>
+	)[pkg];
 	const commands = known
 		? {
 				core: known.core,
@@ -212,4 +214,4 @@ function CopyButton({ text }: { text: string }) {
 	);
 }
 
-export { PACKAGES, fallbackCommands };
+export { fallbackCommands, PACKAGES };

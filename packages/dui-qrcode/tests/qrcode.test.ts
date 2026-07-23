@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	qrcode,
 	formatLabel,
-	resolveCellChars,
-	renderMatrixRows,
 	LABEL_MAX_LENGTH,
+	qrcode,
+	renderMatrixRows,
+	resolveCellChars,
 } from "../src/index";
 
 describe("resolveCellChars", () => {
@@ -59,9 +59,9 @@ describe("formatLabel", () => {
 
 	it("uses custom string labels without truncation", () => {
 		const custom = "device code: ABCD-1234-EXTRA-LONG";
-		expect(
-			formatLabel({ ...base, label: custom, showVersion: false }),
-		).toBe(custom);
+		expect(formatLabel({ ...base, label: custom, showVersion: false })).toBe(
+			custom,
+		);
 	});
 
 	it("prefers version tag when showVersion is true", () => {

@@ -8,13 +8,13 @@
  */
 
 import {
-	colors,
 	animate,
 	animateProgress,
+	colorize,
+	colors,
+	createEasing,
 	createSpring,
 	createTimeline,
-	createEasing,
-	colorize,
 	renderLine,
 	renderStatic,
 } from "@bdocs/dui";
@@ -45,7 +45,8 @@ const easingNames = [
 	"ease-out-bounce",
 	"ease-in-back",
 	"ease-out-back",
-];	for (const name of easingNames) {
+];
+for (const name of easingNames) {
 	const label = name.padEnd(20);
 
 	const anim = animateProgress({
@@ -58,9 +59,7 @@ const easingNames = [
 			const pos = Math.round(clamped * 30);
 			const dotColor = pos > 15 ? "#00d4aa" : "#ff6b6b";
 			const bar =
-				" ".repeat(pos) +
-				colorize("●", dotColor) +
-				" ".repeat(30 - pos);
+				" ".repeat(pos) + colorize("●", dotColor) + " ".repeat(30 - pos);
 			// Label goes inside renderLine because renderLine() clears the
 			// whole line (cursorTo(0) + clearLine(0)) before writing.
 			renderLine(`  ${colors.dim(label)}${bar}`);
@@ -88,8 +87,7 @@ const springAnim = animateProgress({
 		const clamped = Math.min(1, Math.max(0, p));
 		const filled = Math.round(clamped * 40);
 		const bar =
-			colors.green("█").repeat(filled) +
-			colors.dim("░").repeat(40 - filled);
+			colors.green("█").repeat(filled) + colors.dim("░").repeat(40 - filled);
 		renderLine(`   ${bar} ${Math.round(clamped * 100)}%`);
 	},
 });
@@ -111,8 +109,7 @@ const customAnim = animateProgress({
 		const clamped = Math.min(1, Math.max(0, p));
 		const filled = Math.round(clamped * 40);
 		const bar =
-			colors.magenta("█").repeat(filled) +
-			colors.dim("░").repeat(40 - filled);
+			colors.magenta("█").repeat(filled) + colors.dim("░").repeat(40 - filled);
 		renderLine(`   ${bar} ${Math.round(clamped * 100)}%`);
 	},
 });

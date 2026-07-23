@@ -1,19 +1,19 @@
-import { useRef } from "react";
 import {
-	OnThisPage,
+	type BoltdocsLocale,
+	cn,
+	useConfig,
+	useI18n,
+	useRoutes,
+} from "boltdocs/client";
+import {
 	AnchorProvider,
+	Link,
+	OnThisPage,
 	ScrollProvider,
 	useActiveAnchors,
-	Link,
 } from "boltdocs/primitives";
-import {
-	useRoutes,
-	useConfig,
-	type BoltdocsLocale,
-	useI18n,
-	cn,
-} from "boltdocs/client";
 import { Pencil } from "lucide-react";
+import { useRef } from "react";
 
 interface HeadingItem {
 	id: string;

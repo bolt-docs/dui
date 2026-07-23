@@ -12,20 +12,22 @@
  */
 
 import {
-	select,
-	multiselect,
-	tree,
 	colors,
-	success,
-	info,
 	defineClass,
+	info,
+	multiselect,
+	select,
+	success,
+	tree,
 } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  🖱️  Hover Effects Demo"));
 console.log(colors.dim("  ──────────────────────\n"));
 
-console.log(colors.dim("  Hover over items with your mouse to see highlights!"));
+console.log(
+	colors.dim("  Hover over items with your mouse to see highlights!"),
+);
 console.log(colors.dim("  Use ↑↓ arrows OR click with mouse to select\n"));
 
 // Customize the hover class for this demo

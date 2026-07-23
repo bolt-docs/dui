@@ -13,10 +13,10 @@
  *           (or npx tsx 16-plugin-stack/index.ts)
  */
 
-import { colors, configure, usePluginAsync, box, divider } from "@bdocs/dui";
+import { box, colors, configure, divider, usePluginAsync } from "@bdocs/dui";
+import { bar, chartPlugin } from "@dui-toolkit/plugin-chart";
+import { diff, diffPlugin } from "@dui-toolkit/plugin-diff";
 import { markdownPlugin, md } from "@dui-toolkit/plugin-markdown";
-import { diffPlugin, diff } from "@dui-toolkit/plugin-diff";
-import { chartPlugin, bar } from "@dui-toolkit/plugin-chart";
 import { section } from "../helpers";
 
 async function main() {
@@ -24,7 +24,9 @@ async function main() {
 	console.log(colors.bold("  🧩 Plugin Stack — composition via v2 API"));
 	console.log(colors.dim("  ──────────────────────────────────────────"));
 	console.log("");
-	console.log(colors.dim("  markdown · diff · chart, themed via one configure()"));
+	console.log(
+		colors.dim("  markdown · diff · chart, themed via one configure()"),
+	);
 	console.log("");
 
 	// ── 1. Register plugins in a single async chain ──────────────────────
@@ -77,7 +79,9 @@ async function main() {
 	});
 
 	console.log(divider("─", 64, { color: "#374151" }));
-	console.log(colors.dim("  configure({ theme: { markdown, diff, chart } }) applied"));
+	console.log(
+		colors.dim("  configure({ theme: { markdown, diff, chart } }) applied"),
+	);
 	console.log(divider("─", 64, { color: "#374151" }));
 	console.log("");
 

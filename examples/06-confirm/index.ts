@@ -8,7 +8,7 @@
  * Note: This is an interactive prompt. It will wait for your input.
  */
 
-import { confirm, colors, info, success, error } from "@bdocs/dui";
+import { colors, confirm, error, info, success } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  ❓ Confirm Prompts"));

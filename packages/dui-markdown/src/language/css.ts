@@ -1,7 +1,7 @@
-import type { LanguageDef } from "./index"
+import type { LanguageDef } from "./index";
 
 export const cssDef: LanguageDef = {
-  id: "css",
-  aliases: [],
-  shikiLang: "css",
-}
+	id: "css",
+	aliases: [],
+	shikiLang: "css",
+};

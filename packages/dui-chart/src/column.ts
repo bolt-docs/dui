@@ -1,5 +1,5 @@
 import { colorize, colors } from "@bdocs/dui";
-import { clamp, getWidth, repeat, barColor } from "./utils";
+import { barColor, clamp, getWidth, repeat } from "./utils";
 
 export interface ColumnOptions {
 	labels?: string[];

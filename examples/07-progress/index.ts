@@ -6,7 +6,7 @@
  * Run: pnpm --filter examples progress
  */
 
-import { createProgressBar, colors } from "@bdocs/dui";
+import { colors, createProgressBar } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  📈 Progress Bars"));

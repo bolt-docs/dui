@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { table } from "../src/index";
 
 describe("table", () => {
@@ -53,10 +53,10 @@ describe("table", () => {
 	it("respects headerSeparator option", () => {
 		const headers = ["Col A", "Col B"];
 		const rows = [["1", "2"]];
-		
+
 		const withSep = table(headers, rows, { headerSeparator: true });
 		const withoutSep = table(headers, rows, { headerSeparator: false });
-		
+
 		expect(withSep).toContain("┣");
 		expect(withoutSep).not.toContain("┣");
 	});
@@ -64,11 +64,11 @@ describe("table", () => {
 	it("respects custom padding option", () => {
 		const headers = ["A"];
 		const rows = [["1"]];
-		
+
 		const defaultPad = table(headers, rows);
 		const doublePad = table(headers, rows, { padding: 2 });
 		const zeroPad = table(headers, rows, { padding: 0 });
-		
+
 		expect(defaultPad).toContain(" 1 ");
 		expect(doublePad).toContain("  1  ");
 		expect(zeroPad).toContain("┃1┃");

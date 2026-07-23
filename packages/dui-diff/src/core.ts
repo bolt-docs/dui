@@ -25,9 +25,9 @@
  */
 
 import { terminalWidth, visibleLength } from "@bdocs/dui";
-import { structuredPatch, type Hunk } from "diff";
-import type { DiffOptions, DiffResult } from "./types";
+import { type Hunk, structuredPatch } from "diff";
 import { getPalette } from "./theme";
+import type { DiffOptions, DiffResult } from "./types";
 import { formatLineNo, gutterFor, truncateTo } from "./utils";
 
 // ── Public API ────────────────────────────────────────────────
@@ -49,15 +49,10 @@ export function diff(
 	const maxCols = maxWidth ?? terminalWidth();
 	const palette = getPalette(options);
 
-	const patch = structuredPatch(
-		"old",
-		"new",
-		oldStr,
-		newStr,
-		"",
-		"",
-		{ context, ignoreNewlineAtEof: true },
-	);
+	const patch = structuredPatch("old", "new", oldStr, newStr, "", "", {
+		context,
+		ignoreNewlineAtEof: true,
+	});
 
 	let additions = 0;
 	let deletions = 0;
@@ -107,10 +102,7 @@ interface RenderHunkOpts {
 	palette: ReturnType<typeof getPalette>;
 }
 
-function renderHunk(
-	hunk: Hunk,
-	opts: RenderHunkOpts,
-): string[] {
+function renderHunk(hunk: Hunk, opts: RenderHunkOpts): string[] {
 	const { lineNumbers, gutterStyle, palette } = opts;
 
 	const oldRange =
@@ -201,8 +193,7 @@ function renderLine(opts: RenderLineOpts): string {
 		const w = 5;
 		const left = formatLineNo(oldNo, w);
 		const right = formatLineNo(newNo, w);
-		const numStr =
-			kind === "context" ? `${left}${right}` : `${left} ${right}`;
+		const numStr = kind === "context" ? `${left}${right}` : `${left} ${right}`;
 		lineNoCol = palette.linenum(`  ${numStr} `);
 	}
 
@@ -218,6 +209,10 @@ function renderLine(opts: RenderLineOpts): string {
 	const head = `${gutter}${marker} `;
 
 	const paint =
-		kind === "add" ? palette.add : kind === "del" ? palette.del : palette.context;
+		kind === "add"
+			? palette.add
+			: kind === "del"
+				? palette.del
+				: palette.context;
 	return lineNoCol + paint(head + ln);
 }

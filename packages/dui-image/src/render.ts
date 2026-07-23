@@ -4,17 +4,11 @@
  * Loads images using sharp, resizes them, and renders to ANSI strings.
  */
 
-import sharp from "sharp";
 import { terminalWidth } from "@bdocs/dui";
-import {
-	pixelsToAnsi,
-	type AnsiImageOptions,
-} from "./ansi";
+import sharp from "sharp";
+import { type AnsiImageOptions, pixelsToAnsi } from "./ansi";
 import { detectTerminal } from "./detect";
-import {
-	loadResizedPixels,
-	resolveDimensions,
-} from "./utils";
+import { loadResizedPixels, resolveDimensions } from "./utils";
 
 export interface ImageRenderOptions extends AnsiImageOptions {
 	/** Output format (default: "auto") */
@@ -49,7 +43,7 @@ export async function renderImage(
 
 /**
  * Render an image to ANSI half-block art (always uses ANSI).
- */	export async function renderAnsi(
+ */ export async function renderAnsi(
 	imagePath: string | Buffer,
 	options: AnsiImageOptions = {},
 ): Promise<string> {
@@ -57,12 +51,11 @@ export async function renderImage(
 	const caps = detectTerminal();
 	const dims = resolveDimensions(caps.columns, width, height);
 
-	const { pixels, width: actualWidth, height: actualHeight } = await loadResizedPixels(
-		imagePath,
-		dims.width,
-		dims.height * 2,
-		dither,
-	);
+	const {
+		pixels,
+		width: actualWidth,
+		height: actualHeight,
+	} = await loadResizedPixels(imagePath, dims.width, dims.height * 2, dither);
 
 	// Use actual sharp output dimensions (withoutEnlargement may prevent
 	// full resize, so actualWidth/actualHeight may differ from requested).
@@ -82,7 +75,8 @@ async function renderKitty(
 	const img = sharp(imagePath);
 	const metadata = await img.metadata();
 	const w = options.width ?? Math.min(terminalWidth(), 80);
-	const h = options.height ??
+	const h =
+		options.height ??
 		Math.floor((w * (metadata.height ?? w)) / (metadata.width ?? w));
 
 	const resized = await img

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	animate,
 	animateProgress,
@@ -222,9 +222,7 @@ describe("animate", () => {
 		vi.useFakeTimers();
 		const onFrame = vi.fn();
 		const anim = animate({
-			keyframes: [
-				{ offset: 0, content: "test", fg: "#fff" },
-			],
+			keyframes: [{ offset: 0, content: "test", fg: "#fff" }],
 			duration: 1000,
 			loop: true,
 			onFrame,
@@ -290,9 +288,7 @@ describe("animate", () => {
 		vi.useFakeTimers();
 		const onFrame = vi.fn();
 		const anim = animate({
-			keyframes: [
-				{ offset: 0.3, content: "mid", fg: "#888" },
-			],
+			keyframes: [{ offset: 0.3, content: "mid", fg: "#888" }],
 			duration: 100,
 			onFrame,
 		});

@@ -12,9 +12,9 @@ import { renderMatrixRows } from "./render";
 import type { QRCodeRenderOptions } from "./types";
 import { formatLabel, resolveCellChars, wrapRowSgr } from "./utils";
 
-export type { ErrorCorrectionLevel, QRCodeRenderOptions } from "./types";
-export { renderMatrixRows } from "./render";
 export type { QrBitMatrix } from "./render";
+export { renderMatrixRows } from "./render";
+export type { ErrorCorrectionLevel, QRCodeRenderOptions } from "./types";
 export {
 	formatLabel,
 	LABEL_MAX_LENGTH,
@@ -72,9 +72,7 @@ export async function qrcode(
 	const fgSgr = toAnsiFg(color);
 	const bgSgr = bgColor !== undefined ? toAnsiBg(bgColor) : "";
 
-	const body = plainRows
-		.map((row) => wrapRowSgr(row, fgSgr, bgSgr))
-		.join("\n");
+	const body = plainRows.map((row) => wrapRowSgr(row, fgSgr, bgSgr)).join("\n");
 
 	const labelText = formatLabel({
 		text,
@@ -93,6 +91,6 @@ export async function qrcode(
 	return `${body}\n${wrapRowSgr(colors.dim(labelText), fgSgr, bgSgr)}`;
 }
 
+export { qrcodePlugin } from "./plugin";
 /** Re-export the upstream encoder for advanced matrix access. */
 export { QRCode };
-export { qrcodePlugin } from "./plugin";

@@ -17,7 +17,7 @@
  * - Press Esc to cancel
  */
 
-import { multiselect, colors, success, info } from "@bdocs/dui";
+import { colors, info, multiselect, success } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  🖱️  Mouse-Enabled Multiselect"));

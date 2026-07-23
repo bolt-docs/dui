@@ -6,7 +6,7 @@
  * Run: pnpm --filter examples boxes
  */
 
-import { box, double, single, round, colors } from "@bdocs/dui";
+import { box, colors, double, round, single } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  📦 Boxes & Borders"));
@@ -15,25 +15,19 @@ console.log(colors.dim("  ──────────────────
 // ── Default double box ────────────────────────────────────────
 
 console.log("  Default (double) box:");
-console.log(
-	box(["Hello from DUI!", "This is a default double box."]),
-);
+console.log(box(["Hello from DUI!", "This is a default double box."]));
 console.log("\n");
 
 // ── Single box ────────────────────────────────────────────────
 
 console.log("  Single box:");
-console.log(
-	single([colors.cyan("Single border style"), "Clean and minimal."]),
-);
+console.log(single([colors.cyan("Single border style"), "Clean and minimal."]));
 console.log("\n");
 
 // ── Round box ─────────────────────────────────────────────────
 
 console.log("  Round box:");
-console.log(
-	round([colors.magenta("Round border style"), "Soft corners."]),
-);
+console.log(round([colors.magenta("Round border style"), "Soft corners."]));
 console.log("\n");
 
 // ── Box with title ────────────────────────────────────────────

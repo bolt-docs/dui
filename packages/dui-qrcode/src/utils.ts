@@ -37,9 +37,7 @@ export function resolveCellChars(
 		targetWidth < naturalCols &&
 		targetWidth >= moduleCount;
 
-	return wantNarrow
-		? { dark: "█", light: " " }
-		: { dark: "██", light: "  " };
+	return wantNarrow ? { dark: "█", light: " " } : { dark: "██", light: "  " };
 }
 
 /**

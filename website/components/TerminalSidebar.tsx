@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { Sidebar, Button } from "boltdocs/primitives";
 import {
+	useI18n,
+	useLocalizedTo,
 	useRoutes,
 	useSidebar,
-	useLocalizedTo,
 	useUI,
-	useI18n,
 } from "boltdocs/client";
+import { Button, Sidebar } from "boltdocs/primitives";
 import { Menu } from "lucide-react";
+import { useState } from "react";
 
 interface RouteItem {
 	path: string;
@@ -119,7 +119,9 @@ export function TerminalSidebar() {
 	const groupsWithIndex = sortedGroups.map((group) => {
 		const routesList = [...group.routes];
 		if (group.path && group.path !== "#") {
-			const hasIndexRoute = routesList.some((r: RouteItem) => r.path === group.path);
+			const hasIndexRoute = routesList.some(
+				(r: RouteItem) => r.path === group.path,
+			);
 			if (!hasIndexRoute) {
 				routesList.unshift({
 					title: group.title,
@@ -215,32 +217,32 @@ export function TerminalSidebar() {
 						<div className="flex flex-col gap-6">
 							{ungrouped.length > 0 && (
 								<Sidebar.Group className="flex flex-col gap-0.5">
-							{ungrouped.map((route: RouteItem) => (
-								<TerminalSidebarItem
-									key={route.path}
-									route={route}
-									activePath={activePath}
-									activeRoute={activeRoute}
-								/>
+									{ungrouped.map((route: RouteItem) => (
+										<TerminalSidebarItem
+											key={route.path}
+											route={route}
+											activePath={activePath}
+											activeRoute={activeRoute}
+										/>
+									))}
+								</Sidebar.Group>
+							)}
+							{groupsWithIndex.map((group: SidebarGroup) => (
+								<Sidebar.Group
+									key={group.title}
+									title={group.title}
+									className="flex flex-col gap-0.5 [&>h4]:px-2 [&>h4]:mb-1.5 [&>h4]:flex [&>h4]:items-center [&>h4]:text-xs [&>h4]:font-bold [&>h4]:font-mono [&>h4]:uppercase [&>h4]:tracking-widest [&>h4]:text-dim [&>h4]:before:content-['#'] [&>h4]:before:mr-1.5 [&>h4]:before:text-dim [&>h4]:before:font-mono mt-6 first:mt-0"
+								>
+									{group.routes.map((route: RouteItem) => (
+										<TerminalSidebarItem
+											key={route.path}
+											route={route}
+											activePath={activePath}
+											activeRoute={activeRoute}
+										/>
+									))}
+								</Sidebar.Group>
 							))}
-						</Sidebar.Group>
-					)}
-					{groupsWithIndex.map((group: SidebarGroup) => (
-						<Sidebar.Group
-							key={group.title}
-							title={group.title}
-							className="flex flex-col gap-0.5 [&>h4]:px-2 [&>h4]:mb-1.5 [&>h4]:flex [&>h4]:items-center [&>h4]:text-xs [&>h4]:font-bold [&>h4]:font-mono [&>h4]:uppercase [&>h4]:tracking-widest [&>h4]:text-dim [&>h4]:before:content-['#'] [&>h4]:before:mr-1.5 [&>h4]:before:text-dim [&>h4]:before:font-mono mt-6 first:mt-0"
-						>
-							{group.routes.map((route: RouteItem) => (
-								<TerminalSidebarItem
-									key={route.path}
-									route={route}
-									activePath={activePath}
-									activeRoute={activeRoute}
-								/>
-							))}
-						</Sidebar.Group>
-					))}
 						</div>
 					</div>
 				</Sidebar.Content>

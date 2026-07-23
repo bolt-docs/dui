@@ -1,11 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	diff,
+	diffFiles,
 	diffSideBySide,
+	diffStat,
 	diffWords,
 	diffWordsRender,
-	diffStat,
-	diffFiles,
 } from "../src/index";
 
 // ── diff (unified) ─────────────────────────────────────────────
@@ -53,10 +53,7 @@ describe("diff (unified)", () => {
 	});
 
 	it("formats hunk headers with position and counts", () => {
-		const r = diff(
-			"a\nb\nc\nd\ne\nf",
-			"a\nb\nCHANGED\nd\ne\nf",
-		);
+		const r = diff("a\nb\nc\nd\ne\nf", "a\nb\nCHANGED\nd\ne\nf");
 		expect(r.output).toMatch(/@@ -\d+,\d+ \+\d+,\d+ @@/);
 	});
 
@@ -221,7 +218,10 @@ describe("diffWords", () => {
 	it("segments preserve original order", () => {
 		const segs = diffWords("foo bar baz", "foo qux baz");
 		// The added segment is somewhere in the middle
-		const added = segs.filter((s) => s.added).map((s) => s.value).join("");
+		const added = segs
+			.filter((s) => s.added)
+			.map((s) => s.value)
+			.join("");
 		expect(added).toContain("qux");
 	});
 
@@ -272,7 +272,12 @@ describe("diffFiles", () => {
 	it("renders multiple files with per-file stats", () => {
 		const r = diffFiles([
 			{ oldPath: "a.ts", newPath: "a.ts", oldContent: "x", newContent: "y" },
-			{ oldPath: "b.ts", newPath: "b.ts", oldContent: "1\n2", newContent: "1\n3" },
+			{
+				oldPath: "b.ts",
+				newPath: "b.ts",
+				oldContent: "1\n2",
+				newContent: "1\n3",
+			},
 		]);
 		expect(r.files).toHaveLength(2);
 		expect(r.totals.files).toBe(2);
@@ -295,7 +300,13 @@ describe("diffFiles", () => {
 
 	it("honors an explicit status", () => {
 		const r = diffFiles([
-			{ oldPath: "a.ts", newPath: "a.ts", oldContent: "x", newContent: "x", status: "removed" },
+			{
+				oldPath: "a.ts",
+				newPath: "a.ts",
+				oldContent: "x",
+				newContent: "x",
+				status: "removed",
+			},
 		]);
 		expect(r.files[0]?.status).toBe("removed");
 	});
@@ -343,7 +354,9 @@ describe("realistic code-diff usage", () => {
 	});
 
 	it("renders large file changes with multiple hunks", () => {
-		const oldFile = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n");
+		const oldFile = Array.from({ length: 100 }, (_, i) => `line${i}`).join(
+			"\n",
+		);
 		const newFile = Array.from({ length: 100 }, (_, i) =>
 			i === 20 || i === 80 ? `CHANGED${i}` : `line${i}`,
 		).join("\n");

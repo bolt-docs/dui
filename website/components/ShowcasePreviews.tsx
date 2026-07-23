@@ -7,7 +7,8 @@ function parseHex(hex: string) {
 	return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 function interpolate(c1: string, c2: string, t: number) {
-	const a = parseHex(c1), b = parseHex(c2);
+	const a = parseHex(c1),
+		b = parseHex(c2);
 	return `rgb(${Math.round(a.r + (b.r - a.r) * t)},${Math.round(a.g + (b.g - a.g) * t)},${Math.round(a.b + (b.b - a.b) * t)})`;
 }
 
@@ -24,17 +25,25 @@ export function ProgressBarDemo() {
 		return () => window.removeEventListener("resize", handleResize);
 	}, []);
 
-	useTimeout(() => {
-		if (progress >= 100) setProgress(0);
-		else setProgress((p) => Math.min(p + 4, 100));
-	}, progress >= 100 ? 800 : 60);
+	useTimeout(
+		() => {
+			if (progress >= 100) setProgress(0);
+			else setProgress((p) => Math.min(p + 4, 100));
+		},
+		progress >= 100 ? 800 : 60,
+	);
 
 	const f = Math.round((progress / 100) * w);
 	const bar = "█".repeat(f) + "░".repeat(w - f);
-	const color = progress === 100 ? "\u001b[38;2;74;222;128m" : "\u001b[38;2;34;211;238m";
+	const color =
+		progress === 100 ? "\u001b[38;2;74;222;128m" : "\u001b[38;2;34;211;238m";
 
 	return (
-		<TerminalPreview title="dui — progress" command="node download-assets.js" screenClassName="min-h-[140px] flex flex-col justify-start">
+		<TerminalPreview
+			title="dui — progress"
+			command="node download-assets.js"
+			screenClassName="min-h-[140px] flex flex-col justify-start"
+		>
 			{`${color}${bar}\u001b[0m  ${progress.toString().padStart(3, " ")}% | ${progress === 100 ? "download complete! \u001b[32m✔\u001b[0m" : "downloading assets..."}`}
 		</TerminalPreview>
 	);
@@ -54,12 +63,18 @@ export function ColorsDemo() {
 
 	let gradient = "";
 	for (let i = 0; i < 24; i++) {
-		const m = interpolate(colorA, colorB, i / 23).match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+		const m = interpolate(colorA, colorB, i / 23).match(
+			/rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+		);
 		if (m) gradient += `\u001b[48;2;${m[1]};${m[2]};${m[3]}m \u001b[0m`;
 	}
 
 	return (
-		<TerminalPreview title="dui — true color engine" command="node colorize.js" screenClassName="min-h-[160px] flex flex-col justify-start">
+		<TerminalPreview
+			title="dui — true color engine"
+			command="node colorize.js"
+			screenClassName="min-h-[160px] flex flex-col justify-start"
+		>
 			{[
 				"\u001b[38;2;248;113;113mcolors.red('Error occurred')\u001b[0m",
 				"\u001b[38;2;74;222;128mcolors.green('Success status')\u001b[0m",
@@ -90,7 +105,11 @@ export function SpinnerDemo() {
 	};
 
 	return (
-		<TerminalPreview title="dui — spinners" command="node install.js" screenClassName="min-h-[140px] flex flex-col justify-start">
+		<TerminalPreview
+			title="dui — spinners"
+			command="node install.js"
+			screenClassName="min-h-[140px] flex flex-col justify-start"
+		>
 			{lines[step]}
 		</TerminalPreview>
 	);
@@ -135,14 +154,25 @@ export function StepsDemo() {
 	].join("\n");
 
 	return (
-		<TerminalPreview title="dui — step pipeline" command="node deploy.js" screenClassName="min-h-[140px] flex flex-col justify-start">
+		<TerminalPreview
+			title="dui — step pipeline"
+			command="node deploy.js"
+			screenClassName="min-h-[140px] flex flex-col justify-start"
+		>
 			{content}
 		</TerminalPreview>
 	);
 }
 
 export function TableDemo() {
-	const [stats, setStats] = useState({ boxCpu: "0.2%", boxRam: "12.4 MB", spinCpu: "1.5%", spinRam: "14.8 MB", logCpu: "0.0%", logRam: "8.1 MB" });
+	const [stats, setStats] = useState({
+		boxCpu: "0.2%",
+		boxRam: "12.4 MB",
+		spinCpu: "1.5%",
+		spinRam: "14.8 MB",
+		logCpu: "0.0%",
+		logRam: "8.1 MB",
+	});
 
 	useInterval(() => {
 		setStats({
@@ -159,7 +189,11 @@ export function TableDemo() {
 	const bReset = "\u001b[0m";
 
 	return (
-		<TerminalPreview title="dui — dynamic table" command="node table.js" screenClassName="min-h-[160px] flex flex-col justify-start">
+		<TerminalPreview
+			title="dui — dynamic table"
+			command="node table.js"
+			screenClassName="min-h-[160px] flex flex-col justify-start"
+		>
 			{[
 				`${border}┌───────────┬──────────────┬────────────┐${bReset}`,
 				"│ Component │ CPU Usage    │ RAM        │",

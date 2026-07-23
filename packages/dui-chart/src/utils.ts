@@ -1,4 +1,4 @@
-import { terminalWidth, visibleLength, stripAnsi, colorize } from "@bdocs/dui";
+import { colorize, stripAnsi, terminalWidth, visibleLength } from "@bdocs/dui";
 
 export function clamp(value: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, value));
@@ -20,7 +20,9 @@ export function formatNumber(n: number): string {
 }
 
 export function getWidth(preferred?: number): number {
-	return preferred ? Math.min(preferred, terminalWidth() - 2) : terminalWidth() - 4;
+	return preferred
+		? Math.min(preferred, terminalWidth() - 2)
+		: terminalWidth() - 4;
 }
 
 export function repeat(char: string, count: number): string {

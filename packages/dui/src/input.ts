@@ -3,7 +3,7 @@ import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { stripAnsi, computeLinesRendered } from "./utils";
+import { computeLinesRendered, stripAnsi } from "./utils";
 
 export interface InputOptions {
 	default?: string;
@@ -35,9 +35,7 @@ export async function input(
 		});
 
 		return new Promise<string>((resolve) => {
-			const hint = defaultValue !== undefined
-				? ` (${defaultValue})`
-				: "";
+			const hint = defaultValue !== undefined ? ` (${defaultValue})` : "";
 			rl.question(`${message}${hint}: `, (answer) => {
 				rl.close();
 				const value = answer.trim() || defaultValue || "";
@@ -54,7 +52,13 @@ export async function input(
 		});
 	}
 
-	return interactiveInput(message, defaultValue, placeholder, validate, colorsOverride);
+	return interactiveInput(
+		message,
+		defaultValue,
+		placeholder,
+		validate,
+		colorsOverride,
+	);
 }
 
 function interactiveInput(
@@ -115,9 +119,7 @@ function interactiveInput(
 				: placeholder
 					? placeholderColor(colors.dim(placeholder))
 					: "";
-			const errorLine = errorMsg
-				? `  ${errorColor(`✖ ${errorMsg}`)}`
-				: "";
+			const errorLine = errorMsg ? `  ${errorColor(`✖ ${errorMsg}`)}` : "";
 
 			const lines: string[] = [];
 			const valueLine = `${promptLine} ${displayValue}`;
@@ -175,7 +177,10 @@ function interactiveInput(
 			resolve(buf);
 		}
 
-		function onKeypress(_str: string, key: { name?: string; ctrl?: boolean; meta?: boolean }) {
+		function onKeypress(
+			_str: string,
+			key: { name?: string; ctrl?: boolean; meta?: boolean },
+		) {
 			if (done) return;
 
 			if (key.name === "return" || key.name === "enter") {
@@ -254,5 +259,3 @@ function interactiveInput(
 		render();
 	});
 }
-
-

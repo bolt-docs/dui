@@ -8,16 +8,18 @@
 
 html,
 body {
-  overflow-x: hidden;
-  max-width: 100vw;
+	overflow-x: hidden;
+	max-width: 100vw;
 }
 
 /* Terminal-style cursor on interactive elements */
-a, button, [role="button"] {
-  cursor: default;
+a,
+button,
+[role="button"] {
+	cursor: default;
 }
 
 ::selection {
-  background-color: var(--color-primary-500);
-  color: #ffffff;
+	background-color: var(--color-primary-500);
+	color: #ffffff;
 }

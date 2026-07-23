@@ -1,7 +1,13 @@
-import { describe, it, expect, beforeAll, afterEach } from "vitest";
-import { tokenize, tokenizeInline } from "../src/tokenizer";
+import {
+	configure,
+	getConfig,
+	resetConfig,
+	setColorSupported,
+	stripAnsi,
+} from "@bdocs/dui";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { md } from "../src/renderer";
-import { configure, getConfig, resetConfig, setColorSupported, stripAnsi } from "@bdocs/dui";
+import { tokenize, tokenizeInline } from "../src/tokenizer";
 
 describe("tokenizeInline", () => {
 	it("parses bold text", () => {
@@ -75,7 +81,7 @@ describe("tokenizer", () => {
 
 	it("tokenizes all six heading levels", () => {
 		for (let i = 1; i <= 6; i++) {
-			const tokens = tokenize(`${ "#".repeat(i) } H${i}`);
+			const tokens = tokenize(`${"#".repeat(i)} H${i}`);
 			expect(tokens[0]).toMatchObject({ type: "heading", level: i });
 		}
 	});
@@ -83,13 +89,21 @@ describe("tokenizer", () => {
 	it("tokenizes code blocks", () => {
 		const tokens = tokenize("```ts\nconst x = 1\n```");
 		expect(tokens).toHaveLength(1);
-		expect(tokens[0]).toMatchObject({ type: "code", lang: "ts", code: "const x = 1" });
+		expect(tokens[0]).toMatchObject({
+			type: "code",
+			lang: "ts",
+			code: "const x = 1",
+		});
 	});
 
 	it("tokenizes code blocks without language", () => {
 		const tokens = tokenize("```\nplain text\n```");
 		expect(tokens).toHaveLength(1);
-		expect(tokens[0]).toMatchObject({ type: "code", lang: "", code: "plain text" });
+		expect(tokens[0]).toMatchObject({
+			type: "code",
+			lang: "",
+			code: "plain text",
+		});
 	});
 
 	it("tokenizes multi-line code blocks", () => {
@@ -320,7 +334,10 @@ describe("renderer", () => {
 	});
 
 	it("renders all heading levels", async () => {
-		const text = Array.from({ length: 6 }, (_, i) => `${ "#".repeat(i + 1) } H${i + 1}`).join("\n");
+		const text = Array.from(
+			{ length: 6 },
+			(_, i) => `${"#".repeat(i + 1)} H${i + 1}`,
+		).join("\n");
 		const output = await md(text);
 		const clean = stripAnsi(output);
 		for (let i = 1; i <= 6; i++) {
@@ -332,7 +349,38 @@ describe("renderer", () => {
 		const output = await md("# Big Title");
 		expect(output).toContain("\x1b[");
 		expect(output).toContain("Big Title");
-		expect(stripAnsi(output)).toContain("# Big Title");
+		// The renderer must NOT leak the raw markdown `#` marker into
+		// the output. Hierarchy is conveyed through color + bold + the
+		// `▌` accent bar so the line reads as styled prose, not raw
+		// markdown syntax.
+		expect(stripAnsi(output)).not.toContain("# Big Title");
+		expect(stripAnsi(output)).toContain("Big Title");
+		expect(output).toContain("▌ Big Title");
+	});
+
+	it("does not render the leading `#` from any heading level", async () => {
+		// Driving from markdown source the reader typed — they SHOULD
+		// see styled prose after `md()`, not a copy of their markdown
+		// verbatim. Asserting against each of the six levels keeps the
+		// regression visible to anyone fixing heading layout.
+		for (let level = 1; level <= 6; level++) {
+			const text = `${"#".repeat(level)} Hidden`;
+			const output = await md(text);
+			const clean = stripAnsi(output);
+			expect(clean).not.toContain(`${"#".repeat(level)} Hidden`);
+			expect(clean).toContain("Hidden");
+		}
+	});
+
+	it("indents deeper heading levels so the depth reads visually", async () => {
+		// Strip ANSI so we measure space-only indent, not the colored
+		// bar. H1/H2 should be flush-left; H4+ should deepen in 2-space
+		// steps while still containing the label.
+		const output = await md("# Top\n## Sub\n#### Deep");
+		const clean = stripAnsi(output);
+		expect(clean).toMatch(/^▌ Top/m);
+		expect(clean).toMatch(/^▌ Sub/m);
+		expect(clean).toMatch(/^ {2}▌ Deep/m);
 	});
 
 	it("renders italic text with ANSI", async () => {
@@ -358,7 +406,9 @@ describe("renderer", () => {
 	});
 
 	it("handles mixed content", async () => {
-		const output = await md("# Title\n\n> Quote with **bold**\n\n- List item with `code`");
+		const output = await md(
+			"# Title\n\n> Quote with **bold**\n\n- List item with `code`",
+		);
 		const clean = stripAnsi(output);
 		expect(clean).toContain("Title");
 		expect(clean).toContain("Quote");

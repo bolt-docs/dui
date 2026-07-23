@@ -8,26 +8,26 @@
  */
 
 import {
-	colors,
+	animateProgress,
+	applyStyle,
 	box,
-	table,
-	steps,
 	bullet,
-	tasks,
-	divider,
+	colorize,
+	colors,
 	createProgressBar,
 	createSpinner,
-	animateProgress,
 	createTimeline,
-	applyStyle,
-	colorize,
-	interpolateColor,
-	info,
-	success,
-	warn,
+	divider,
 	error,
+	info,
+	interpolateColor,
 	renderLine,
 	renderStatic,
+	steps,
+	success,
+	table,
+	tasks,
+	warn,
 } from "@bdocs/dui";
 
 async function sleep(ms: number) {
@@ -97,7 +97,11 @@ async function showPipeline() {
 	console.log("  " + colors.bold("Build Pipeline Demo"));
 	console.log(
 		steps([
-			{ label: "Install dependencies", status: "running", details: "pnpm install" },
+			{
+				label: "Install dependencies",
+				status: "running",
+				details: "pnpm install",
+			},
 			{ label: "TypeScript check", status: "pending" },
 			{ label: "Run tests", status: "pending" },
 			{ label: "Build packages", status: "pending" },
@@ -108,7 +112,11 @@ async function showPipeline() {
 
 	// Animate through the pipeline
 	const pipelineSteps = [
-		{ label: "Install dependencies", status: "running" as const, details: "pnpm install" },
+		{
+			label: "Install dependencies",
+			status: "running" as const,
+			details: "pnpm install",
+		},
 		{ label: "TypeScript check", status: "pending" as const },
 		{ label: "Run tests", status: "pending" as const },
 		{ label: "Build packages", status: "pending" as const },

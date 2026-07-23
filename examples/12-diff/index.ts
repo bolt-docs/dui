@@ -7,13 +7,13 @@
  * Run: pnpm --filter examples diff
  */
 
-import { colors, box, renderStatic, configure } from "@bdocs/dui";
+import { box, colors, configure, renderStatic } from "@bdocs/dui";
 import {
 	diff,
-	diffSideBySide,
-	diffWordsRender,
 	diffFiles,
+	diffSideBySide,
 	diffStat,
+	diffWordsRender,
 	getPalette,
 } from "@dui-toolkit/plugin-diff";
 
@@ -30,15 +30,9 @@ async function main() {
 	console.log(colors.dim("  ────────────────────"));
 	console.log("");
 	console.log(
-		colors.dim(
-			"  Unified diffs, side-by-side, word-level highlighting,",
-		),
+		colors.dim("  Unified diffs, side-by-side, word-level highlighting,"),
 	);
-	console.log(
-		colors.dim(
-			"  multi-file aggregation, and theme customization.",
-		),
-	);
+	console.log(colors.dim("  multi-file aggregation, and theme customization."));
 	console.log("");
 
 	// ── 1. Unified diff ─────────────────────────────────────
@@ -82,10 +76,12 @@ export const AUTHOR = "Bolt Docs";`;
 	const newLine = "const result = newValue * 2;";
 
 	const wordDiff = diffWordsRender(oldLine, newLine);
-	console.log(box(
-		[`  - ${wordDiff.old}`, `  + ${wordDiff.new}`],
-		{ title: "diffWordsRender", style: "round" },
-	));
+	console.log(
+		box([`  - ${wordDiff.old}`, `  + ${wordDiff.new}`], {
+			title: "diffWordsRender",
+			style: "round",
+		}),
+	);
 
 	// ── 4. Multi-file diff ──────────────────────────────────
 	section("Multi-file diff");
@@ -134,7 +130,9 @@ export const AUTHOR = "Bolt Docs";`;
 		"function new() {\n  return 2;\n}\n// end",
 		{ filename: "themed.ts" },
 	);
-	console.log(box([themed.output], { title: "With custom theme", style: "round" }));
+	console.log(
+		box([themed.output], { title: "With custom theme", style: "round" }),
+	);
 	console.log("");
 
 	// ── 6. Palette inspection ───────────────────────────────

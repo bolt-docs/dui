@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { PassThrough } from "node:stream";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { multiselect, resetConfig } from "../src/index";
 
 // Node 22+ exposes `isTTY` as a getter-only inherited property. Override
@@ -583,6 +583,57 @@ describe("multiselect", () => {
 
 				writeData("\x1b");
 				await expect(promise).rejects.toThrow("Cancelled");
+			});
+		});
+
+		describe("wheelSensitivity", () => {
+			// Wheel only moves the cursor on multiselect \u2014 it does
+			// NOT toggle checkboxes, even with non-1 sensitivity.
+			// The toggles are still done via Space / click. So the
+			// wheelSensitivity matrix here verifies cursor motion
+			// only.
+			const items = ["a", "b", "c", "d", "e", "f", "g"];
+
+			it("wheelSensitivity: 3 advances the cursor 3 rows per single wheel tick", async () => {
+				const promise = multiselect("Pick", {
+					choices: items.map((label) => ({ label, value: label })),
+					wheelSensitivity: 3,
+				});
+
+				writeData("\x1b[<65;1;1~"); // 1 wheel-down tick
+				writeData(" "); // toggle space at cursor=3 (here would be 'd')
+				writeData("\x1b[<65;1;1~"); // another 1 wheel-down tick \u2192 cursor=6 ('g')
+				writeData(" "); // toggle 'g'
+				writeData("\r");
+
+				await expect(promise).resolves.toEqual(["d", "g"]);
+			});
+
+			it("wheelSensitivity: 0 falls back to default 1-tick behavior", async () => {
+				const promise = multiselect("Pick", {
+					choices: items.map((label) => ({ label, value: label })),
+					wheelSensitivity: 0,
+				});
+
+				writeData("\x1b[<65;1;1~"); // 1 tick \u2192 cursor=1 ('b')
+				writeData("\r");
+
+				// Space NOT sent, so nothing is checked \u2014 confirms
+				// cursor landed at 'b' and wheel did not toggle.
+				await expect(promise).resolves.toEqual([]);
+			});
+
+			it("wheelSensitivity: 3 multi-tick burst lands on last row", async () => {
+				const promise = multiselect("Pick", {
+					choices: items.map((label) => ({ label, value: label })),
+					wheelSensitivity: 3,
+				});
+
+				writeData("\x1b[<65;1;1~\x1b[<65;1;2~"); // 2 ticks \u00d7 3 sens = 6 rows
+				writeData("\r");
+
+				// Nothing toggled \u2014 only navigation verified.
+				await expect(promise).resolves.toEqual([]);
 			});
 		});
 	});

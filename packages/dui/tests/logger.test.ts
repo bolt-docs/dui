@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	info,
-	warn,
-	error,
-	success,
-	debug,
-	formatLog,
-	stripAnsi,
 	createLogger,
+	debug,
+	error,
+	formatLog,
+	info,
+	stripAnsi,
+	success,
+	warn,
 } from "../src/index";
 
 describe("logger", () => {

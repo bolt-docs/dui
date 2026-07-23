@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { box, double, single, round, visibleLength } from "../src/index";
+import { describe, expect, it } from "vitest";
+import { box, double, round, single, visibleLength } from "../src/index";
 
 describe("box", () => {
 	it("generic box renders with content", () => {

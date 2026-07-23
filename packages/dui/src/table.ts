@@ -1,8 +1,8 @@
-import { visibleLength, wrapAnsiWord, terminalWidth } from "./utils";
-import { getConfig } from "./config";
-import { resolveColor } from "./theme";
-import type { ColorStyle } from "./theme";
 import type { BoxBorderStyle } from "./box";
+import { getConfig } from "./config";
+import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
+import { terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
 
 export interface TableColumnOptions {
 	align?: "left" | "center" | "right";
@@ -104,7 +104,11 @@ export function table(
 ): string {
 	const style = opts?.style ?? "single";
 	const theme = getConfig().theme;
-	const { apply: headerStyle } = resolveColor("table.header", theme, opts?.colors?.header);
+	const { apply: headerStyle } = resolveColor(
+		"table.header",
+		theme,
+		opts?.colors?.header,
+	);
 
 	const padding = opts?.padding ?? 1;
 	const padStr = " ".repeat(padding);

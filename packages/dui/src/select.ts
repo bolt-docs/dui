@@ -1,22 +1,22 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
-import type { ColorStyle } from "./theme";
-import { resolveColor } from "./theme";
-import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 import {
 	disableMouse,
 	enableMouse,
 	enableMouseMove,
 	getClickedItem,
 	getHoveredItem,
-	parseSGRMouseData,
+	parseSGRMouseDataAll,
 	registerClickableArea,
 	registerHoverableArea,
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
 import { applyClass } from "./style";
+import type { ColorStyle } from "./theme";
+import { resolveColor } from "./theme";
+import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 
 export interface SelectChoice<T = string> {
 	label: string;
@@ -27,6 +27,13 @@ export interface SelectChoice<T = string> {
 export interface SelectOptions<T = string> {
 	choices: SelectChoice<T>[];
 	pageSize?: number;
+	/**
+	 * How many rows the cursor advances per wheel tick. Defaults
+	 * to 1 (one tick = one row). Values `< 1` are coerced to 1,
+	 * so 3 means one tick moves the cursor three rows. Useful
+	 * for long lists where a single tick feels too granular.
+	 */
+	wheelSensitivity?: number;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
@@ -41,7 +48,12 @@ export async function select<T = string>(
 	message: string,
 	options: SelectOptions<T>,
 ): Promise<T> {
-	const { choices, pageSize = 10, colors: colorsOverride } = options;
+	const {
+		choices,
+		pageSize = 10,
+		colors: colorsOverride,
+		wheelSensitivity: wheelSensitivityOption,
+	} = options;
 
 	if (!choices.length) {
 		throw new Error("Select requires at least one choice");
@@ -51,7 +63,14 @@ export async function select<T = string>(
 		return nonInteractiveSelect(message, choices);
 	}
 
-	return interactiveSelect(message, choices, pageSize, colorsOverride);
+	const wheelSensitivity = Math.max(1, Math.floor(wheelSensitivityOption ?? 1));
+	return interactiveSelect(
+		message,
+		choices,
+		pageSize,
+		colorsOverride,
+		wheelSensitivity,
+	);
 }
 
 function nonInteractiveSelect<T>(
@@ -89,6 +108,7 @@ function interactiveSelect<T>(
 	choices: SelectChoice<T>[],
 	pageSize: number,
 	colorsOverride: SelectOptions["colors"],
+	wheelSensitivity: number,
 ): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -189,7 +209,12 @@ function interactiveSelect<T>(
 				registerClickableArea({
 					id: areaId,
 					type: "select",
-					bounds: { left: 0, top: 1 + msgRowDelta + 1 + i, width: 999, height: 1 },
+					bounds: {
+						left: 0,
+						top: 1 + msgRowDelta + 1 + i,
+						width: 999,
+						height: 1,
+					},
 					data: { choiceIndex: idx },
 				});
 				clickableAreaIds.add(areaId);
@@ -197,7 +222,12 @@ function interactiveSelect<T>(
 				registerHoverableArea({
 					id: `hover-${areaId}`,
 					type: "select",
-					bounds: { left: 0, top: 1 + msgRowDelta + 1 + i, width: 999, height: 1 },
+					bounds: {
+						left: 0,
+						top: 1 + msgRowDelta + 1 + i,
+						width: 999,
+						height: 1,
+					},
 					data: { choiceIndex: idx },
 				});
 				hoverableAreaIds.add(`hover-${areaId}`);
@@ -249,32 +279,103 @@ function interactiveSelect<T>(
 				buf = buf.slice(-32);
 			}
 
-			const mouseEvent = parseSGRMouseData(buf);
-			if (mouseEvent) {
+			// Process every SGR mouse sequence in arrival order so a
+			// single chunk with several wheel ticks (fast scroll)
+			// advances the cursor by the full burst count rather
+			// than just the last tick. This matches the `multiselect`
+			// and `tree` integration so wheel bursts behave identically
+			// across all three interactive prompts.
+			const mouseEvents = parseSGRMouseDataAll(buf);
+			if (mouseEvents.length > 0) {
 				buf = "";
-				if (mouseEvent.type === "click") {
-					const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
-					if (
-						clickedArea &&
-						clickedArea.type === "select" &&
-						clickedArea.data
-					) {
-						const actualIndex = clickedArea.data.choiceIndex as number;
-						if (!choices[actualIndex].disabled) {
-							cursor = actualIndex;
-							finalize();
+
+				let wheelUp = 0;
+				let wheelDown = 0;
+				let lastMove: (typeof mouseEvents)[number] | null = null;
+				// Multiple clicks in one chunk: pick the LAST click that
+				// landed on an enabled choice, mirroring the legacy
+				// single-click behaviour (finalize on hit). Earlier misses
+				// are discarded because finalize is the terminal state.
+				let lastEnabledClickIndex = -1;
+
+				for (const mouseEvent of mouseEvents) {
+					if (mouseEvent.type === "click") {
+						const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
+						if (
+							clickedArea &&
+							clickedArea.type === "select" &&
+							clickedArea.data
+						) {
+							const actualIndex = clickedArea.data.choiceIndex as number;
+							if (
+								actualIndex >= 0 &&
+								actualIndex < choices.length &&
+								!choices[actualIndex].disabled
+							) {
+								lastEnabledClickIndex = actualIndex;
+							}
 						}
+					} else if (mouseEvent.type === "move") {
+						lastMove = mouseEvent;
+					} else if (mouseEvent.type === "wheel") {
+						// Wheel events behave identical to ↑/↓: wrap to
+						// the opposite end and skip disabled choices.
+						// Burst handling is the key fix — three wheel-up
+						// ticks in one chunk move the cursor three rows,
+						// not one.
+						if (mouseEvent.wheel === "up") wheelUp++;
+						else if (mouseEvent.wheel === "down") wheelDown++;
 					}
-				} else if (mouseEvent.type === "move") {
-					const hoveredArea = getHoveredItem(mouseEvent.x, mouseEvent.y);
+				}
+
+				// Click wins over wheel (the user's intent finalized,
+				// so wheel-driven deltas wouldn't matter).
+				if (lastEnabledClickIndex >= 0) {
+					cursor = lastEnabledClickIndex;
+					finalize();
+					return;
+				}
+
+				let renderNeeded = false;
+				const wheelNet = wheelDown - wheelUp;
+				if (wheelNet !== 0) {
+					hoveredIndex = null;
+					// `wheelSensitivity` multiplies the per-burst magnitude
+					// — with sensitivity=3 and wheelDown=2, the cursor
+					// advances 6 rows. Sensitive values < 1 are already
+					// coerced to 1 in `select(...)` so the loop count is
+					// always a positive integer and disabled-skip still
+					// fires per row via `clampCursor`.
+					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
+					const dir = wheelNet < 0 ? -1 : 1;
+					for (let i = 0; i < magnitude; i++) {
+						cursor = clampCursor(cursor + dir);
+					}
+					if (cursor < offset) offset = cursor;
+					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+					renderNeeded = true;
+				}
+
+				if (lastMove !== null) {
+					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
 					const newHovered =
 						hoveredArea && hoveredArea.data
 							? (hoveredArea.data.choiceIndex as number)
 							: null;
 					if (newHovered !== hoveredIndex) {
 						hoveredIndex = newHovered;
-						render();
+						// Only mark renderNeeded when the hover index
+						// actually changed — gating on `lastMove !== null`
+						// would force a redraw for repeated motion events
+						// landing on the same coordinate (the pre-refactor
+						// legacy contract that the `does not re-render when
+						// hovering same item` test pins).
+						renderNeeded = true;
 					}
+				}
+
+				if (renderNeeded) {
+					render();
 				}
 				return;
 			}

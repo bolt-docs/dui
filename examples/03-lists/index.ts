@@ -6,7 +6,7 @@
  * Run: pnpm --filter examples lists
  */
 
-import { bullet, ordered, tasks, colors } from "@bdocs/dui";
+import { bullet, colors, ordered, tasks } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  📋 Lists"));

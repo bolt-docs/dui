@@ -9,7 +9,10 @@ export interface SparklineOptions {
 
 const BARS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 
-export function sparkline(data: number[], options: SparklineOptions = {}): string {
+export function sparkline(
+	data: number[],
+	options: SparklineOptions = {},
+): string {
 	if (data.length === 0) return "";
 
 	const { width, color, progress = 1 } = options;

@@ -189,6 +189,36 @@ El soporte de mouse se habilita automáticamente en entornos TTY y se desactiva 
   Las características de mouse requieren soporte del protocolo SGR 1006 (la mayoría de terminales modernos).
 </Callout>
 
+### Scroll con Rueda
+
+Además de los clics, `select()` lee eventos de rueda del mouse desde el stream SGR 1006 y los convierte en movimientos del cursor:
+
+- **Rueda arriba** equivale a presionar `↑` — mueve el cursor hacia arriba, saltando elementos deshabilitados
+- **Rueda abajo** equivale a presionar `↓` — mueve el cursor hacia abajo, saltando elementos deshabilitados
+- Cada tick de la rueda mueve el cursor una fila; cuando llega al borde de la página visible, la ventana se desplaza en sincronía
+- El scroll **no** confirma el prompt automáticamente — pulsa `Enter` o haz clic para confirmar la selección
+
+El soporte de rueda viene activado por defecto en `select()` — sin opciones extra. El estado de modificadores (Shift/Ctrl/Alt) se captura a través del evento estándar pero la v1 mapea cada tick a una sola fila; un scroll rápido simplemente genera más ticks.
+
+<Callout variant="info">
+  El scroll con rueda también funciona en `multiselect()` y `tree()` con la misma semántica — la rueda mueve el cursor únicamente, no alterna checkboxes ni expande ramas. Usa `Espacio` (multiselect) o `→`/`Espacio` (tree) para esas acciones.
+</Callout>
+
+#### Sensibilidad de la Rueda
+
+Pasa `wheelSensitivity` en el objeto de opciones de `select`, `multiselect` o `tree` para que un solo tick de la rueda avance el cursor `N` filas en lugar de una. Por defecto vale `1`. Los valores menores a `1` se fuerzan a `1` (fracciones negativas o cero no pueden desactivar el scroll).
+
+```ts
+// Un tick = 3 filas. Útil para listas largas donde un solo
+// notch se siente muy granular.
+const value = await select("Pick", {
+  choices: [...allItems],
+  wheelSensitivity: 3,
+});
+```
+
+El multiplicador se compone con los bursts multi-tick: con `wheelSensitivity: 3` y un chunk con dos ticks consecutivos, el cursor avanza `2 × 3 = 6` filas en un solo render. Los elementos deshabilitados siguen saltándose por fila (el loop llama a `clampCursor` una vez por paso). El scroll con rueda en `multiselect` nunca alterna checkboxes independientemente de la sensibilidad, y el cursor de `tree` se topa con los extremos (sin wrap).
+
 ## tree
 
 ```ts

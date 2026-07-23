@@ -10,9 +10,9 @@
  *       Works best with 24-bit color terminals.
  */
 
-import { colors, box } from "@bdocs/dui";
 import { readFile } from "node:fs/promises";
-import { createMinimalPng, createGradientPng } from "./helpers.js";
+import { box, colors } from "@bdocs/dui";
+import { createGradientPng, createMinimalPng } from "./helpers.js";
 
 async function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));

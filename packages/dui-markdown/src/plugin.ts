@@ -26,22 +26,48 @@ const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 export const markdownPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-markdown",
 	version: "0.5.0",
+	description:
+		"Inline markdown renderer with themable headings, code blocks, lists, quotes and tables for DUI's terminal output.",
+	tags: ["renderer", "markdown", "text", "content"],
+	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-markdown",
+	author: "DUI Toolkit",
 	peerDependencies: { dui: "^0.5.0" },
 	setup(api) {
+		// Theme palette — registered up front so users can override any
+		// `markdown.*` slot via `configure({ theme: { markdown: … } })`
+		// without re-registering the plugin.
 		for (const [slot, defaultColor] of Object.entries(DEFAULTS)) {
 			api.registerThemeSlot(slot, defaultColor);
 		}
 
+		// Standalone renderer — usable through `renderWith("md", text)` or
+		// `api.getRenderer("md")` so other plugins can compose markdown
+		// output without re-implementing the pipeline.
 		api.registerRenderer("md", async (input) => {
-			const output = await md(input);
-			return output;
+			return md(input);
 		});
 
-		api.registerRenderHook("md", async (input, ctx) => {
-			const output = await md(input);
-			return output;
-		});
+		// Render-time hook — feeds the markdown channel so any host UI can
+		// pass user content through `runRenderHookAsync("md", text)` and
+		// receive styled output. Hooks for the same channel chain in
+		// priority order; with only one hook here, this is the seed.
+		api.registerRenderHook(
+			"md",
+			async (input) => {
+				return md(input);
+			},
+			{ priority: "first" },
+		);
 
-		return () => {};
+		// Surface whether the highlighter has been touched this session so
+		// other plugins (e.g. a status dashboard) can tell `markdown` has
+		// been used at least once. Pure side-info; consumers opt in via
+		// `api.shared.set` themselves.
+		api.shared.set("renderer", "md");
+
+		return () => {
+			// Markdown has no native cleanup — highlighter handles its own
+			// GC. Keep the function so `unregisterPlugin` runs it.
+		};
 	},
 };

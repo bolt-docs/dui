@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import {
 	configure,
 	getConfig,
@@ -6,6 +5,7 @@ import {
 	unregisterPlugin,
 	usePluginAsync,
 } from "@bdocs/dui";
+import { describe, expect, it } from "vitest";
 import { chartPlugin } from "../src/plugin";
 
 const PLUGIN_NAME = "@dui-toolkit/plugin-chart";
@@ -21,9 +21,15 @@ describe("chartPlugin v2", () => {
 
 	it("registers the 5-slot palette", async () => {
 		await usePluginAsync(chartPlugin);
-		expect(resolveColor("chart.palette.0").apply("a")).toContain("\x1b[38;2;0;212;170m"); // #00d4aa
-		expect(resolveColor("chart.palette.1").apply("a")).toContain("\x1b[38;2;255;140;66m"); // #ff8c42
-		expect(resolveColor("chart.palette.4").apply("a")).toContain("\x1b[38;2;0;180;216m"); // #00b4d8
+		expect(resolveColor("chart.palette.0").apply("a")).toContain(
+			"\x1b[38;2;0;212;170m",
+		); // #00d4aa
+		expect(resolveColor("chart.palette.1").apply("a")).toContain(
+			"\x1b[38;2;255;140;66m",
+		); // #ff8c42
+		expect(resolveColor("chart.palette.4").apply("a")).toContain(
+			"\x1b[38;2;0;180;216m",
+		); // #00b4d8
 		unregisterPlugin(PLUGIN_NAME);
 	});
 

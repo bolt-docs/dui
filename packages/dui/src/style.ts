@@ -1,5 +1,5 @@
-import { colorize } from "./color";
 import type { ColorInput } from "./color";
+import { colorize } from "./color";
 
 export interface TerminalStyle {
 	fg?: ColorInput;

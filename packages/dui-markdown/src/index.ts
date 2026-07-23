@@ -1,17 +1,17 @@
-export { md, mdRender } from "./renderer";
-export { mdSyntax, hexToAnsi } from "./syntax";
-export { markdownPlugin } from "./plugin";
-export { tokenize } from "./tokenizer";
-export { createLanguage, getLanguage, getLanguages } from "./language";
 export type { LanguageDef } from "./language";
+export { createLanguage, getLanguage, getLanguages } from "./language";
+export { markdownPlugin } from "./plugin";
+export { md, mdRender } from "./renderer";
+export { hexToAnsi, mdSyntax } from "./syntax";
 export type {
 	BlockToken,
-	BlockTokenHeading,
 	BlockTokenCode,
+	BlockTokenHeading,
 	BlockTokenList,
+	BlockTokenParagraph,
 	BlockTokenQuote,
 	BlockTokenTable,
-	BlockTokenParagraph,
 	BlockTokenThematicBreak,
 	InlineToken,
 } from "./tokenizer";
+export { tokenize } from "./tokenizer";

@@ -6,7 +6,7 @@
  * Run: pnpm --filter examples tables
  */
 
-import { table, colors } from "@bdocs/dui";
+import { colors, table } from "@bdocs/dui";
 
 console.log("\n");
 console.log(colors.bold("  📊 Tables"));
@@ -98,11 +98,7 @@ console.log(
 		],
 		{
 			style: "single",
-			columns: [
-				{ align: "left" },
-				{ align: "center" },
-				{ align: "right" },
-			],
+			columns: [{ align: "left" }, { align: "center" }, { align: "right" }],
 		},
 	),
 );

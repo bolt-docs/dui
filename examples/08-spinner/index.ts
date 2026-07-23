@@ -6,7 +6,7 @@
  * Run: pnpm --filter examples spinner
  */
 
-import { createSpinner, colors, animateProgress } from "@bdocs/dui";
+import { animateProgress, colors, createSpinner } from "@bdocs/dui";
 
 async function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
