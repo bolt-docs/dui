@@ -1,11 +1,9 @@
 import {
-	useConfig,
 	useI18n,
 	useLocalizedTo,
 	useRoutes,
 	useSidebar,
 	useUI,
-	useVersion,
 } from "boltdocs/client";
 import { Button, Sidebar } from "boltdocs/primitives";
 import { Menu } from "lucide-react";
@@ -92,46 +90,6 @@ function TerminalSidebarItem({ route, activePath, activeRoute }: ItemProps) {
 			badge={route.badge}
 			className={linkClass}
 		/>
-	);
-}function SidebarVersionSelector({ variant = "sidebar" }: { variant?: "sidebar" | "mobile" }) {
-	const version = useVersion();
-	const config = useConfig();
-	const navVersionConfig = config?.versions;
-
-	if (!navVersionConfig?.versions || navVersionConfig.versions.length <= 1)
-		return null;
-
-	const items = version.availableVersions ?? [];
-	const label = version.currentVersionLabel ?? version.currentVersion ?? "?";
-
-	const isSidebar = variant === "sidebar";
-
-	return (
-		<div
-			className={`flex items-center gap-2 font-mono text-xs${
-				isSidebar ? " px-2 py-1.5 border border-strong rounded-none" : ""
-			}`}
-		>
-			<span className="text-dim">v</span>
-			<span className="text-terminal-green font-semibold">{label}</span>
-			<div className={`flex ${isSidebar ? "gap-0.5" : "gap-1"} ml-auto`}>
-				{items.map(
-					(item: { value: string; label: string; isCurrent: boolean }) => (
-						<Button
-							key={item.value}
-							onPress={() => version.handleVersionChange(item.value)}
-							className={`font-mono text-[10px] px-1.5 py-0.5 rounded-none border transition-none ${
-								item.isCurrent
-									? "border-terminal-green text-terminal-green bg-soft"
-									: "border-strong text-muted hover:text-body hover:bg-soft"
-							}`}
-						>
-							{item.label}
-						</Button>
-					),
-				)}
-			</div>
-		</div>
 	);
 }
 
