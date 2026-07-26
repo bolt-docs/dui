@@ -93,7 +93,7 @@ function TerminalSidebarItem({ route, activePath, activeRoute }: ItemProps) {
 			className={linkClass}
 		/>
 	);
-}function SidebarVersionSelector() {
+}function SidebarVersionSelector({ variant = "sidebar" }: { variant?: "sidebar" | "mobile" }) {
 	const version = useVersion();
 	const config = useConfig();
 	const navVersionConfig = config?.versions;
@@ -104,47 +104,17 @@ function TerminalSidebarItem({ route, activePath, activeRoute }: ItemProps) {
 	const items = version.availableVersions ?? [];
 	const label = version.currentVersionLabel ?? version.currentVersion ?? "?";
 
-	return (
-		<div className="flex items-center gap-2 px-2 py-1.5 border border-strong rounded-none font-mono text-xs">
-			<span className="text-dim">v</span>
-			<span className="text-terminal-green font-semibold">{label}</span>
-			<div className="flex gap-0.5 ml-auto">
-				{items.map(
-					(item: { value: string; label: string; isCurrent: boolean }) => (
-						<Button
-							key={item.value}
-							onPress={() => version.handleVersionChange(item.value)}
-							className={`font-mono text-[10px] px-1.5 py-0.5 rounded-none border transition-none ${
-								item.isCurrent
-									? "border-terminal-green text-terminal-green bg-soft"
-									: "border-strong text-muted hover:text-body hover:bg-soft"
-							}`}
-						>
-							{item.label}
-						</Button>
-					),
-				)}
-			</div>
-		</div>
-	);
-}
-
-function MobileSidebarVersionSelector() {
-	const version = useVersion();
-	const config = useConfig();
-	const navVersionConfig = config?.versions;
-
-	if (!navVersionConfig?.versions || navVersionConfig.versions.length <= 1)
-		return null;
-
-	const items = version.availableVersions ?? [];
-	const label = version.currentVersionLabel ?? version.currentVersion ?? "?";
+	const isSidebar = variant === "sidebar";
 
 	return (
-		<div className="flex items-center gap-2 font-mono text-xs">
+		<div
+			className={`flex items-center gap-2 font-mono text-xs${
+				isSidebar ? " px-2 py-1.5 border border-strong rounded-none" : ""
+			}`}
+		>
 			<span className="text-dim">v</span>
 			<span className="text-terminal-green font-semibold">{label}</span>
-			<div className="flex gap-1 ml-auto">
+			<div className={`flex ${isSidebar ? "gap-0.5" : "gap-1"} ml-auto`}>
 				{items.map(
 					(item: { value: string; label: string; isCurrent: boolean }) => (
 						<Button
@@ -285,10 +255,9 @@ export function TerminalSidebar() {
 					</Button>
 				</Sidebar.Header>
 				<Sidebar.Content className="p-4">
-					{mobileLocaleSwitcher && (
-							<div className="px-1 mb-4">
-							<MobileSidebarVersionSelector />
-						</div>
+					<div className="px-1 mb-4">
+						<SidebarVersionSelector variant="mobile" />
+					</div>
 					{mobileLocaleSwitcher && (
 						<div className="flex gap-2 mb-6">{mobileLocaleSwitcher}</div>
 					)}
