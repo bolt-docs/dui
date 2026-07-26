@@ -823,28 +823,47 @@ export function GridDemo() {
 	const dim = "\u001b[90m";
 	const reset = "\u001b[0m";
 
-	const rows = [
-		`${dim}┌──────┬──────┬──────┐${reset}`,
-		`${dim}│\u001b[0m  \u001b[38;2;255;107;107m█\u001b[0m  \u001b[38;2;78;205;196m█\u001b[0m  \u001b[38;2;255;230;109m█\u001b[0m  ${dim}│${reset}`,
-		`${dim}├──────┼──────┼──────┤${reset}`,
-		`${dim}│\u001b[0m  \u001b[38;2;72;219;251m█\u001b[0m  \u001b[38;2;108;92;231m█\u001b[0m  \u001b[38;2;255;159;243m█\u001b[0m  ${dim}│${reset}`,
-		`${dim}├──────┼──────┼──────┤${reset}`,
-		`${dim}│\u001b[0m  \u001b[38;2;84;160;255m█\u001b[0m  \u001b[38;2;254;202;87m█\u001b[0m  \u001b[38;2;46;213;115m█\u001b[0m  ${dim}│${reset}`,
-		`${dim}└──────┴──────┴──────┘${reset}`,
+	const bold = "\u001b[1m";
+	const green = "\u001b[38;2;74;222;128m";
+	const cyan = "\u001b[38;2;34;211;238m";
+	const yellow = "\u001b[38;2;254;202;87m";
+	const red = "\u001b[38;2;248;113;113m";
+	const magenta = "\u001b[38;2;244;114;182m";
+	const blue = "\u001b[38;2;96;165;250m";
+	const white = "\u001b[38;2;229;231;235m";
+	const bgGreen = "\u001b[48;2;74;222;128;38;2;10;10;10m";
+	const bgRed = "\u001b[48;2;248;113;113;38;2;10;10;10m";
+	const bgDim = "\u001b[48;2;60;60;60;38;2;200;200;200m";
+
+	const lines = [
+		`${bold}${green}╭── ${reset}${bold}System Dashboard${reset}${green} ───────────────────────────────────╮${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${bold}CPU${reset}  ${cyan}████████████░░░░░░${reset}  ${white}65%${reset}  ${dim}${bold}||${reset}  ${bold}MEM${reset}  ${yellow}██████░░░░░░░░░░${reset}  ${white}3.2/8 GB${reset}  ${green}│${reset}`,
+		`${green}│${reset}  ${bold}DSK${reset}  ${magenta}████████░░░░░░░░░░${reset}  ${white}42%${reset}  ${dim}${bold}||${reset}  ${bold}NET${reset}  ${blue}████████████░░░░${reset}  ${white}1.5 MB/s${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${dim}── Services ────────────────────────────────────${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}   ${bgGreen} API ${reset}  ${green}●${reset} ${green}api-gateway${reset}   ${dim}uptime: 12d 4h${reset}                 ${green}│${reset}`,
+		`${green}│${reset}   ${bgRed} DB  ${reset}  ${red}●${reset} ${red}postgres-main${reset}  ${dim}uptime: 2h 18m${reset}  ${red}!${reset}              ${green}│${reset}`,
+		`${green}│${reset}   ${bgDim} CACHE ${reset}  ${dim}●${reset} ${dim}redis-cluster${reset}  ${dim}uptime: 12d 4h${reset}               ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${dim}── Alerts ──────────────────────────────────────${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${red}✖${reset} Disk usage on ${bold}/dev/sda1${reset} at 87%  ${dim}[threshold: 80%]${reset}  ${green}│${reset}`,
+		`${green}│${reset}  ${yellow}⚠${reset} SSL cert expires in 14 days              ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}╰── ${reset}${dim}Grid • Section • Divider • Badge${reset}${green} ─────────────────────────╯${reset}`,
 	];
 
 	return (
 		<TerminalPreview
 			title="dui — grid & layout"
-			command="node grid.js"
-			screenClassName="min-h-[160px] flex flex-col justify-start"
+			command="node dashboard.js"
+			screenClassName="min-h-[320px] flex flex-col justify-start"
 		>
 			{[
-				"  \u001b[1mColor Grid Layout\u001b[0m",
-				"",
-				...rows,
-				"",
-				"  \u001b[90mGrid • Section • Divider • Badge\u001b[0m",
+				`  ${dim}${bold}╭── layout demo ───────────────────────────────╮${reset}`,
+				...lines,
 			].join("\n")}
 		</TerminalPreview>
 	);
