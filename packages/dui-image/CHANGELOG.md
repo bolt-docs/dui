@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-image
 
+## 0.3.0-next.2
+
+### Patch Changes
+
+- Updated dependencies [[`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c), [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c), [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c)]:
+  - @bdocs/dui@0.6.0-next.2
+
 ## 0.3.0-next.1
 
 ### Patch Changes
