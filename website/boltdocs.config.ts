@@ -2,6 +2,16 @@ import { defineConfig } from "boltdocs";
 
 export default defineConfig({
 	base: "/docs",
+	versions: {
+		defaultVersion: "next",
+		prefix: "",
+		versions: [
+			{
+				label: "Next (v0.6.0)",
+				path: "next",
+			},
+		],
+	},
 	i18n: {
 		locales: ["en", "es"],
 		defaultLocale: "en",
@@ -30,15 +40,15 @@ export default defineConfig({
 					es: "Documentación",
 					en: "Documentation",
 				},
-				href: "/docs/overview",
+				href: "/docs/next/overview",
 			},
 			{
 				label: "Plugins",
-				href: "/docs/plugins",
+				href: "/docs/next/plugins",
 			},
 			{
 				label: "API",
-				href: "/docs/api",
+				href: "/docs/next/api",
 			},
 		],
 		codeTheme: {
@@ -51,7 +61,7 @@ export default defineConfig({
 			light: "/light.svg",
 			alt: "DUI Logo",
 		},
-		editLink: "https://github.com/bolt-docs/dui/edit/main/website/docs/:path",
+		editLink: "https://github.com/bolt-docs/dui/edit/main/website/docs/next/:path",
 		githubRepo: "bolt-docs/dui",
 	},
 	robots: {

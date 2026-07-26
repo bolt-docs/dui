@@ -1,0 +1,93 @@
+---
+title: Box
+sidebarPosition: 3
+description: Flexible box builder with seven border styles for ASCII, dashed, dotted, and themed rendering.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+```ts
+import { box, double, single, round } from '@bdocs/dui'
+```
+
+## box
+
+```ts
+box(lines: string[], opts?: BoxOptions): string
+```
+
+Generic box builder. Width adapts to terminal size by default.
+
+```ts
+box(['Line 1', 'Line 2'], {
+  title: 'Status',
+  style: 'double',
+})
+```
+
+<TerminalPreview command="node box.js">
+{`╔═ \x1b[1mStatus\x1b[0m ════════════════╗
+║                         ║
+║ Line 1                  ║
+║ Line 2                  ║
+║                         ║
+╚═════════════════════════╝`}
+</TerminalPreview>
+
+### shorthands
+
+```ts
+double(['Content'], { title: 'Title' })
+single(['Content'], { title: 'Title' })
+round(['Content'], { title: 'Title' })
+```
+
+<TerminalPreview command="node shorthands.js">
+{`╭─ \x1b[1mTitle\x1b[0m ─────────────────╮
+│                         │
+│ Content                 │
+│                         │
+╰─────────────────────────╯`}
+</TerminalPreview>
+
+### Options
+
+<Field name="title" type="string">Bold title centered in the top border.</Field>
+<Field name="width" type="number" default="auto">Box width. Defaults to terminal width (capped at 80).</Field>
+<Field name="style" type="'single' | 'double' | 'round' | 'thick' | 'ascii' | 'dashed' | 'dotted'" default="'single'">Border style. See below for visual examples of each.</Field>
+<Field name="padding" type="number" default="1">Inner horizontal padding.</Field>
+<Field name="color" type="ColorInput">Border color. Accepts hex, rgb, rgba, oklch, or named color.</Field>
+
+### Border styles
+
+Seven styles are available as of v0.7.0. Pick one based on the rendering target and the visual rhythm you want:
+
+| Style | Strokes | Use when |
+| --- | --- | --- |
+| `'single'` (default) | Heavy box-drawing (`┏ ━ ┃`) | Standard native terminals. |
+| `'double'` | Double-line (`╔ ═ ║`) | Heavy frames, headers, dialogs. |
+| `'round'` | Rounded corners (`╭ ─ │`) | Friendly / UI-driven feel. |
+| `'thick'` | Heavy strokes (alias of `'single'`) | Same look as `'single'`; a more descriptive name. |
+| `'ascii'` | Pure ASCII (`+ - |`) | Dumb terminals / Windows code pages / log scrapers. |
+| `'dashed'` | Light dashed (`┄ ┆`) | Softer visual rhythm; dashed log sections. |
+| `'dotted'` | Light dotted (`┈ ┊`) | Maximum softness; pipeline / stage indicators. |
+
+```ts
+box(['rendered in ASCII'],  { style: 'ascii',   title: 'Plain' })
+box(['rendered dashed'],   { style: 'dashed',  title: 'Log' })
+box(['rendered dotted'],   { style: 'dotted',  title: 'Stage' })
+```
+
+All box shorthands also accept a `color` option to tint the border lines:
+
+```ts
+round('Notice', ['Server starting...'], { color: '#ff8800' })
+```
+
+<TerminalPreview command="node color-box.js">
+{`\x1b[38;2;255;136;0m╭─\x1b[0m \x1b[1mNotice\x1b[0m \x1b[38;2;255;136;0m────────────────╮\x1b[0m
+\x1b[38;2;255;136;0m│\x1b[0m                         \x1b[38;2;255;136;0m│\x1b[0m
+\x1b[38;2;255;136;0m│\x1b[0m  Server starting...     \x1b[38;2;255;136;0m│\x1b[0m
+\x1b[38;2;255;136;0m│\x1b[0m                         \x1b[38;2;255;136;0m│\x1b[0m
+\x1b[38;2;255;136;0m╰─────────────────────────╯\x1b[0m`}
+</TerminalPreview>

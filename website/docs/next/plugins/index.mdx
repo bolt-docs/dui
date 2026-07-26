@@ -1,0 +1,43 @@
+---
+title: Plugins
+sidebarPosition: 1
+description: Official DUI plugins to extend your terminal toolkit.
+---
+
+import { File, BarChart3, GitCompare, QrCode, Bell } from 'lucide-react'
+import { Image } from '../../../components/icons'
+
+**DUI** has a lightweight plugin system that lets you extend the core with custom
+functionality. These are the official plugins maintained by the DUI team.
+
+---
+
+## Official plugins
+
+<Cards cols={2}>
+  <Card title="@dui-toolkit/plugin-markdown" icon={<File />} href="/docs/next/plugins/markdown">
+    Render markdown with colors, tables, and syntax-highlighted code blocks.
+  </Card>
+  <Card title="@dui-toolkit/plugin-chart" icon={<BarChart3 />} href="/docs/next/plugins/chart">
+    Bar, column, line, pie, and sparkline charts for your terminal.
+  </Card>
+  <Card title="@dui-toolkit/plugin-image" icon={<Image />} href="/docs/next/plugins/image">
+    Render images — PNG, JPG, and GIF — in the terminal with ANSI half-block art and Kitty protocol.
+  </Card>
+  <Card title="@dui-toolkit/plugin-diff" icon={<GitCompare />} href="/docs/next/plugins/diff">
+    Unified, side-by-side, and word-level diffs themed for the terminal.
+  </Card>
+  <Card title="@dui-toolkit/plugin-qrcode" icon={<QrCode />} href="/docs/next/plugins/qrcode">
+    Scannable QR codes in the terminal with custom colors, width cap, and labels.
+  </Card>
+  <Card title="@dui-toolkit/plugin-notify" icon={<Bell />} href="/docs/next/plugins/notify">
+    Cross-platform desktop notifications: osascript / notify-send / powershell, OSC 99/9/777, and inline TUI toasts — all behind one `notify()` API.
+  </Card>
+</Cards>
+
+---
+
+## Creating your own plugin
+
+See the [Plugin API docs](/docs/api/plugin) to learn how to create and register
+your own plugins.

@@ -26,13 +26,13 @@ export const layout = ({ children }: { children: React.ReactNode }) => (
 
 				<div className="flex flex-wrap gap-x-6 gap-y-2 text-muted">
 					<a
-						href="/docs/getting-started"
+						href="/docs/next/overview/getting-started"
 						className="hover:text-terminal-green transition-colors"
 					>
 						Docs
 					</a>
 					<a
-						href="/docs/api"
+						href="/docs/next/api"
 						className="hover:text-terminal-green transition-colors"
 					>
 						API

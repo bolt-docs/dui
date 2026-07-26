@@ -114,14 +114,14 @@ export function HomePage() {
 					</p>
 					<div className="mt-8 flex flex-wrap justify-center md:justify-start gap-3">
 						<Link
-							href="/docs/overview/getting-started"
+							href="/docs/next/overview/getting-started"
 							className="inline-flex items-center px-4 py-2 text-sm border border-strong text-body hover:bg-soft transition-all duration-150"
 						>
 							<span className="text-terminal-green mr-2">$</span>{" "}
 							{txt("gettingStarted")}
 						</Link>
 						<Link
-							href="/docs/api"
+							href="/docs/next/api"
 							className="inline-flex items-center px-4 py-2 text-sm border border-strong text-muted hover:text-body hover:bg-soft transition-all duration-150"
 						>
 							{txt("apiReference")}
