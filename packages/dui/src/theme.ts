@@ -74,6 +74,20 @@ export interface MultiselectTheme {
 	checked?: ColorStyle;
 	label?: ColorStyle;
 	message?: ColorStyle;
+	/**
+	 * Foreground color for the row currently being **dragged**
+	 * (where the user pressed the mouse button down). Only
+	 * applies when `multiselect()` was called with
+	 * `enableDragReorder: true`.
+	 */
+	dragSource?: ColorStyle;
+	/**
+	 * Foreground color for the row currently **under** the
+	 * cursor during a drag — the visual hint for "if you release
+	 * here, the dragged row lands here". Only applies when
+	 * `multiselect()` was called with `enableDragReorder: true`.
+	 */
+	dropTarget?: ColorStyle;
 }
 
 export interface TreeTheme {
@@ -123,6 +137,76 @@ export interface MarkdownTheme {
 	thematic?: ColorStyle;
 }
 
+/**
+ * Theme slots for the `modal({ title, content, buttons? })` overlay dialog.
+ *
+ * - `border` colors the frame around the modal.
+ * - `title` colors the dialog title rendered inside the top border row.
+ * - `buttonPrimary` styles the label of buttons flagged `primary: true`.
+ * - `buttonSecondary` styles every other button in the footer.
+ */
+export interface ModalTheme {
+	border?: ColorStyle;
+	title?: ColorStyle;
+	buttonPrimary?: ColorStyle;
+	buttonSecondary?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `tabs({ items, active, style? })` segmented control.
+ *
+ * - `active` colors the currently selected tab label (the underline SGR is
+ *   still applied on top so the active tab looks visually distinct even
+ *   when `active` matches `inactive` in hue).
+ * - `inactive` colors every other tab label.
+ * - `border` only matters for `style: "boxed"` — it paints the rounded
+ *   frame around each tab pill.
+ */
+export interface TabsTheme {
+	active?: ColorStyle;
+	inactive?: ColorStyle;
+	border?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `badge({ label, status? })` chip.
+ *
+ * Each status accepts a `ColorStyle` (string fg, or compound `{ fg, bg }`).
+ * Compound overrides keep the chip background matching the palette;
+ * passing a plain string opts out of any background.
+ */
+export interface BadgeTheme {
+	info?: ColorStyle;
+	success?: ColorStyle;
+	warning?: ColorStyle;
+	error?: ColorStyle;
+	neutral?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `kbd({ keys, platform? })` keyboard hint.
+ *
+ * - `text` colors the rendered glyph (e.g. `⌘ K`).
+ * - `border` is reserved for a future boxed variant that paints each
+ *   key inside its own chip border; current MVP renders the hint as a
+ *   single styled text token, so `border` is documented but unused.
+ */
+export interface KbdTheme {
+	text?: ColorStyle;
+	border?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `section({ title, align? })` labeled divider.
+ *
+ * - `title` colors the title text inline in the divider row.
+ * - `line` colors the surrounding `─` strokes on both sides of the title.
+ */
+export interface SectionTheme {
+	title?: ColorStyle;
+	line?: ColorStyle;
+}
+
 export interface DuiTheme {
 	success?: ColorStyle;
 	error?: ColorStyle;
@@ -144,6 +228,11 @@ export interface DuiTheme {
 	progress?: ProgressTheme;
 	table?: TableTheme;
 	markdown?: MarkdownTheme;
+	modal?: ModalTheme;
+	tabs?: TabsTheme;
+	badge?: BadgeTheme;
+	kbd?: KbdTheme;
+	section?: SectionTheme;
 }
 
 type ColorFn = (s: string) => string;
@@ -182,6 +271,16 @@ function resolveColorStyle(
 	if (!style) return defaultSpec;
 
 	if (typeof style === "string") {
+		// Named color *or* named font style (e.g. "bold", "italic",
+		// "underline", "cyan", "bgGreen"). The pre-built `colorMap`
+		// already covers all three sub-trees (`NAMED_FG`, `NAMED_BG`,
+		// `STYLE_NAMES` — see `color.ts`'s `ALL_STYLES` loop) so a
+		// single string lookup handles everything `colorize` would
+		// have routed through `parseColor` and failed on for styles.
+		// Falls through to `colorize` only for hex / rgb() / oklch()
+		// CSS-style strings that aren't in the catalog.
+		const named = colorMap[style];
+		if (named) return { apply: named };
 		return { apply: (s: string) => colorize(s, style, "fg") };
 	}
 
@@ -266,6 +365,8 @@ function getDefaultFn(slot: string): DefaultSpec {
 		"multiselect.checked": "green",
 		"multiselect.label": "white",
 		"multiselect.message": "yellow",
+		"multiselect.dragSource": "yellow",
+		"multiselect.dropTarget": "cyan",
 		"tree.pointer": "cyan",
 		"tree.selected": "cyan",
 		"tree.label": "white",
@@ -299,6 +400,34 @@ function getDefaultFn(slot: string): DefaultSpec {
 		"markdown.listCheck": "#50c878",
 		"markdown.listCross": "#b4b4b4",
 		"markdown.thematic": "#888888",
+		// Native widget set (v0.7.0) — modal, tabs, badge, kbd, section.
+		// Modal buttons use a compound `{fg, bg}` chip so primary actions
+		// pop in the dialog footer without further configuration.
+		"modal.border": "cyan",
+		"modal.title": "bold",
+		"modal.buttonPrimary": { fg: "black", bg: "cyan" },
+		"modal.buttonSecondary": "gray",
+		// Tab nav: active inherits `bold` (plus SGR underline on top for
+		// the `underline` style) so it stands out even on a flat palette.
+		"tabs.active": "bold",
+		"tabs.inactive": "gray",
+		"tabs.border": "gray",
+		// Badge color map — each status ships a compound `{fg, bg}` chip
+		// pair so consumers get a chip that pops without opting in to a
+		// background explicitly via `colors.bg`.
+		"badge.info": { fg: "white", bg: "blue" },
+		"badge.success": { fg: "white", bg: "green" },
+		"badge.warning": { fg: "black", bg: "yellow" },
+		"badge.error": { fg: "white", bg: "red" },
+		"badge.neutral": { fg: "white", bg: "gray" },
+		// Kbd hint glyph.
+		"kbd.text": "white",
+		// Reserved for future boxed-key variant — see KbdTheme docstring.
+		"kbd.border": "gray",
+		// Section divider — `line` defaults to the muted family so the
+		// surrounding dashes fade into the screen on dense layouts.
+		"section.title": "bold",
+		"section.line": "gray",
 	};
 
 	const value = map[slot];

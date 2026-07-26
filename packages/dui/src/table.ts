@@ -77,6 +77,69 @@ const TABLE_BORDERS: Record<
 		mr: "┤",
 		mm: "┼",
 	},
+	// Alias-of-`single`: same glyph set under the descriptive name so
+	// autocomplete surfaces "thick" alongside the original options.
+	thick: {
+		tl: "┏",
+		tr: "┓",
+		bl: "┗",
+		br: "┛",
+		h: "━",
+		v: "┃",
+		tm: "┳",
+		bm: "┻",
+		ml: "┣",
+		mr: "┫",
+		mm: "╋",
+	},
+	// Pure ASCII for log scrapers / Windows code pages where the
+	// box-drawing block is missing. Junctions collapse to the same
+	// `+` corner character so consumers don't get gap artifacts.
+	ascii: {
+		tl: "+",
+		tr: "+",
+		bl: "+",
+		br: "+",
+		h: "-",
+		v: "|",
+		tm: "+",
+		bm: "+",
+		ml: "+",
+		mr: "+",
+		mm: "+",
+	},
+	// Dashed: light corners with dashed h/v strokes. Junction glyphs
+	// fall back to the closest non-dashed equivalents because the
+	// box-drawing block has no dashed `tm` / `bm` / `ml` / `mr` / `mm`.
+	dashed: {
+		tl: "┌",
+		tr: "┐",
+		bl: "└",
+		br: "┘",
+		h: "┄",
+		v: "┆",
+		tm: "┬",
+		bm: "┴",
+		ml: "├",
+		mr: "┤",
+		mm: "┼",
+	},
+	// Dotted: identical to dashed except the h/v strokes use the
+	// light dotted set (`┈` / `┊`); corners + junctions stay solid
+	// because no dotted variants exist there.
+	dotted: {
+		tl: "┌",
+		tr: "┐",
+		bl: "└",
+		br: "┘",
+		h: "┈",
+		v: "┊",
+		tm: "┬",
+		bm: "┴",
+		ml: "├",
+		mr: "┤",
+		mm: "┼",
+	},
 };
 
 function padCell(

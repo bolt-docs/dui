@@ -18,7 +18,7 @@ import {
 	visibleLength,
 } from "./utils";
 
-export const DUI_VERSION = "0.5.0";
+export const DUI_VERSION = "0.6.0-next.1";
 
 export interface RenderContext {
 	width?: number;
@@ -32,6 +32,14 @@ export interface PluginEvents {
 	unregister: () => void;
 	configure: (config: DuiConfig) => void;
 	"theme-changed": (theme: DuiTheme) => void;
+	/**
+	 * Fires whenever `configure({ plain })` (or per-call
+	 * `notify({ plain })`) toggles the accessibility layer. The
+	 * handler receives the boolean value (true → text-only
+	 * fallback, false → normal styled output). Compose with
+	 * `theme-changed` for full config introspection.
+	 */
+	"plain-changed": (plain: boolean) => void;
 	"before-render": (ctx: RenderContext) => void;
 	"after-render": (ctx: RenderContext) => void;
 	"terminal-resize": (cols: number, rows: number) => void;
@@ -261,9 +269,10 @@ let asyncPending = 0;
 let queueStarted = false;
 let registrationOrder = 0;
 
-onConfigChange((config, theme) => {
+onConfigChange((config, options) => {
 	emit("configure", config);
-	if (theme) emit("theme-changed", theme);
+	if (options?.theme !== undefined) emit("theme-changed", options.theme);
+	if (options?.plain !== undefined) emit("plain-changed", options.plain);
 });
 
 export function emit<E extends keyof PluginEvents>(

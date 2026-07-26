@@ -89,6 +89,8 @@ const valores = await multiselect('Elige colores:', {
 | `choices` | `MultiselectChoice<T>[]` | — | Array de opciones |
 | `pageSize` | `number` | `10` | Máximo de items visibles antes de hacer scroll |
 | `required` | `boolean` | `false` | Si es true, al menos una selección es obligatoria |
+| `wheelSensitivity` | `number` | `1` | Paso del cursor por tick de rueda (ver Sensibilidad de la Rueda) |
+| `enableDragReorder` | `boolean` | `false` | Permite arrastrar para reordenar la lista (ver Reordenar con Arrastre) |
 | `colors` | `object` | — | Sobrescritura de colores por llamada |
 
 **Campos de MultiselectChoice:**
@@ -218,6 +220,40 @@ const value = await select("Pick", {
 ```
 
 El multiplicador se compone con los bursts multi-tick: con `wheelSensitivity: 3` y un chunk con dos ticks consecutivos, el cursor avanza `2 × 3 = 6` filas en un solo render. Los elementos deshabilitados siguen saltándose por fila (el loop llama a `clampCursor` una vez por paso). El scroll con rueda en `multiselect` nunca alterna checkboxes independientemente de la sensibilidad, y el cursor de `tree` se topa con los extremos (sin wrap).
+
+### Reordenar con Arrastre
+
+`multiselect()` soporta reordenamiento por press-and-drag cuando `enableDragReorder: true`. Está desactivado por defecto para preservar el contrato legacy de que el orden del array `choices` se conserva de extremo a extremo.
+
+```ts
+const orden = await multiselect('Ordena por prioridad:', {
+  choices: [
+    { label: 'Critico', value: 'p0' },
+    { label: 'Alto',    value: 'p1', checked: true },
+    { label: 'Medio',   value: 'p2' },
+    { label: 'Bajo',    value: 'p3' },
+  ],
+  enableDragReorder: true,
+});
+```
+
+Semantica:
+
+- **Pulsa el boton izquierdo del raton sobre una fila** -> inicia el arrastre; la fila obtiene el color `multiselect.dragSource` (por defecto `yellow`).
+- **Mueve sobre otra fila** -> esa fila obtiene el color `multiselect.dropTarget` (por defecto `cyan`) como vista previa en vivo.
+- **Suelta sobre una fila habilitada diferente** -> la fila arrastrada **se mueve** (inserta, no intercambia) a esa posicion. Los elementos entre la fuente y el destino suben uno para hacer hueco.
+- **Suelta sobre una fila deshabilitada, la misma fila, o fuera de cualquier fila** -> arrastre cancelado (sin reorden).
+- **Pulsa y suelta en la misma fila** -> se comporta como clic: alterna el checkbox. El arrastre nunca alterna checkboxes accidentalmente.
+- **Scroll con rueda a mitad del arrastre** -> cancela el arrastre en curso limpiamente (sin estado residual al siguiente press).
+
+Dos invariantes importantes:
+
+- El array `choices` del usuario **nunca** se muta. El componente mantiene una copia interna y devuelve las entradas `.value` desde esa copia.
+- **El estado checked sigue a la fila arrastrada** hasta su nuevo indice. Si la fila 2 estaba checked y la arrastras a la fila 5, el elemento en la fila 5 queda checked tras la suelta. Cualquier fila que quedo dentro de la ventana del splice sigue su nuevo indice en **ambas** direcciones (arrastre hacia abajo las empuja una posicion arriba; arrastre hacia arriba las empuja una posicion abajo).
+
+El cursor queda anclado a la **fila logica** que senalaba antes del movimiento. Si el cursor estaba sobre la fila arrastrada, sigue esa fila hasta su nuevo indice. Si el cursor estaba sobre otra fila, esa fila puede haberse desplazado como parte del splice; el cursor sigue a esa fila hasta su nuevo indice (no a la misma posicion entera absoluta, que tras el desplazamiento apuntaria a una opcion diferente). Esto mantiene el cursor anclado visualmente al mismo item en AMBAS direcciones de arrastre.
+
+**Slots del tema:** `multiselect.dragSource`, `multiselect.dropTarget` (ambos por defecto son color de primer plano; pasa `{ fg, bg }` para un fondo tipo chip).
 
 ## tree
 

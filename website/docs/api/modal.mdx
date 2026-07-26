@@ -1,0 +1,69 @@
+---
+title: modal
+sidebarPosition: 23
+description: Overlay dialog primitive with title, content, and optional button footer.
+---
+
+# `modal(opts)` — overlay dialog
+
+Wraps `box()` with two conveniences for confirm-style dialogs:
+
+1. **Title** and **content** share a single options object.
+2. **Buttons** (a footer action row) is composed automatically: each button is wrapped in `[ label ]` brackets, primary buttons get `modal.buttonPrimary` color, and the action row is centered inside the dialog's width.
+
+`modal()` is non-interactive — it returns a static rendered string. For interactive dialog flows, layer the string under a `select` prompt so users can drive the button value programmatically.
+
+```ts
+import { modal } from "@bdocs/dui";
+
+console.log(modal({
+  title: "Confirm",
+  content: "Are you sure you want to delete this file?",
+  buttons: [
+    { label: "Cancel", value: "cancel" },
+    { label: "Delete", value: "delete", primary: true },
+  ],
+  width: 50,
+}));
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `title` | `string` | — | Dialog title; rendered inside the top border row. |
+| `content` | `string \| string[]` | — | Body lines. |
+| `width` | `number` | `60` | Total width including borders. |
+| `buttons` | `ModalButton[]` | — | Footer action row. |
+| `style` | `BoxBorderStyle` | `"round"` | Border style for the dialog frame. |
+| `colors.border` | `ColorStyle` | `theme.modal.border` | Border color override. |
+| `colors.title` | `ColorStyle` | `theme.modal.title` | Title color override. |
+| `colors.buttonPrimary` | `ColorStyle` | `theme.modal.buttonPrimary` | Primary button color override. |
+| `colors.buttonSecondary` | `ColorStyle` | `theme.modal.buttonSecondary` | Secondary button color override. |
+
+### `ModalButton`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `label` | `string` | — | Visible label inside `[ … ]`. |
+| `value` | `string` | — | Returned to the consumer when the button is "pressed". |
+| `primary` | `boolean` | `false` | Gets `modal.buttonPrimary` color. |
+
+## Rendering
+
+The dialog is a `box()` enclosing:
+
+- A title row (top border carves space out for the title text),
+- All `content` lines (each array entry becomes its own row),
+- A separator (`""` line as visual gap),
+- A centered footer with `[ label ]` tokens for each button.
+
+`primary: true` buttons get the bold `fg`/`bg` chip from `modal.buttonPrimary`. The default is `{ fg: "black", bg: "cyan" }`, which renders a striking inverse on the dialog frame.
+
+## When to use
+
+- Confirmation prompts where the response is "yes / no / cancel".
+- Status dialogs that surface a single piece of state (e.g., "Connection lost — retry?").
+- Help overlays on dashboards.
+
+If you need scrollable / form-based dialogs, use `select()` for radio-style lists or reach for a dedicated prompt and call `modal()` purely for static art.

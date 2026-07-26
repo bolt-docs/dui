@@ -18,13 +18,13 @@ const DEFAULTS: Record<keyof typeof SLOTS, string> = {
 
 export const diffPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-diff",
-	version: "0.5.0",
+	version: "0.3.0-next.1",
 	description:
 		"Unified and side-by-side diff renderer with themable add/del/hunk colors, gutter and per-line stats.",
 	tags: ["renderer", "diff", "text", "vcs"],
 	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-diff",
 	author: "DUI Toolkit",
-	peerDependencies: { dui: "^0.5.0" },
+	peerDependencies: { dui: ">=0.6.0-next.0 <0.7.0" },
 	setup(api) {
 		for (const [key, defaultColor] of Object.entries(DEFAULTS) as Array<
 			[keyof typeof SLOTS, string]

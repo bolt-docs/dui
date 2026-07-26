@@ -1,4 +1,5 @@
 import { emit as emitPluginEvent } from "./plugin";
+import { getConfig } from "./config";
 import type {
 	ClickableArea,
 	HoverableArea,
@@ -24,6 +25,83 @@ const SGR_PREFIX = "\u001b[<";
 // wheel-down (button code 65). Motion events (codes >= 32) on press also
 // use `M`/`m`, so the terminator carries the role.
 const SGR_REGEX = /^(\d+);(\d+);(\d+)([Mm~])/;
+
+// ── Multi‑click / gesture state ──────────────────────────────────────────
+//
+// Triple‑click detection: the terminal only sends one `click` per physical
+// click — it doesn't know about multi‑click semantics.  DUI tracks the
+// last click's timestamp, position, and button so it can detect a
+// triple‑tap within GESTURE_WINDOW_MS and synthesise `doubleclick` and
+// `tripleclick` events on the same bus.  Right‑click (`button === "right"`)
+// additionally emits a dedicated `contextmenu` event so consumers can
+// branch on `type === "contextmenu"` without tracking button state.
+
+/**
+ * Read the user's multi‑click gesture window from config, defaulting
+ * to 500 ms. Read live at each gesture-comparison so a mid‑session
+ * `configure({ gestureWindowMs: 1000 })` is picked up without requiring
+ * the user to re‑enable mouse tracking.
+ */
+function getGestureWindowMs(): number {
+	const ms = getConfig().gestureWindowMs;
+	return typeof ms === "number" && ms > 0 ? ms : 500;
+}
+
+interface GestureState {
+	timestamp: number;
+	x: number;
+	y: number;
+	button: "left" | "right" | "middle";
+	/** Click count so far (1 = first, 2 = double, 3 = triple). */
+	count: number;
+}
+
+let gestureState: GestureState | null = null;
+
+/**
+ * Feed a resolved click event into the multi‑click gesture tracker.
+ * Returns an array of **additional** synthesised events to emit AFTER
+ * the raw click — `doubleclick` at count 2, `tripleclick` at count 3.
+ * The caller is responsible for emitting the original `click` event
+ * itself; this helper only returns the *extra* events on top of it.
+ */
+function detectMultiClick(
+	click: MouseEventBase & { type: "click" },
+): MouseEventBase[] {
+	const now = click.timestamp;
+	const extras: MouseEventBase[] = [];
+
+	if (
+		gestureState &&
+		gestureState.button === click.button &&
+		gestureState.x === click.x &&
+		gestureState.y === click.y &&
+		now - gestureState.timestamp <= getGestureWindowMs()
+	) {
+		// Continuation of the same gesture.
+		gestureState.count++;
+		gestureState.timestamp = now;
+
+		if (gestureState.count === 2) {
+			extras.push({ ...click, type: "doubleclick", clicks: 2 });
+		} else if (gestureState.count >= 3) {
+			extras.push({ ...click, type: "tripleclick", clicks: 3 });
+			// Reset so a 4th click starts a fresh gesture.
+			gestureState = null;
+		}
+	} else {
+		// First click of a new gesture.
+		gestureState = {
+			timestamp: now,
+			x: click.x,
+			y: click.y,
+			button: click.button,
+			count: 1,
+		};
+	}
+
+	return extras;
+}
 
 function getButtonTypeFromCode(code: number): MouseEventBase["button"] {
 	switch (code) {
@@ -57,10 +135,40 @@ function disableMotionMode(stdout: NodeJS.WriteStream): void {
 }
 
 /**
+ * Read the user's `useStrictInput` preference once at call time
+ * (not at module load) so a mid-run `configure({ useStrictInput: true })`
+ * is picked up without a refresh call.
+ */
+function isStrictInput(): boolean {
+	return getConfig().useStrictInput === true;
+}
+
+/**
+ * Log a strict-mode warning with the canonical `[dui]` prefix so users
+ * can filter for these messages independently of other console output.
+ * The extra newline ensures the warning is visually separated from the
+ * event stream when the terminal is painting frames rapidly.
+ */
+function warnStrict(msg: string): void {
+	console.warn(`[dui] mouse: ${msg}`);
+}
+
+/**
  * Parse one SGR-encoded mouse event from `data` and return **every**
  * sequence in arrival order. Unknown wheel codes (66+) are silently
  * consumed — the parser advances past those bytes without emitting, so
  * a mistyped terminal can't pollute the event queue.
+ *
+ * When `configure({ useStrictInput: true })` is set, the parser logs
+ * warnings for:
+ *
+ *  - Bytes between valid SGR sequences that aren't part of an escape
+ *  - Unknown wheel codes (base codes other than 64 / 65)
+ *  - Non-numeric coordinate values (parseInt returning NaN)
+ *  - Button codes outside the expected range (≥ 3 for press/release
+ *    after stripping modifier bits, unknown wheel base codes)
+ *  - The `SGR_PREFIX` (`[<`) followed by a non-matching tail
+ *    (incomplete or corrupted sequence)
  *
  * Components that need to react to a *burst* of wheel ticks in one
  * stdin chunk (e.g. fast scrolling, where the OS bundles several
@@ -72,12 +180,24 @@ function disableMotionMode(stdout: NodeJS.WriteStream): void {
  */
 export function parseSGRMouseDataAll(data: string | Buffer): MouseEvent[] {
 	const str = typeof data === "string" ? data : data.toString("utf8");
+	const strict = isStrictInput();
 
 	const events: MouseEvent[] = [];
 	let pos = 0;
 	while (pos < str.length) {
-		const result = parseNextSGR(str.slice(pos));
-		if (!result) break;
+		const result = parseNextSGR(str.slice(pos), strict);
+		if (!result) {
+			// No SGR_PREFIX found in the remaining bytes. In strict
+			// mode, warn if there ARE remaining bytes (they're probably
+			// garbage or an unsupported protocol).
+			if (strict && pos < str.length) {
+				const leftover = str.slice(pos);
+				warnStrict(
+					`${leftover.length} byte(s) between SGR sequences are not valid mouse data: ${JSON.stringify(leftover)}`,
+				);
+			}
+			break;
+		}
 		if (result.event !== null) events.push(result.event);
 		pos += result.consumed;
 	}
@@ -98,13 +218,43 @@ export function parseSGRMouseData(data: string | Buffer): MouseEvent | null {
 
 function parseNextSGR(
 	str: string,
+	strict = false,
 ): { event: MouseEvent | null; consumed: number } | null {
 	const idx = str.indexOf(SGR_PREFIX);
-	if (idx === -1) return null;
+	if (idx === -1) {
+		// No escape prefix at all — in strict mode, warn about the
+		// unexpected bytes so the user can investigate.
+		if (strict && str.length > 0) {
+			warnStrict(
+				`no SGR prefix found in ${str.length} byte(s): ${JSON.stringify(str.slice(0, 40))}`,
+			);
+		}
+		return null;
+	}
+
+	// If there are non-SGR bytes before the prefix, warn in strict
+	// mode so the user can identify where garbage is entering the
+	// stream (e.g. a terminal sending legacy X10 mouse codes).
+	if (strict && idx > 0) {
+		const garbage = str.slice(0, idx);
+		warnStrict(
+			`${garbage.length} byte(s) before SGR prefix: ${JSON.stringify(garbage)}`,
+		);
+	}
 
 	const rest = str.slice(idx + SGR_PREFIX.length);
 	const match = rest.match(SGR_REGEX);
-	if (!match) return null;
+	if (!match) {
+		// SGR_PREFIX found but the tail doesn't match the expected
+		// pattern — incomplete or corrupted sequence.
+		if (strict) {
+			const tail = rest.slice(0, 20);
+			warnStrict(
+				`incomplete SGR sequence after prefix: ${JSON.stringify(tail)}`,
+			);
+		}
+		return { event: null, consumed: idx + SGR_PREFIX.length };
+	}
 
 	const consumed = idx + SGR_PREFIX.length + match[0].length;
 	const [, buttonCodeStr, xStr, yStr, action] = match;
@@ -113,6 +263,21 @@ function parseNextSGR(
 	const y = Number.parseInt(yStr, 10);
 	const isPress = action === "M";
 	const isWheel = action === "~";
+
+	// Validate parsed integers in strict mode — NaN values indicate a
+	// malformed sequence where coordinates aren't numeric.
+	if (strict) {
+		if (!Number.isFinite(buttonCode)) {
+			warnStrict(
+				`non-numeric button code in SGR sequence: ${JSON.stringify(buttonCodeStr)}`,
+			);
+		}
+		if (!Number.isFinite(x) || !Number.isFinite(y)) {
+			warnStrict(
+				`non-numeric coordinates in SGR sequence: x=${JSON.stringify(xStr)}, y=${JSON.stringify(yStr)}`,
+			);
+		}
+	}
 
 	// Wheel event (SGR terminator `~`). Button code 64 = wheel-up,
 	// 65 = wheel-down. Modifier bits (shift/alt/ctrl) live in bits 2-4
@@ -130,6 +295,11 @@ function parseNextSGR(
 		} else {
 			// Unknown wheel code — consume but emit nothing. Keeps the
 			// parser advancing past the bytes without faking an event.
+			if (strict) {
+				warnStrict(
+					`unknown wheel base code ${baseWheel} (raw button=${buttonCode}); modifiers may be interfering`,
+				);
+			}
 			return { event: null, consumed };
 		}
 		const event: MouseWheelEvent = {
@@ -166,9 +336,10 @@ function parseNextSGR(
 
 	// Button code >= 32 means it's a motion event (1003h).
 	if (buttonCode >= 32) {
-		const event: MouseEvent = {
+		const event: MouseEventBase = {
 			type: "move",
 			button: getButtonTypeFromCode(buttonCode & 0x03),
+			clicks: 0,
 			x,
 			y,
 			modifiers: {
@@ -182,9 +353,10 @@ function parseNextSGR(
 		return { event, consumed };
 	}
 
-	const event: MouseEvent = {
+	const event: MouseEventBase = {
 		type: isPress ? "press" : "release",
 		button: getButtonTypeFromCode(buttonCode & 0x03),
+		clicks: 0,
 		x,
 		y,
 		modifiers: {
@@ -195,7 +367,32 @@ function parseNextSGR(
 		timestamp: Date.now(),
 	};
 
-	let resolvedType: MouseEvent["type"] = event.type;
+	let resolvedType: MouseEventBase["type"] = event.type;
+	if (!isPress) {
+		// Release event — check for right-click context menu.
+		if (getButtonTypeFromCode(buttonCode & 0x03) === "right") {
+			// Clear pressPosition so a stale left-click press isn't
+			// accidentally matched on the next release after the user
+			// right-clicks (the early return below skips the normal
+			// pressPosition cleanup path).
+			pressPosition = null;
+			const resolved: MouseEventBase = {
+				...event,
+				type: resolvedType as MouseEventBase["type"],
+			};
+			emitMouseEvent(resolved);
+			// Synthesise a dedicated contextmenu event so consumers
+			// can branch on `type === "contextmenu"` without tracking
+			// button state.
+			const ctxEvent: MouseEventBase = {
+				...event,
+				type: "contextmenu",
+			};
+			emitMouseEvent(ctxEvent);
+			return { event: ctxEvent, consumed };
+		}
+	}
+
 	if (event.button === "left") {
 		if (isPress) {
 			pressPosition = { x, y };
@@ -213,8 +410,23 @@ function parseNextSGR(
 		pressPosition = null;
 	}
 
-	const resolved: MouseEvent = { ...event, type: resolvedType };
+	const resolved: MouseEventBase = {
+		...event,
+		type: resolvedType as MouseEventBase["type"],
+		clicks: resolvedType === "click" ? 1 : 0,
+	};
 	emitMouseEvent(resolved);
+
+	// If resolved is a click, feed into the multi-click gesture tracker
+	// and emit any synthesised doubleclick / tripleclick events.
+	if (resolvedType === "click") {
+		const clickEvent = resolved as MouseEventBase & { type: "click" };
+		const extras = detectMultiClick(clickEvent);
+		for (const extra of extras) {
+			emitMouseEvent(extra);
+		}
+	}
+
 	return { event: resolved, consumed };
 }
 
@@ -288,6 +500,7 @@ export function disableMouse(): void {
 	stdinRef = undefined;
 	stdoutRef = undefined;
 	pressPosition = null;
+	gestureState = null;
 	clickableAreas.clear();
 	hoverableAreas.clear();
 }

@@ -1,0 +1,48 @@
+---
+title: tabs
+sidebarPosition: 33
+description: Segmented control / nav bar primitive with three visual styles.
+---
+
+# `tabs(opts)` — segmented control
+
+Renders an array of tab labels with one marked active. Three visual styles are supported:
+
+- `"underline"` (default) — flat single-line strip where the active tab gets its color plus an SGR underline.
+- `"pill"` — bracketed rendering `[ label ]` with the active tab's color.
+- `"boxed"` — framed rendering `╭─label─╮` with active tab color on the label and `tabs.border` on the strokes.
+
+```ts
+import { tabs } from "@bdocs/dui";
+
+console.log(tabs({
+  items: ["Home", "Docs", "Blog"],
+  active: 1,
+  style: "underline",
+}));
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `items` | `string[]` | — | Tab labels. |
+| `active` | `number` | — | Index of the active tab (0-based). |
+| `style` | `"underline" \| "pill" \| "boxed"` | `"underline"` | Visual renderer. |
+| `colors.active` | `ColorStyle` | `theme.tabs.active` | Active label color. |
+| `colors.inactive` | `ColorStyle` | `theme.tabs.inactive` | Inactive label color. |
+| `colors.border` | `ColorStyle` | `theme.tabs.border` | Stroke color (boxed mode). |
+
+## Style trade-offs
+
+- **`underline`** reads cleanest in dense CLI output and is the canonical look. The active tab is differentiated by both hue AND an SGR underline SGR (`\x1b[4m`/`\x1b[24m`), so it remains visible even when fg color is identical to inactive.
+- **`pill`** brackets `[ label ]` make each tab visually distinct and are easy to scan at a glance. They consume ~2 extra chars per tab.
+- **`boxed`** frames each tab in `╭─╮` strokes. Looks most "GUI-like" but consumes ~4 extra chars per tab. Best for nav bars where the rest of the dashboard is plain.
+
+## When to use
+
+- Top-of-screen navigation between dashboard panes.
+- Sub-pane toggle rows (e.g. `Files | Branches | Tags | Logs`).
+- Wizard step indicators (`Step 1 / Step 2 / …`).
+
+`tabs()` is non-interactive — wire `active` index back to your navigation state. For interactive tab selection, drive `active` from a `select({ choices: items })` result.

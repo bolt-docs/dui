@@ -1,0 +1,42 @@
+---
+title: section
+sidebarPosition: 28
+description: Section header / labeled divider for breaking up dense CLI output.
+---
+
+# `section(opts)` — labeled divider
+
+Renders a single-line divider with the title inline. Two alignments are supported: `"left"` (default) flushes the title at the left edge of the available width, `"center"` splits the dashes equally on both sides of the title.
+
+```ts
+import { section } from "@bdocs/dui";
+
+console.log(section({ title: "Configuration", width: 70 }));
+// ── Configuration ─────────────────────────────────────────────────────
+console.log(section({ title: "Defaults", align: "center" }));
+// ───────────────────────── Defaults ────────────────────────────────────
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `title` | `string` | — | Title text inside the divider. |
+| `width` | `number` | `min(terminalWidth(), 80)` | Total divider width. |
+| `align` | `"left" \| "center"` | `"left"` | Title position. |
+| `colors.title` | `ColorStyle` | `theme.section.title` | Title color. |
+| `colors.line` | `ColorStyle` | `theme.section.line` | Dash color. |
+
+## Truncation behavior
+
+If the title's visible length is greater than `width - 4` (the slots for "──" and the title padding), the title is **truncated** with an ellipsis (`…`) so the divider stays strictly one line. Multi-line section headers break surrounding layouts that assume a single-row gap.
+
+If even the truncated title would overflow (e.g. `width: 3`), the divider degrades to a pure line of `─` of `width` cells. The consumer's vertical geometry is preserved (one row tall) even with no room for the title.
+
+## When to use
+
+- Block separators in long CLI logs.
+- Identify configuration sections / step indicators / sub-panes.
+- Reinforce visual rhythm in dense terminal output (every 40 rows or so).
+
+Combine with `divider()` for plain lines, `box({ title })` for full framed boxes.

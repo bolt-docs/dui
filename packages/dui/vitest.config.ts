@@ -11,5 +11,10 @@ export default defineConfig({
 				statements: 85,
 			},
 		},
+		setupFiles: ["./tests/setup-env.ts"],
+		// Run each test file in its own fork so process.env mutations
+		// in one file (e.g. accessibility.test.ts stubEnv to "TERM=dumb")
+		// don't leak into another file's tests.
+		pool: "forks",
 	},
 });

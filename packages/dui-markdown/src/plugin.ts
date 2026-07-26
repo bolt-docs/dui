@@ -25,13 +25,13 @@ const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 
 export const markdownPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-markdown",
-	version: "0.5.0",
+	version: "0.3.0-next.1",
 	description:
 		"Inline markdown renderer with themable headings, code blocks, lists, quotes and tables for DUI's terminal output.",
 	tags: ["renderer", "markdown", "text", "content"],
 	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-markdown",
 	author: "DUI Toolkit",
-	peerDependencies: { dui: "^0.5.0" },
+	peerDependencies: { dui: ">=0.6.0-next.0 <0.7.0" },
 	setup(api) {
 		// Theme palette — registered up front so users can override any
 		// `markdown.*` slot via `configure({ theme: { markdown: … } })`

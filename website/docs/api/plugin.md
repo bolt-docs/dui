@@ -82,9 +82,95 @@ api.on('wheel-down', () => { downs++; /* redraw counter */ });
 
 The handler receives the full [`MouseWheelEvent`](#) (the `wheel` field is `"up"` or `"down"`). These hooks reuse DUI's existing event bus — they fire exactly when a wheel SGR sequence is parsed from stdin (so multi-tick bursts fan out to multiple handler calls). `unregisterPlugin(name)` removes the subscriptions.
 
+## Plugin lifecycle hooks
+
+Plugins can hook into the entire DUI lifecycle:
+
+| Hook | Timing | Use case |
+|------|--------|----------|
+| `register` | After all queued plugins finish setup | 🏁 Plugin-init, cross-plugin coordination |
+| `unregister` | On `unregisterPlugin(name)` | 🧹 Tear down UI state, unsubscribe from external streams |
+| `configure` | Every `configure()` call | ⚙️ React to config changes (prefix, theme, plain mode) |
+| `theme-changed` | When `configure()` touches `theme` | 🎨 Re-render themed elements without full UI reset |
+| `plain-changed` | When `configure()` toggles `plain` | ♿ Enable/disable accessibility text-only mode |
+| `before-render` | Before `emitRenderEvent('before-render')` | 📐 Measure layout, capture start time |
+| `after-render` | After `emitRenderEvent('after-render')` | ⏱️ Post-render metrics, cleanup |
+| `terminal-resize` | When terminal resizes | 📏 Recalculate layout, re-render |
+
+```ts
+api.on('register', () => {
+  // All queued plugins are ready — safe to call getRenderer()
+  const formatter = api.getRenderer('diff')
+})
+
+api.on('unregister', () => {
+  // Cleanup timers, remove listeners, save state
+  clearInterval(myInterval)
+})
+
+api.on('terminal-resize', (cols, rows) => {
+  // Recalculate grid positions
+  myLayout.width = cols
+})
+```
+
+### Wheel Scroll Hooks
+
+For dashboards that scroll-counter or animate scroll feedback, plugins can subscribe to wheel direction keys directly through the same event bus:
+
+```ts
+let ups = 0;
+let downs = 0;
+
+api.on('wheel-up', (event) => { ups++; api.shared.set('scroll-ups', ups) });
+api.on('wheel-down', (event) => { downs++; api.shared.set('scroll-downs', downs) });
+```
+
+The handler receives the full [`MouseWheelEvent`](#) (the `wheel` field is `"up"` or `"down"`, plus `x`, `y`, and `modifiers`). These hooks reuse DUI's existing event bus — they fire exactly when a wheel SGR sequence is parsed from stdin (multi-tick bursts fan out to multiple handler calls). `unregisterPlugin(name)` removes the subscriptions.
+
+## Plugin-to-plugin communication
+
+### Shared state
+
+```ts
+api.shared.set('counter', 42)
+api.shared.get('counter') // 42
+api.shared.has('counter') // true
+api.shared.keys()         // ['counter']
+api.shared.delete('counter')
+```
+
+Each plugin gets an isolated namespace — keys set by one plugin are invisible to others. To share data between plugins, coordinate through `api.registerRenderer()` / `api.getRenderer()` or the `PluginAPI.on()` event bus.
+
+### Renderer discovery
+
+```ts
+// Plugin A registers a renderer
+api.registerRenderer('transform.upper', async (input) => input.toUpperCase())
+
+// Plugin B discovers and uses it
+const upper = api.getRenderer('transform.upper')
+if (upper) {
+  const result = await upper('hello')
+  // result: "HELLO"
+}
+```
+
+### Render hook chains
+
+Multiple plugins can register hooks for the same channel. Hooks run in **priority order** (see `registerRenderHook` options below) so each plugin transforms the output in sequence:
+
+```ts
+// Plugin C: high-priority hook (runs first)
+api.registerRenderHook('md', async (input) => `# Metadata\n\n${input}`, { priority: 'first' })
+
+// Plugin D: default priority (runs second)
+api.registerRenderHook('md', async (input) => `${input}\n\n_FOOTER_`)
+```
+
 ### registerThemeSlot
 
-Register a default color for a theme slot (e.g. `"markdown.heading1"`).
+Register a default color for a theme slot (e.g. `"myplugin.border"`).
 Plugin defaults are consulted only when the user hasn't supplied a value
 via `configure({ theme: { … } })`, so user-set values always win.
 

@@ -1,9 +1,15 @@
 import type { BundledLanguage } from "shiki";
 import { bashDef } from "./bash";
+import { cppDef } from "./cpp";
 import { cssDef } from "./css";
+import { elixirDef } from "./elixir";
+import { goDef } from "./go";
 import { htmlDef } from "./html";
+import { javaDef } from "./java";
 import { jsonDef } from "./json";
 import { pythonDef } from "./python";
+import { rubyDef } from "./ruby";
+import { rustDef } from "./rust";
 import { javascriptDef, typescriptDef } from "./typescript";
 import { yamlDef } from "./yaml";
 
@@ -41,6 +47,12 @@ const builtins = [
 	yamlDef,
 	jsonDef,
 	htmlDef,
+	cppDef,
+	elixirDef,
+	goDef,
+	javaDef,
+	rubyDef,
+	rustDef,
 ];
 
 for (const def of builtins) {

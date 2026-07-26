@@ -59,7 +59,11 @@ export interface SpringConfig {
 	velocity?: number;
 }
 
-export type Easing = EasingName | ((t: number) => number) | SpringConfig;
+/**
+ * Easing can be a named preset, a function, a spring config, or a
+ * CSS-style `cubic-bezier()` string like `"cubic-bezier(0.42, 0, 0.58, 1)"`.
+ */
+export type Easing = EasingName | ((t: number) => number) | SpringConfig | `cubic-bezier(${string})`;
 
 // ── Easing implementations ──────────────────────────────────────
 
@@ -183,7 +187,32 @@ function isSpringConfig(easing: Easing): easing is SpringConfig {
 function resolveEasing(easing: Easing): EasingFn {
 	if (typeof easing === "function") return easing;
 	if (isSpringConfig(easing)) return createSpring(easing);
+	if (typeof easing === "string" && easing.startsWith("cubic-bezier(")) {
+		return parseCubicBezierString(easing);
+	}
 	return EASING_FNS[easing] ?? EASING_FNS.linear;
+}
+
+/**
+ * Parse a `cubic-bezier(x1, y1, x2, y2)` CSS string into an easing
+ * function. Accepts both space-separated and comma-separated formats.
+ */
+function parseCubicBezierString(s: string): EasingFn {
+	const inner = s.slice("cubic-bezier(".length, -1).trim();
+	const parts = inner
+		.split(/[,\s]+/)
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0)
+		.map(Number);
+
+	if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
+		console.warn(
+			`[dui] Invalid cubic-bezier string: "${s}". Falling back to linear.`,
+		);
+		return EASING_FNS.linear;
+	}
+
+	return createEasing(parts[0], parts[1], parts[2], parts[3]);
 }
 
 // ── Spring physics ──────────────────────────────────────────────
@@ -321,8 +350,26 @@ export interface AnimationConfig {
 }
 
 export interface AnimationHandle {
-	/** Stop the animation immediately. */
+	/** Stop the animation immediately and reset to start. */
 	stop(): void;
+	/** Pause the animation at the current frame. Resume with `.resume()`. */
+	pause(): void;
+	/** Resume a paused animation from where it stopped. */
+	resume(): void;
+	/**
+	 * Seek to a specific progress point (0..1) without advancing the
+	 * clock. The animation frame at that instant is rendered immediately.
+	 * After seeking, a paused animation stays paused; a running animation
+	 * continues from the new virtual start time.
+	 */
+	seek(progress: number): void;
+	/**
+	 * Current animation progress as a value between 0 (start) and 1 (end).
+	 * Resets to 0 on `stop()`, stays at the paused value during `pause()`.
+	 */
+	readonly progress: number;
+	/** Whether the animation is currently paused. */
+	readonly paused: boolean;
 	/** Register a callback for when the animation ends (non-looping only). */
 	then(cb: () => void): void;
 }
@@ -447,27 +494,76 @@ export function animate(
 ): AnimationHandle {
 	const { keyframes, duration, loop = false, fps = 60, onFrame } = config;
 	const easingFn = resolveEasing(config.easing ?? "linear");
-	const startTime = performance.now();
 	const frameInterval = 1000 / fps;
 	let timer: ReturnType<typeof setTimeout> | null = null;
 	let stopped = false;
+	let paused = false;
+	let pauseElapsed = 0; // accumulated ms before pause
+	let pauseStart = 0;
+	let startTime = performance.now();
+	let lastT = 0;
 	const doneCallbacks: (() => void)[] = [];
+
+	const handle: AnimationHandle = {
+		stop: () => {
+			stopped = true;
+			paused = false;
+			if (timer !== null) {
+				clearTimeout(timer);
+				timer = null;
+			}
+			lastT = 0;
+		},
+		pause: () => {
+			if (paused || stopped) return;
+			paused = true;
+			pauseStart = performance.now();
+			if (timer !== null) {
+				clearTimeout(timer);
+				timer = null;
+			}
+		},
+		resume: () => {
+			if (!paused || stopped) return;
+			pauseElapsed += performance.now() - pauseStart;
+			paused = false;
+			tick();
+		},
+		seek: (progress: number) => {
+			const t = Math.max(0, Math.min(1, progress));
+			const frame = resolveFrame(sorted, t, easingFn);
+			onFrame(frame);
+			lastT = t;
+			// Adjust start time so the next tick continues from here.
+			startTime = performance.now() - (duration * t + pauseElapsed);
+		},
+		get progress(): number {
+			return lastT;
+		},
+		get paused(): boolean {
+			return paused;
+		},
+		then: (cb: () => void) => {
+			doneCallbacks.push(cb);
+		},
+	};
 
 	if (keyframes.length === 0) {
 		console.warn(
 			"[dui] animate() called with empty keyframes array. Provide at least one keyframe.",
 		);
-		return { stop: () => {}, then: (cb) => cb() };
+		return handle;
 	}
 
 	const sorted = normalizeKeyframes(keyframes);
 
 	function tick() {
-		if (stopped) return;
+		if (stopped || paused) return;
 
-		const elapsed = performance.now() - startTime;
+		const elapsed = performance.now() - startTime - pauseElapsed;
 		const rawT = elapsed / duration;
 		const t = loop ? rawT % 1 : Math.min(rawT, 1);
+		lastT = t;
 
 		const frame = resolveFrame(sorted, t, easingFn);
 		onFrame(frame);
@@ -482,18 +578,7 @@ export function animate(
 
 	tick();
 
-	return {
-		stop() {
-			stopped = true;
-			if (timer !== null) {
-				clearTimeout(timer);
-				timer = null;
-			}
-		},
-		then(cb: () => void) {
-			doneCallbacks.push(cb);
-		},
-	};
+	return handle;
 }
 
 // ── animateProgress ─────────────────────────────────────────────

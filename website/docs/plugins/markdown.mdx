@@ -61,16 +61,59 @@ console.log(highlighted)
 
 ## Supported languages
 
+## Extensible languages system
+
+The highlighter supports **14 languages** out of the box, each registered as a `LanguageDef` with aliases. You can add more by calling `createLanguage()` before initializing the highlighter.
+
+### Built-in languages
+
 | Language | Aliases |
 |----------|---------|
 | TypeScript | `ts`, `typescript` |
-| JavaScript | `js`, `javascript` |
+| JavaScript | `js`, `javascript`, `jsx` |
 | JSON | `json` |
 | HTML | `html` |
 | CSS | `css` |
 | Bash | `bash`, `sh`, `shell` |
 | Python | `python`, `py` |
 | YAML | `yaml`, `yml` |
+| Rust | `rust`, `rs` |
+| Go | `go`, `golang` |
+| Java | `java` |
+| Ruby | `ruby`, `rb` |
+| C++ | `cpp`, `c++`, `cxx`, `cc` |
+| Elixir | `elixir`, `ex`, `exs` |
+
+### Add a custom language
+
+```ts
+import { createLanguage } from '@dui-toolkit/plugin-markdown'
+
+createLanguage({
+  id: 'graphql',
+  aliases: ['gql'],
+  shikiLang: 'graphql', // must be a Shiki bundled language
+})
+```
+
+## Theming
+
+Every markdown element has a dedicated theme slot. Customize colors via `configure({ theme: { markdown: { … } } })`:
+
+```ts
+configure({
+  theme: {
+    markdown: {
+      heading1: '#ff6e6e',
+      heading2: '#ffb450',
+      codeInline: { fg: '#96c8ff', bg: '#282c34' },
+      quoteBar: '#64788c',
+      listBullet: '#888888',
+      thematic: '#888888',
+    },
+  },
+})
+```
 
 ## Supported elements
 

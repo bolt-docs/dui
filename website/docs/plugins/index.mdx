@@ -4,7 +4,7 @@ sidebarPosition: 1
 description: Official DUI plugins to extend your terminal toolkit.
 ---
 
-import { File, BarChart3, GitCompare, QrCode } from 'lucide-react'
+import { File, BarChart3, GitCompare, QrCode, Bell } from 'lucide-react'
 import { Image } from '../../components/icons'
 
 **DUI** has a lightweight plugin system that lets you extend the core with custom
@@ -29,6 +29,9 @@ functionality. These are the official plugins maintained by the DUI team.
   </Card>
   <Card title="@dui-toolkit/plugin-qrcode" icon={<QrCode />} href="/docs/plugins/qrcode">
     Scannable QR codes in the terminal with custom colors, width cap, and labels.
+  </Card>
+  <Card title="@dui-toolkit/plugin-notify" icon={<Bell />} href="/docs/plugins/notify">
+    Cross-platform desktop notifications: osascript / notify-send / powershell, OSC 99/9/777, and inline TUI toasts — all behind one `notify()` API.
   </Card>
 </Cards>
 

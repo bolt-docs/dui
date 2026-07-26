@@ -1,0 +1,208 @@
+---
+title: "Accessibility"
+sidebarPosition: 6
+description: NO_COLOR / TERM=dumb / screen-reader / reduced-motion heuristics — multi-line `prefix:` text fallback when any is detected, with a forced `plain: true` flag.
+---
+
+`@bdocs/dui` ships a single accessibility layer that decides, once per
+call, whether the current host should see styled ANSI widgets or a
+multi-line plain-text fallback. The same heuristic gates the renderer
+inside `@dui-toolkit/plugin-notify` so a CI log, a screen reader user
+on Linux, and a hand-crafted `NO_COLOR=1` env never accidentally
+receive a noisy styled box.
+
+```ts
+import { configure, isPlainMode, box, notify } from "@bdocs/dui";
+
+// Force plain mode globally — every widget + notify call emits the
+// `prefix:` text fallback regardless of env.
+configure({ plain: true });
+
+// Or per-call:
+await notify.error("CI failed", { plain: true });
+```
+
+## What the heuristic decides
+
+`isPlainMode()` returns `true` when **any one** of these is true:
+
+| Heuristic | Why it triggers |
+| --- | --- |
+| `NO_COLOR` env var set to a non-empty value | Cross-tool standard for "user opted out of color" ([no-color.org](https://no-color.org)) |
+| `TERM=dumb` | Terminal emulator can't render escape sequences (piped-to-file, non-interactive shells, emacs comint buffers) |
+| `process.stdout?.isTTY === false` | Pipe consumers (CI logs, `tee`, `less`) can't interpret `\x1b[...m` |
+| Screen reader detected | `brltty` (Linux) / VoiceOver (macOS) / NVDA or JAWS (Windows) |
+| `configure({ plain: true })` set | User explicitly opted into the text-only fallback |
+| `notify({ ..., plain: true })` | Per-call opt-in (one-shot override of any auto-detect) |
+
+```ts
+import {
+	getAccessibilityInfo,
+	isPlainMode,
+	isReducedMotion,
+	refreshAccessibility,
+} from "@bdocs/dui";
+
+getAccessibilityInfo();
+// → { noColor, dumbTerm, nonTty, screenReader, reducedMotion, plainOverride }
+
+isPlainMode();      // true if any of the above triggered
+isReducedMotion();  // true if PREFERS_REDUCED_MOTION=1 OR plain: true
+refreshAccessibility(); // re-probe (e.g. after `child_process.spawnSync`)
+```
+
+## What changes when plain mode is on
+
+Every widget that emits ANSI / borders / animation checks `isPlainMode()`
+early and returns a multi-line `prefix:` text version instead. The
+output has no SGR, no bell, no box drawing — only the prefix markers
+and the literal content.
+
+### Widget output matrix
+
+| Widget | Normal mode | Plain-mode output |
+| --- | --- | --- |
+| `box(...)`   | `╔─ Title ─╗<br>│ body  │<br>╚════════╝` | `box: Title<br>  body` |
+| `badge({...})` | `[ FAIL ]` (green-on-red) | `error: [ FAIL ]` (status as prefix) |
+| `section({...})` | `── Configuration ──────` | `section: -- Configuration --` |
+| `divider(...)` | `─────────────────` | `divider: -----------------` |
+| `modal({...})` | Rounded-box dialog | `modal: <title><br>buttons:<br>  [*] OK` |
+| `tabs({...})` | Pill / underline segments | `tabs:<br>  [*] Active<br>  [ ] Other` |
+| `kbd({...})` | `⌘ K` | `kbd: ⌘ K` |
+
+### Notify plain-mode format
+
+`@dui-toolkit/plugin-notify`'s `notify()` dispatcher routes every
+plain-mode call through the bell backend's text path — irrespective
+of `force: "os" | "osc" | "terminal"`. The output looks like:
+
+```text
+notify.error: CI failed for PR #1421
+
+  body: Vitest surfaced 3 failing tests.
+
+actions:
+  [open-logs] Open logs
+  [rerun] Re-run CI
+```
+
+Concretely:
+
+- **Result backend** is unchanged (`r.backend` still reflects "what
+  would have been chosen" so logs stay traceable).
+- **Result id** switches to a `pln:<uuid>` prefix when plain mode is
+  on so log scrapers can grep for plain notifications.
+- **`\x07`** (BEL) is suppressed — no audible cue.
+- **Children-process spawn** (notify-send / osascript / powershell)
+  is skipped — `osNotify`/`oscNotify` short-circuit to the plain
+  text path even when `force: "os"` is set.
+- **`\x1b]…\x1b\\`** (OSC 99/9/777) escape sequences are skipped for
+  the same reason (OSC is itself ANSI).
+
+## Heuristic detection cost
+
+Screen-reader probes run **once** per CLI session, lazily on the
+first `isPlainMode()` call. Each probe is a single short-lived
+`child_process.spawnSync` with a 100 ms hard timeout:
+
+- **Linux**: `pgrep -f brltty` — checks for a running `brltty` daemon.
+- **macOS**: `defaults read com.apple.universalaccess voiceOverOn`
+  parsed for a `"1"` sentinel.
+- **Windows**: `powershell.exe -Command "(Get-Process -Name NVDA -ErrorAction SilentlyContinue) -ne $null"`
+  (and a second probe for `jfw` aka JAWS).
+- **Other platforms** (e.g. FreeBSD): returns `false`.
+
+NO_COLOR, TERM=dumb, and PREFERS_REDUCED_MOTION are pure env reads —
+no spawn cost.
+
+## Compose with presets
+
+`configure({ theme: presets.dracula, plain: true })` is fully supported.
+The Dracula palette is still resolved into the theme slot map (so
+diagnostic tooling that introspects `getConfig().theme` sees the
+intended palette), but rendering skips colours, borders, and
+animation. The accessibility preference wins over palette selection.
+
+```ts
+import { configure, presets, box } from "@bdocs/dui";
+
+configure({ theme: presets.gruvbox, plain: true });
+// Theme is gruvbox-colored, but every `box()` call renders as
+// `box: Title\n  body` plain text.
+```
+
+## Build queries against the env
+
+Test scripts that want forced plain-mode behaviour just stub the env:
+
+```bash
+NO_COLOR=1 pnpm start             # auto-detect kicks in
+TERM=dumb pnpm start              # auto-detect kicks in
+PREFERS_REDUCED_MOTION=1 pnpm start  # reduced-motion only (anim stopped, ANSI fine)
+```
+
+Or in vitest:
+
+```ts
+import { configure, resetConfig } from "@bdocs/dui";
+
+beforeEach(() => resetConfig());
+
+it("renders plain in CI", () => {
+  process.env.NO_COLOR = "1";
+  refreshAccessibility();
+  expect(box(["x"])).toBe("box: \n  x"); // no `╔` glyph
+});
+```
+
+## Per-call override
+
+Two layers let callers force the path explicitly:
+
+```ts
+// Global: configure once at startup.
+configure({ plain: true });
+
+// Per-call opt-in: a single notify call where the host preference
+// wouldn't normally trigger plain mode (CI has ONE noisy stdout).
+await notify.error("flaky test detected", { plain: true });
+```
+
+Both compose: a `plain: true` per-call override wins over a
+`plain: false` global config, and over auto-detect.
+
+## Reduced motion (animation only)
+
+`isReducedMotion()` is a separate getter — it doesn't coerce plain
+text. A reduced-motion user typically still wants colors and box
+drawing; they only want the **rapid paint cadence** (spinner
+`setInterval`, progress-bar re-renders) to stop.
+
+```ts
+import { isReducedMotion, createSpinner } from "@bdocs/dui";
+
+if (isReducedMotion()) {
+  // Render a single static frame; skip the loop.
+} else {
+  const sp = createSpinner("loading…");
+  sp.start();
+}
+```
+
+## Why forced fallback lives on the config, not as a preset
+
+The shipped `presets.dracula` family are theme palettes only — they
+never set `plain: true` because the user's selection is about
+**colour choice**, not about **rendering safety**. `plain: true`
+sits in `DuiConfig` because accessibility is structurally orthogonal
+to palette: a user can opt for both dracula colors *and* plain-text
+output. The two flags compose with no interaction.
+
+## Disabled-by-default behaviour
+
+The out-of-the-box default is **styled output**, not plain text. A
+fresh `configure({})` produces the same styled box / badge / spinner
+as before this layer shipped. Plain mode only flips on when one of
+the heuristics triggers, or when the user explicitly opts in. There
+is no silent accessibility regression — existing apps keep their
+look unless the host says otherwise.

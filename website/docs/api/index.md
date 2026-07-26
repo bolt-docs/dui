@@ -19,6 +19,8 @@ import { usePlugin } from '@bdocs/dui'
 | [List](./list) | `bullet`, `ordered`, `tasks` | `TaskItem` |
 | [Divider](./divider) | `divider`, `dividerLog` | |
 | [Theme](./theme) | `resolveColor`, `mergeTheme` | `DuiTheme` |
+| [Presets](./presets) | `presets` | `PresetName`, `DuiThemePreset` |
+| [Accessibility](../overview/accessibility) | `isPlainMode`, `isReducedMotion`, `getAccessibilityInfo`, `refreshAccessibility` | `AccessibilityInfo` |
 | [Colors](./color) | `colorize`, `parseColor`, `interpolateColor`, `colors`, `colorMap` | `ColorInput`, `ColorStyle` |
 | [Animation](./animation) | `animate`, `lerp` | `Keyframe`, `AnimationHandle`, `EasingFn`, `Easing` |
 | [Progress](./progress) | `createProgressBar` | `ProgressBar`, `ProgressBarOptions` |

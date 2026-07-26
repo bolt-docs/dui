@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { configure, getConfig } from "../src/config";
 import * as logger from "../src/logger";
@@ -85,13 +86,33 @@ describe("plugin system", () => {
 	});
 });
 
+// DUI_VERSION is bumped alongside package.json (changesets enforces
+// parity on each release). The test reads package.json at runtime so
+// it stays in sync after future bumps without any test edit.
+// Anchor the package.json read to this test file, not process.cwd(), so
+// the assertion stays correct even when vitest is invoked from the repo
+// root or via a global filter.
+const pkgVersion: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;// Pre-release stability guard: pkgVersion must share the same major as
+// DUI_VERSION. If a future changesets bump accidentally separates the source
+// constant from package.json (e.g. someone bumps DUI_VERSION by hand but
+// forgets to bump package.json, or vice versa), this guard fires.
+const pkgMajor = pkgVersion.split(".")[0];
+const duiMajor = DUI_VERSION.split(".")[0];
+if (pkgMajor !== duiMajor) {
+	throw new Error(
+		`DUI_VERSION (${DUI_VERSION}) and package.json (${pkgVersion}) disagree on the major bump; changesets enforces parity on each release.`,
+	);
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Plugin system v2
 // ────────────────────────────────────────────────────────────────────────────
 
 describe("plugin system v2", () => {
 	it("exposes DUI_VERSION matching package.json", () => {
-		expect(DUI_VERSION).toBe("0.5.0");
+		expect(DUI_VERSION).toBe(pkgVersion);
 	});
 
 	it("registers theme slots and lets user override win", async () => {

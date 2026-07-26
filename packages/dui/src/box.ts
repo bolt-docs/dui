@@ -1,9 +1,18 @@
+import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
+import { formatActionToken, formatBoxPlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { fitWidth, terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
+import { fitWidth, terminalWidth, truncateByCells, visibleLength, wrapAnsiWord } from "./utils";
 
-export type BoxBorderStyle = "single" | "double" | "round";
+export type BoxBorderStyle =
+	| "single"
+	| "double"
+	| "round"
+	| "thick"
+	| "ascii"
+	| "dashed"
+	| "dotted";
 
 interface BorderChars {
 	tl: string;
@@ -18,7 +27,25 @@ const BORDERS: Record<BoxBorderStyle, BorderChars> = {
 	single: { tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃" },
 	double: { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" },
 	round: { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
+	// Alias-of-`single`: same heavy stroke set, exposed under the more
+	// descriptive name so autocomplete surfaces "thick" alongside the
+	// existing styles. Kept distinct so a future visual variation
+	// (e.g. double-heavy via half-block chars) can be re-pointed here
+	// without breaking the original `single` consumers.
+	thick: { tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃" },
+	// Pure ASCII — works on dumb terminals / log scrapers / Windows code
+	// pages where the box-drawing block is missing.
+	ascii: { tl: "+", tr: "+", bl: "+", br: "+", h: "-", v: "|" },
+	// Dashed/dotted – use light corners (no dashed corner glyph exists)
+	// so the corners remain readable while the strokes are broken.
+	dashed: { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "┄", v: "┆" },
+	dotted: { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "┈", v: "┊" },
 };
+
+export interface BoxAction {
+	id: string;
+	label: string;
+}
 
 export interface BoxOptions {
 	title?: string;
@@ -35,10 +62,20 @@ export interface BoxOptions {
 		label?: ColorStyle;
 		value?: ColorStyle;
 	};
+	/**
+	 * Optional action chips rendered as a footer inside the box.
+	 * The first char of `label` becomes the visible shortcut
+	 * glyph (e.g. `[O]pen logs`). Each action becomes a
+	 * `[ [K]eybind label ]` row in plain mode (with `actions:`
+	 * header) so screen-reader users can read the list flat.
+	 */
+	actions?: BoxAction[];
 }
 
 function truncate(s: string, max: number): string {
-	return visibleLength(s) > max ? s.slice(0, max - 1) + "…" : s;
+	// Use the cell-aware helper so CJK titles don't overflow the
+	// requested width when `slice` would otherwise cut mid‑char.
+	return truncateByCells(s, max);
 }
 
 function buildBoxBase(
@@ -89,9 +126,21 @@ function buildBoxBase(
 }
 
 export function box(lines: string[], opts?: BoxOptions): string {
+	// Plain-mode fallback — multi-line text with `box:` / `actions:`
+	// prefixes. Skips border styling, theme resolution, and width
+	// calculation entirely. The output is screen-reader friendly,
+	// reads top-down, and has no ANSI.
+	const cfg = getConfig();
+	if (isPlainMode(undefined, cfg)) {
+		return formatBoxPlain(lines, {
+			title: opts?.title,
+			actions: opts?.actions,
+		});
+	}
+
 	const style = opts?.style ?? "double";
 	const padding = opts?.padding ?? 1;
-	const theme = getConfig().theme;
+	const theme = cfg.theme;
 	const colorsOverride = opts?.colors;
 
 	const termWidth = Math.min(terminalWidth(), 80);
@@ -106,6 +155,16 @@ export function box(lines: string[], opts?: BoxOptions): string {
 		for (const subLine of subLines) {
 			wrappedLines.push(...wrapAnsiWord(subLine, maxContentWidth));
 		}
+	}
+
+	// Action footer — appended after a blank line for visual breathing
+	// room, mirroring how `@dui-toolkit/plugin-notify`'s terminal
+	// toast composes its inline keypress shortcuts. Each token is its
+	// own line so `wrapAnsiWord` keeps them as discrete visual rows
+	// when the box is narrow.
+	if (opts?.actions && opts.actions.length > 0) {
+		wrappedLines.push("");
+		wrappedLines.push(...opts.actions.map((a) => formatActionToken(a)));
 	}
 
 	const maxContent = wrappedLines.reduce(

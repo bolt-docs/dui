@@ -29,6 +29,27 @@ function ansi(params: number[]): string {
 	return `\x1b[${params.join(";")}m`;
 }
 
+/**
+ * Resolve a named-color string to its SGR palette index.
+ *
+ * `NAMED_FG` keys are the plain names (`"cyan"`) while `NAMED_BG` keys
+ * are the `"bg"`-prefixed chainable-API names (`"bgCyan"`). When a
+ * caller passes `"cyan"` as a bg color, we transparently alias it to
+ * `"bgCyan"` so the chainable `colors.bgCyan("x")` API and the
+ * `colorize("x", "cyan", "bg")` API produce identical SGR.
+ *
+ * Returns `undefined` for non-named strings — callers fall through to
+ * `parseColor` for hex / OkLCh / rgb strings.
+ */
+function resolveNamedBgSgr(name: string): number | undefined {
+	if (typeof name !== "string" || name.length === 0) return undefined;
+	const direct = NAMED_BG[name as BgName];
+	if (direct !== undefined) return direct;
+	// Alias lookup: "cyan" → "bgCyan" (capitalize first letter + prefix).
+	const aliased = `bg${name[0]?.toUpperCase()}${name.slice(1)}`;
+	return NAMED_BG[aliased as BgName];
+}
+
 // Individual SGR close codes (instead of blanket \x1b[0m)
 const CLOSE_FG = 39;
 const CLOSE_BG = 49;
@@ -334,6 +355,36 @@ function oklabToLinearSrgb(
 	];
 }
 
+function parseHslString(input: string): ParsedColor | null {
+	const match = input.match(
+		/^hsla?\(\s*([\d.]+)\s*[,\s]+([\d.]+)%?\s*[,\s]+([\d.]+)%?\s*(?:[,\/]\s*([\d.]+))?\s*\)$/i,
+	);
+	if (!match) return null;
+	let h = Number(match[1]) % 360;
+	if (h < 0) h += 360;
+	const s = clamp(Number(match[2]), 0, 100) / 100;
+	const l = clamp(Number(match[3]), 0, 100) / 100;
+	const a = match[4] !== undefined ? clamp(Number(match[4]), 0, 1) : undefined;
+	// Convert HSL → RGB
+	const c = (1 - Math.abs(2 * l - 1)) * s;
+	const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+	const m = l - c / 2;
+	let r1 = 0, g1 = 0, b1 = 0;
+	if (h < 60) { r1 = c; g1 = x; }
+	else if (h < 120) { r1 = x; g1 = c; }
+	else if (h < 180) { g1 = c; b1 = x; }
+	else if (h < 240) { g1 = x; b1 = c; }
+	else if (h < 300) { r1 = x; b1 = c; }
+	else { r1 = c; b1 = x; }
+	const result: ParsedColor = {
+		r: Math.round((r1 + m) * 255),
+		g: Math.round((g1 + m) * 255),
+		b: Math.round((b1 + m) * 255),
+	};
+	if (a !== undefined) result.a = a;
+	return result;
+}
+
 function parseOklchString(input: string): ParsedColor | null {
 	const match = input.match(
 		/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+))?\s*\)$/,
@@ -378,6 +429,8 @@ export function parseColor(input: ColorInput): ParsedColor {
 		result = hexToRgb(trimmed);
 	} else if (trimmed.startsWith("oklch")) {
 		result = parseOklchString(trimmed);
+	} else if (trimmed.startsWith("hsl")) {
+		result = parseHslString(trimmed);
 	} else if (trimmed.startsWith("rgb")) {
 		result = parseRgbString(trimmed);
 	}
@@ -388,16 +441,25 @@ export function parseColor(input: ColorInput): ParsedColor {
 	}
 
 	throw new Error(
-		`Unsupported color format: "${input}". Use hex, rgb(), rgba(), or oklch().`,
+		`Unsupported color format: "${input}". Use hex, rgb(), rgba(), hsl(), hsla(), or oklch().`,
 	);
 }
 
 export function toAnsiFg(color: ColorInput): string {
+	// Named colors (e.g. "cyan", "bold-italic" companions) short-circuit
+	// to the corresponding SGR palette index so theme overrides can use
+	// the same vocabulary as the chainable `colors.cyan(...)` API.
+	// Falls back to 24-bit hex/OkLCh/rgb parsing for everything else.
+	if (typeof color === "string" && NAMED_FG[color as FgName] !== undefined) {
+		return ansi([NAMED_FG[color as FgName]]);
+	}
 	const { r, g, b } = parseColor(color);
 	return ansi([38, 2, r, g, b]);
 }
 
 export function toAnsiBg(color: ColorInput): string {
+	const named = resolveNamedBgSgr(color);
+	if (named !== undefined) return ansi([named]);
 	const { r, g, b } = parseColor(color);
 	return ansi([48, 2, r, g, b]);
 }
@@ -413,8 +475,18 @@ export function colorize(
 	color: ColorInput,
 	target: PaintTarget = "fg",
 ): string {
+	// Short-circuit to the named-color palette BEFORE parseColor so
+	// `colors.cyan("x")` and `colorize("x", "cyan")` produce identical
+	// SGR. `parseColor` only handles hex / oklch / rgb.
 	if (target === "bg") {
+		const named = resolveNamedBgSgr(color);
+		if (named !== undefined) {
+			return `${ansi([named])}${text}${ansi([CLOSE_BG])}`;
+		}
 		return `${toAnsiBg(color)}${text}${ansi([CLOSE_BG])}`;
+	}
+	if (typeof color === "string" && NAMED_FG[color as FgName] !== undefined) {
+		return `${ansi([NAMED_FG[color as FgName]])}${text}${ansi([CLOSE_FG])}`;
 	}
 	return `${toAnsiFg(color)}${text}${ansi([CLOSE_FG])}`;
 }
@@ -453,15 +525,26 @@ export function applyStyle(
 	}
 
 	if (color) {
-		const { r, g, b } = parseColor(color);
-		openParts.push(38, 2, r, g, b);
-		closeParts.push(CLOSE_FG);
+		if (NAMED_FG[color as FgName] !== undefined) {
+			openParts.push(NAMED_FG[color as FgName]);
+			closeParts.push(CLOSE_FG);
+		} else {
+			const { r, g, b } = parseColor(color);
+			openParts.push(38, 2, r, g, b);
+			closeParts.push(CLOSE_FG);
+		}
 	}
 
 	if (bg) {
-		const { r, g, b } = parseColor(bg);
-		openParts.push(48, 2, r, g, b);
-		closeParts.push(CLOSE_BG);
+		const bgNamed = resolveNamedBgSgr(bg);
+		if (bgNamed !== undefined) {
+			openParts.push(bgNamed);
+			closeParts.push(CLOSE_BG);
+		} else {
+			const { r, g, b } = parseColor(bg);
+			openParts.push(48, 2, r, g, b);
+			closeParts.push(CLOSE_BG);
+		}
 	}
 
 	if (openParts.length === 0) return text;

@@ -1,6 +1,7 @@
 import readline from "node:readline";
 import type { AnimationHandle } from "./animation";
 import { animate } from "./animation";
+import { isReducedMotion } from "./accessibility";
 import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";

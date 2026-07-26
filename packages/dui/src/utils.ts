@@ -11,6 +11,40 @@ export function visibleLength(s: string): number {
 	return stringWidth(s);
 }
 
+/**
+ * Cell-aware truncation. The native `String#slice` indexes by UTF‑16 code
+ * units, so a CJK ideograph (`visibleLength = 2`) is sliced as a single
+ * unit — turning `slice(0, 9)` on `"中文标题标题标题"` into a string whose
+ * `visibleLength` is 19, not the requested 9. This helper slices by
+ * **terminal cells** (using `visibleLength`/`string‑width`) so callers
+ * can put a hard cap on rendered width:
+ *
+ *   truncateByCells("中文标题标题标题", 9)  // → "中文标题题…"   (9 cells)
+ *   truncateByCells("中文", 3)              // → "中…"          (3 cells)
+ *   truncateByCells("中文", 0)              // → "…"            (1 cell fallback)
+ *
+ * When the input already fits in `maxCells`, returns the input verbatim.
+ * Reserves 1 cell for the ellipsis `…` when truncation occurs; if
+ * `maxCells < 1` it returns `"…"` so consumers never see a wider output
+ * than they asked for.
+ */
+export function truncateByCells(s: string, maxCells: number): string {
+	if (visibleLength(s) <= maxCells) return s;
+	if (maxCells <= 0) return "";
+	const target = Math.max(0, maxCells - 1); // 1 cell for the ellipsis
+	const chars = Array.from(s); // iterator walks codepoints, surrogate‑aware
+	let accum = "";
+	let used = 0;
+	for (const ch of chars) {
+		const w = visibleLength(ch);
+		if (used + w > target) break;
+		accum += ch;
+		used += w;
+		if (used === target) break;
+	}
+	return accum + "\u2026";
+}
+
 export function padCenter(s: string, w: number): string {
 	const len = visibleLength(s);
 	const pad = Math.max(0, w - len);

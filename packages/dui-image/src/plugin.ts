@@ -4,13 +4,13 @@ import { renderImage } from "./render";
 
 export const imagePlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-image",
-	version: "0.5.0",
+	version: "0.3.0-next.1",
 	description:
 		"Image renderer (PNG/JPEG/GIF) using half-block pixel sampling so any image fits in a terminal pane.",
 	tags: ["renderer", "image", "media"],
 	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-image",
 	author: "DUI Toolkit",
-	peerDependencies: { dui: "^0.5.0" },
+	peerDependencies: { dui: ">=0.6.0-next.0 <0.7.0" },
 	setup(api) {
 		api.registerThemeSlot("image.fg", "#ffffff");
 		api.registerThemeSlot("image.bg", "#000000");

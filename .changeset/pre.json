@@ -1,0 +1,19 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@bdocs/dui": "0.5.0",
+    "@dui-toolkit/plugin-chart": "0.3.0",
+    "@dui-toolkit/plugin-diff": "0.2.0",
+    "@dui-toolkit/plugin-image": "0.2.0",
+    "@dui-toolkit/plugin-markdown": "0.2.1",
+    "@dui-toolkit/plugin-qrcode": "0.2.0",
+    "docs": "0.0.0",
+    "@dui-toolkit/plugin-notify": "0.1.0-next.0"
+  },
+  "changesets": [
+    "notify-plugin",
+    "v0.6.0-interactive-improvements",
+    "v0.7.0-native-widget-set"
+  ]
+}

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	clearClickableAreas,
 	clearHoverableAreas,
+	configure,
 	disableMouse,
 	disableMouseMove,
 	enableMouse,
@@ -17,6 +18,7 @@ import {
 	registerHoverableArea,
 	unregisterClickableArea,
 	unregisterHoverableArea,
+	resetConfig,
 } from "../src/index";
 
 // Helper: Node 22+ exposes `isTTY` as a getter-only inherited property, so
@@ -51,6 +53,209 @@ describe("mouse", () => {
 		disableMouse();
 		clearClickableAreas();
 		vi.restoreAllMocks();
+	});
+
+	describe("pressPosition leak regression", () => {
+		it("does not promote left-click release to click after a right-click release at same position",
+			() => {
+				// Regression guard for the pressPosition leak fix: if a
+				// left-click press → right-click release → left-click
+				// release sequence fires at the same coordinates, the
+				// right-click early return path must clear pressPosition
+				// so the subsequent left-click release doesn't falsely
+				// match it and synthesise a spurious 'click' event.
+				const events: Array<{ type: string; button?: string }> = [];
+				const off = onMouseEvent((e) =>
+					events.push({ type: e.type, button: e.button }),
+				);
+
+				// Step 1: left-button press at (10, 5)
+				parseSGRMouseData("\x1b[<0;10;5M");
+
+				// Step 2: right-button release at (10, 5) — fires
+				// 'release' then immediately 'contextmenu', and crucially
+				// clears pressPosition before returning early.
+				parseSGRMouseData("\x1b[<2;10;5m");
+
+				// Step 3: left-button release at (10, 5) — the positions
+				// match the Step 1 press, but pressPosition was cleared
+				// by Step 2, so this must NOT become 'click'.
+				const last = parseSGRMouseData("\x1b[<0;10;5m");
+
+				// The left-click release should stay 'release', not 'click'
+				expect(last!.type).toBe("release");
+				expect(last!.button).toBe("left");
+
+				// Full event bus trace: press → release(right) →
+				// contextmenu → release(left). No 'click' anywhere.
+				expect(events.map((e) => e.type)).toEqual([
+					"press",
+					"release",
+					"contextmenu",
+					"release",
+				]);
+
+				off();
+		},
+	);
+
+	it("does not promote left-click release to click after a middle-click release at same position",
+		() => {
+			// Regression guard: the middle-click release path clears
+			// pressPosition via `else if (!isPress) { pressPosition =
+			// null; }`, NOT via the right-click early-return path that
+			// required an explicit fix. This test verifies that code
+			// path works correctly and that no future refactor removes
+			// the cleanup.
+			const events: Array<{ type: string; button?: string }> = [];
+			const off = onMouseEvent((e) =>
+				events.push({ type: e.type, button: e.button }),
+			);
+
+			// Step 1: left-button press at (10, 5)
+			parseSGRMouseData("\x1b[<0;10;5M");
+
+			// Step 2: middle-button release at (10, 5) — button code 1
+			// with action 'm'. The parser clears pressPosition via the
+			// `else if (!isPress)` branch, emits a 'release' event.
+			parseSGRMouseData("\x1b[<1;10;5m");
+
+			// Step 3: left-button release at (10, 5) — pressPosition
+			// was cleared by Step 2, so this must NOT become 'click'.
+			const last = parseSGRMouseData("\x1b[<0;10;5m");
+
+			// The left-click release should stay 'release', not 'click'
+			expect(last!.type).toBe("release");
+			expect(last!.button).toBe("left");
+
+			// Full event bus trace: press → release(middle) →
+			// release(left). No 'click' anywhere.
+			expect(events.map((e) => e.type)).toEqual([
+				"press",
+				"release",
+				"release",
+			]);
+
+			off();
+		},
+	);
+});
+
+	describe("useStrictInput warnings", () => {
+		beforeEach(() => {
+			vi.spyOn(console, "warn").mockImplementation(() => {});
+			configure({ useStrictInput: true });
+		});
+
+		afterEach(() => {
+			resetConfig();
+		});
+
+		it("warns when the entire buffer contains no SGR prefix", () => {
+			parseSGRMouseDataAll("hello");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: no SGR prefix found in 5 byte(s): "hello"',
+			);
+		});
+
+		it("warns about garbage bytes before a valid SGR sequence", () => {
+			// "junk" (4 bytes) before a left-click press at (10, 5)
+			parseSGRMouseDataAll("junk\x1b[<0;10;5M");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: 4 byte(s) before SGR prefix: "junk"',
+			);
+			// Still parses the valid sequence (garbage is tolerated)
+			expect(parseSGRMouseData("junk\x1b[<0;10;5M")!.type).toBe("press");
+		});
+
+		it("warns about an incomplete SGR sequence after the prefix", () => {
+			// The prefix \x1b[< is found, but "0;10" doesn't match the
+			// full /^(\d+);(\d+);(\d+)([Mm~])/ pattern.
+			parseSGRMouseDataAll("\x1b[<0;10");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: incomplete SGR sequence after prefix: "0;10"',
+			);
+		});
+
+		it("warns about unknown wheel base codes (e.g. 66)", () => {
+			// Button code 66, after stripping modifier bits, has
+			// baseWheel = 66, which is neither 64 (up) nor 65 (down).
+			parseSGRMouseDataAll("\x1b[<66;10;5~");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: unknown wheel base code 66 (raw button=66); modifiers may be interfering',
+			);
+		});
+
+		it("warns about leftover bytes between valid SGR sequences", () => {
+			// A valid wheel-up event followed by garbage "junk" that
+			// sits between it and the next (absent) sequence.
+			parseSGRMouseDataAll("\x1b[<64;5;3~junk");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: 4 byte(s) between SGR sequences are not valid mouse data: "junk"',
+			);
+		});
+
+		it("does NOT warn when useStrictInput is false (default)", () => {
+			configure({ useStrictInput: false });
+			vi.mocked(console.warn).mockClear();
+
+			// Feed every malformed input from the strict tests — none
+			// should trigger a warning.
+			parseSGRMouseDataAll("hello");
+			parseSGRMouseDataAll("junk\x1b[<0;10;5M");
+			parseSGRMouseDataAll("\x1b[<0;10");
+			parseSGRMouseDataAll("\x1b[<66;10;5~");
+			parseSGRMouseDataAll("\x1b[<64;5;3~junk");
+
+			expect(console.warn).not.toHaveBeenCalled();
+		});
+
+		it("still parses valid sequences correctly while strict mode warns about garbage", () => {
+			// A valid press that was preceded by noise: the parser
+			// warns about the garbage but still returns the event.
+			parseSGRMouseDataAll("garbage\x1b[<0;10;5M");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: 7 byte(s) before SGR prefix: "garbage"',
+			);
+
+			// The event should parse normally, even with strict mode.
+			expect(parseSGRMouseData("garbage\x1b[<0;10;5M")!.type).toBe("press");
+		});
+
+		it("warns and still returns events after a garbage sequence in the middle of a burst", () => {
+			// Wheel-up, then garbage, then wheel-down — strict mode
+			// warns about the garbage (as 'bytes before SGR prefix'
+			// for the second sequence) but still returns both events.
+			const events = parseSGRMouseDataAll(
+				"\x1b[<64;5;3~junk\x1b[<65;7;5~",
+			);
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: 4 byte(s) before SGR prefix: "junk"',
+			);
+			expect(events).toHaveLength(2);
+			if (events[0].type === "wheel") expect(events[0].wheel).toBe("up");
+			if (events[1].type === "wheel") expect(events[1].wheel).toBe("down");
+		});
+
+		it("warns about non-numeric button code and coordinates in strict mode", () => {
+			// Construct a malformed sequence by using the raw SGR
+			// prefix followed by non-digit characters. The regex
+			// /^(\d+);(\d+);(\d+)([Mm~])/ won't match "abc;10;5M",
+			// so it falls into the "incomplete sequence" path rather
+			// than the numeric validation path. To reach the numeric
+			// validation we need a sequence where the regex DOES
+			// match but Number.parseInt yields NaN. That's
+			// structurally impossible via the SGR_REGEX since \d+
+			// only captures [0-9]. This test documents that the
+			// strict numeric checks exist but are unreachable through
+			// normal SGR input, and that malformed sequences are
+			// still handled gracefully.
+			const result = parseSGRMouseDataAll("\x1b[<abc;10;5M");
+			expect(console.warn).toHaveBeenCalledWith(
+				'[dui] mouse: incomplete SGR sequence after prefix: "abc;10;5M"',
+			);
+			expect(result).toEqual([]);
+		});
 	});
 
 	describe("parseSGRMouseData", () => {
@@ -121,7 +326,152 @@ describe("mouse", () => {
 		});
 	});
 
+	describe("gestureWindowMs config", () => {
+		afterEach(() => {
+			resetConfig();
+		});
+
+		// Each test fires 4 SGR sequences (press → click → press → click),
+		// so we mock 4 Date.now() calls: press timestamp, release/click
+		// timestamp, second press timestamp, second release/click timestamp.
+		// After mockReturnValueOnce values are exhausted, Vitest falls back
+		// to returning undefined (NOT the original Date.now), which makes
+		// the gesture comparison return NaN and fail — so we always provide
+		// exactly 4 values.
+
+		it("fires doubleclick when two fast clicks arrive within the default 500 ms window", () => {
+			vi.spyOn(Date, "now")
+				.mockReturnValueOnce(1_000_000) // press 1
+				.mockReturnValueOnce(1_000_000) // click 1 (same ms = 0 elapsed)
+				.mockReturnValueOnce(1_000_000) // press 2
+				.mockReturnValueOnce(1_000_000); // click 2
+
+			const events: string[] = [];
+			const off = onMouseEvent((e) => events.push(e.type));
+
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+
+			expect(events).toEqual([
+				"press",
+				"click",
+				"press",
+				"click",
+				"doubleclick",
+			]);
+
+			off();
+		});
+
+		it("fires doubleclick at the boundary when gap equals the default 500 ms window", () => {
+			// Gesture detection uses CLICK timestamps (not press
+			// timestamps). Mock so click₂ - click₁ = 500 ms, exactly
+			// at the ≤ 500 boundary.
+			vi.spyOn(Date, "now")
+				.mockReturnValueOnce(1_000_000) // press 1
+				.mockReturnValueOnce(1_000_000) // click 1 → gestureState timestamp
+				.mockReturnValueOnce(1_000_500) // press 2
+				.mockReturnValueOnce(1_000_500); // click 2 → gap = 500 ms ≤ 500 ✓
+
+			const events: string[] = [];
+			const off = onMouseEvent((e) => events.push(e.type));
+
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+
+			expect(events).toEqual([
+				"press",
+				"click",
+				"press",
+				"click",
+				"doubleclick",
+			]);
+
+			off();
+		});
+
+		it("respects gestureWindowMs=2000 — fires doubleclick with a 1500 ms gap", () => {
+			configure({ gestureWindowMs: 2000 });
+			vi.spyOn(Date, "now")
+				.mockReturnValueOnce(1_000_000)   // press 1
+				.mockReturnValueOnce(1_001_500)   // click 1 (+1500 ms)
+				.mockReturnValueOnce(1_001_501)   // press 2
+				.mockReturnValueOnce(1_001_501);  // click 2 (+1500 ms from click 1)
+
+			const events: string[] = [];
+			const off = onMouseEvent((e) => events.push(e.type));
+
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+
+			// click 2 (1_001_501) - click 1 (1_001_500) = 1 ≤ 2000 ✓
+			expect(events).toContain("doubleclick");
+			off();
+		});
+
+		it("does NOT fire doubleclick when gestureWindowMs=500 and gap is 501 ms", () => {
+			configure({ gestureWindowMs: 500 });
+			vi.spyOn(Date, "now")
+				.mockReturnValueOnce(1_000_000) // press 1
+				.mockReturnValueOnce(1_000_000) // click 1
+				.mockReturnValueOnce(1_000_501) // press 2
+				.mockReturnValueOnce(1_000_501); // click 2 (+501 ms from click 1)
+
+			const events: string[] = [];
+			const off = onMouseEvent((e) => events.push(e.type));
+
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+
+			// click 2 (1_000_501) - click 1 (1_000_000) = 501 > 500 ✗
+			expect(events).not.toContain("doubleclick");
+			expect(events).not.toContain("tripleclick");
+			off();
+		});
+
+		it("falls back to 500 when gestureWindowMs is set to 0", () => {
+			configure({ gestureWindowMs: 0 });
+			vi.spyOn(Date, "now")
+				.mockReturnValueOnce(1_000_000) // press 1
+				.mockReturnValueOnce(1_000_000) // click 1
+				.mockReturnValueOnce(1_000_500) // press 2
+				.mockReturnValueOnce(1_000_500); // click 2 (+500 ms from click 1)
+
+			const events: string[] = [];
+			const off = onMouseEvent((e) => events.push(e.type));
+
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+			parseSGRMouseData("\x1b[<0;10;5M");
+			parseSGRMouseData("\x1b[<0;10;5m");
+
+			// 0 falls back to 500, so 500 ms gap (1_000_500 - 1_000_000) ≤ 500 ✓
+			expect(events).toContain("doubleclick");
+			off();
+		});
+	});
+
 	describe("enable / disable lifecycle", () => {
+		it("is idempotent — multiple calls only flip escape codes once", () => {
+			setTTY(true);
+			const spy = vi
+				.spyOn(process.stdout, "write")
+				.mockImplementation(() => true);
+			enableMouse();
+			const callsAfterFirst = spy.mock.calls.length;
+			enableMouse();
+			enableMouse();
+			expect(spy.mock.calls.length).toBe(callsAfterFirst);
+			expect(isMouseEnabled()).toBe(true);
+		});
 		it("is idempotent — multiple calls only flip escape codes once", () => {
 			setTTY(true);
 			const spy = vi

@@ -1,0 +1,62 @@
+---
+title: badge
+sidebarPosition: 8
+description: Status pill / chip primitive with five severity levels and theme overrides.
+---
+
+# `badge(opts)` — status pill
+
+Renders a single-line chip suitable for dense dashboards, command palettes, and CLI status indicators. The chip is padded with a single space on each side (` label `) so it reads as a distinct inline token against surrounding text.
+
+```ts
+import { badge } from "@bdocs/dui";
+
+console.log(badge({ label: "PASS", status: "success" }));
+console.log(badge({ label: "ERR",  status: "error"   }));
+console.log(badge({ label: "INFO", status: "info"    }));
+```
+
+## Status levels
+
+| Status | Default `fg` | Default `bg` |
+| --- | --- | --- |
+| `"info"` | `"white"` | `"blue"` |
+| `"success"` | `"white"` | `"green"` |
+| `"warning"` | `"black"` | `"yellow"` |
+| `"error"` | `"white"` | `"red"` |
+| `"neutral"` | `"white"` | `"gray"` |
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `label` | `string` | — | Chip text. |
+| `status` | `"info" \| "success" \| "warning" \| "error" \| "neutral"` | `"neutral"` | Severity. |
+| `colors.text` | `ColorStyle` | — | Override fg (or both fg+bg via `{ fg, bg }`). |
+| `colors.bg` | `ColorStyle` | — | Override bg only. |
+
+## Override priority
+
+1. `opts.colors.text / opts.colors.bg` (per-call)
+2. `configure({ theme: { badge: { success: { fg, bg } } } })` (theme)
+3. Built-in default per status
+
+If you only need fg-only chips (no background), pass a plain string:
+
+```ts
+badge({ label: "draft", colors: { text: "gray" } });
+```
+
+For a chip that pops, use a compound override:
+
+```ts
+badge({ label: "PRO", colors: { text: { fg: "black", bg: "magenta" } } });
+```
+
+## When to use
+
+- Test result rows ("PASS / FAIL / SKIP" chips).
+- Status labels next to file names ("STAGED", "MODIFIED", "UNTRACKED").
+- Compact severity indicators on dashboards.
+
+`badge()` is a one-off render — it doesn't replace a colored `log.info()` line for `info` messages. Use `info()` / `success()` from `@bdocs/dui` for full-line logs; use `badge()` for inline chips.
