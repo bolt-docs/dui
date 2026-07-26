@@ -42,7 +42,8 @@ export interface SelectOptions<T = string> {
 	};
 }
 
-const POINTER = "\u276f";
+// ◆ (U+25C6) — filled diamond as cursor pointer, consistent with multiselect
+const POINTER = "\u25c6";
 
 export async function select<T = string>(
 	message: string,

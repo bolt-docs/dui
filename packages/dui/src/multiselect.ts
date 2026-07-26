@@ -38,18 +38,59 @@ export interface MultiselectOptions<T = string> {
 	 * values only.
 	 */
 	wheelSensitivity?: number;
+	/**
+	 * When `true`, the user can press-and-drag a row to reorder
+	 * the list. Off by default to preserve the legacy contract
+	 * that the choices array order is preserved end-to-end.
+	 *
+	 * Semantics:
+	 * - Press left mouse button on a row → starts the drag; the
+	 *   row gets the `multiselect.dragSource` color.
+	 * - Move to another row → that row gets the
+	 *   `multiselect.dropTarget` color as a live preview.
+	 * - Release on a different enabled row → the dragged row
+	 *   MOVES (not swaps) to that position: elements between the
+	 *   source and the target shift up by one to make room.
+	 * - Release on a disabled row, the same row, or outside any
+	 *   row → drag is cancelled (no reorder).
+	 * - Release without dragging (i.e. press and release on the
+	 *   same row) → behaves as a click: toggles the checkbox.
+	 *
+	 * The user's `choices` array is never mutated. The component
+	 * keeps an internal copy (`activeChoices`) and returns
+	 * `.value` entries from that copy, so the original input
+	 * keeps its declared order even if the user reordered.
+	 *
+	 * Checked-state is preserved across a move: the element that
+	 * was at the source index retains its checked flag at its
+	 * new index, and any rows that fell inside the splice
+	 * window follow their new indices in BOTH directions
+	 * (downward drag → rows between source and target shift up
+	 * by one; upward drag → rows between target and source shift
+	 * down by one). The cursor behaves the same way: it stays
+	 * visually pinned to whichever logical row it was on
+	 * before the move, even though the underlying absolute
+	 * index may shift.
+	 */
+	enableDragReorder?: boolean;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
 		checked?: ColorStyle;
 		label?: ColorStyle;
 		message?: ColorStyle;
+		dragSource?: ColorStyle;
+		dropTarget?: ColorStyle;
 	};
 }
 
-const POINTER = "\u276f";
-const CHECKED = "\u2611";
-const UNCHECKED = "\u2610";
+// Modern Unicode symbols for interactive prompt elements.
+// ◆ (U+25C6) — filled diamond as cursor pointer, more visible than ❯
+// ◉ (U+25C9) — fisheye for checked state, modern checkbox look
+// ○ (U+25CB) — white circle for unchecked state, clean and minimal
+const POINTER = "\u25c6";
+const CHECKED = "\u25c9";
+const UNCHECKED = "\u25cb";
 
 export async function multiselect<T = string>(
 	message: string,
@@ -61,6 +102,7 @@ export async function multiselect<T = string>(
 		required = false,
 		colors: colorsOverride,
 		wheelSensitivity: wheelSensitivityOption,
+		enableDragReorder = false,
 	} = options;
 
 	if (!choices.length) {
@@ -79,6 +121,7 @@ export async function multiselect<T = string>(
 		required,
 		colorsOverride,
 		wheelSensitivity,
+		enableDragReorder,
 	);
 }
 
@@ -131,6 +174,7 @@ function interactiveMultiselect<T>(
 	required: boolean,
 	colorsOverride: MultiselectOptions["colors"],
 	wheelSensitivity: number,
+	enableDragReorder: boolean,
 ): Promise<T[]> {
 	return new Promise<T[]>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -165,11 +209,43 @@ function interactiveMultiselect<T>(
 			theme,
 			colorsOverride?.label,
 		).apply;
+		// Resolve drag colours even when drag is disabled so the
+		// defaults are still initialised consistently and the
+		// theme system exercises every multiselect slot exactly
+		// once on entry. The render path gates the actual use of
+		// these on `enableDragReorder` so a user that didn't opt
+		// in never sees them.
+		const dragSourceColor = resolveColor(
+			"multiselect.dragSource",
+			theme,
+			colorsOverride?.dragSource,
+		).apply;
+		const dropTargetColor = resolveColor(
+			"multiselect.dropTarget",
+			theme,
+			colorsOverride?.dropTarget,
+		).apply;
 
-		const checked = new Set<number>();
-		for (let i = 0; i < choices.length; i++) {
-			if (choices[i].checked) checked.add(i);
+		// Internal mutable copy of the user's `choices`. When
+		// `enableDragReorder` is on, drag-and-drop splices/inserts
+		// into THIS array instead of mutating the caller's array.
+		// The returned `value`s come from this copy too, so the
+		// user-visible order reflects any reordering the user
+		// performed. Non-interactive and disabled-drag modes
+		// never splice, so the copy is byte-identical to the input.
+		const activeChoices = choices.slice();
+
+		let checked = new Set<number>();
+		for (let i = 0; i < activeChoices.length; i++) {
+			if (activeChoices[i].checked) checked.add(i);
 		}
+		// `checked` is `let` rather than `const` so the
+		// drag-and-drop MOVE handler can reassign it to a fresh
+		// `new Set<number>()` after splicing an element across
+		// `activeChoices`. Without the reassign, the splice
+		// would invalidate the indices stored in the set
+		// (e.g. moving index 2 to index 4 would leave the set
+		// pointing at the wrong row).
 
 		const clickableAreaIds = new Set<string>();
 		const hoverableAreaIds = new Set<string>();
@@ -181,23 +257,70 @@ function interactiveMultiselect<T>(
 		let linesRendered = 0;
 		let buf = "";
 
+		// Drag-and-drop state. `dragSource` is the index of the
+		// row the user pressed; `dragHover` is the row the cursor
+		// is currently over during the drag (live preview of
+		// where the drop would land). Both are null when no drag
+		// is in progress. The render path uses them to apply
+		// `dragSourceColor` / `dropTargetColor` only when
+		// `enableDragReorder` is true; otherwise the variables
+		// stay null and the render branch is dead code.
+		let dragSource: number | null = null;
+		let dragHover: number | null = null;
+
 		function clampCursor(pos: number): number {
-			const total = choices.length;
+			const total = activeChoices.length;
 			const p = ((pos % total) + total) % total;
-			if (!choices[p].disabled) return p;
+			if (!activeChoices[p].disabled) return p;
 			const dir = pos > cursor ? 1 : -1;
 			let next = p;
 			for (let i = 0; i < total; i++) {
 				next = (((next + dir) % total) + total) % total;
-				if (!choices[next].disabled) return next;
+				if (!activeChoices[next].disabled) return next;
 			}
 			return cursor;
 		}
 
+		// Map an OLD index through the splice-based MOVE(src, dst)
+		// semantics so the cursor and the `checked` set stay
+		// pinned to the same LOGICAL choice across a drag.
+		//
+		// The MOVE is implemented as
+		//   activeChoices.splice(src, 1);
+		//   activeChoices.splice(dst, 0, moved);
+		// which yields the following OLD→NEW mappings:
+		//
+		//   downward drag (src < dst):
+		//     c < src          → c          (no shift)
+		//     c === src        → dst        (drag source follows)
+		//     src < c <= dst   → c - 1      (slice window shifts down)
+		//     c > dst          → c          (no shift)
+		//
+		//   upward drag (src > dst):
+		//     c < dst          → c          (no shift)
+		//     dst <= c < src   → c + 1      (insertion pushes up)
+		//     c === src        → dst        (drag source follows)
+		//     c > src          → c          (no shift)
+		//
+		// The cursor that was NOT on the dragged row therefore
+		// "follows" its original row's new index — the cursor
+		// stays visually pinned to the same choice even though
+		// the absolute index may shift. This matches the file
+		// manager UX the JSDoc on `enableDragReorder` promises.
+		function remapIndex(c: number, src: number, dst: number): number {
+			if (c === src) return dst;
+			if (src < dst) {
+				if (c > src && c <= dst) return c - 1;
+			} else if (src > dst) {
+				if (c >= dst && c < src) return c + 1;
+			}
+			return c;
+		}
+
 		function render() {
 			if (done) return;
-			const effective = Math.min(pageSize, choices.length);
-			offset = Math.max(0, Math.min(offset, choices.length - effective));
+			const effective = Math.min(pageSize, activeChoices.length);
+			offset = Math.max(0, Math.min(offset, activeChoices.length - effective));
 
 			for (const id of clickableAreaIds) {
 				unregisterClickableArea(id);
@@ -208,7 +331,7 @@ function interactiveMultiselect<T>(
 			}
 			hoverableAreaIds.clear();
 
-			const visible = choices.slice(offset, offset + effective);
+			const visible = activeChoices.slice(offset, offset + effective);
 			const lines: string[] = [];
 
 			const help = required
@@ -221,10 +344,24 @@ function interactiveMultiselect<T>(
 
 			for (let i = 0; i < visible.length; i++) {
 				const idx = offset + i;
-				const choice = choices[idx];
+				const choice = activeChoices[idx];
 				const isCursor = idx === cursor;
 				const isChecked = checked.has(idx);
 				const isHovered = idx === hoveredIndex;
+				// Drag visuals: the source row is the one the user
+				// pressed; the drop target is the row currently
+				// under the cursor during the drag. They're
+				// mutually exclusive visually (a row can't be both
+				// the source and its own drop target). The `&&`
+				// after `enableDragReorder` keeps the hot path
+				// cheap when the feature is off: a single boolean
+				// skip instead of an always-on ternary.
+				const isDragSource =
+					enableDragReorder && idx === dragSource;
+				const isDropTarget =
+					enableDragReorder &&
+					idx === dragHover &&
+					idx !== dragSource;
 				const pointer = isCursor ? `${pointerColor(POINTER)} ` : "  ";
 				const checkbox = isChecked
 					? checkedColor(CHECKED)
@@ -233,6 +370,10 @@ function interactiveMultiselect<T>(
 				let label: string;
 				if (choice.disabled) {
 					label = colors.dim(`${checkbox} ${choice.label} (disabled)`);
+				} else if (isDragSource) {
+					label = `${checkbox} ${dragSourceColor(choice.label)}`;
+				} else if (isDropTarget) {
+					label = `${checkbox} ${dropTargetColor(choice.label)}`;
 				} else if (isHovered) {
 					label = `${checkbox} ${applyClass("hover", selectedColor(choice.label))}`;
 				} else if (isCursor) {
@@ -255,23 +396,63 @@ function interactiveMultiselect<T>(
 					},
 					data: { choiceIndex: idx },
 				});
-				clickableAreaIds.add(areaId);
+			clickableAreaIds.add(areaId);
 
-				registerHoverableArea({
-					id: `hover-${areaId}`,
+			registerHoverableArea({
+				id: `hover-${areaId}`,
+				type: "multiselect",
+				bounds: {
+					left: 0,
+					top: 1 + msgRowDelta + 1 + i,
+					width: 999,
+					height: 1,
+				},
+				data: { choiceIndex: idx },
+			});
+			hoverableAreaIds.add(`hover-${areaId}`);
+		}
+
+		// While a drag is in flight, also register clickable /
+		// hoverable areas for choices OUTSIDE the visible window
+		// so the user can release on a row past the `pageSize`
+		// boundary. Without this, `getClickedItem(x, 14)` returns
+		// null once the visible window only covers `[0..9]` and the
+		// release falls into the "drag cancelled" branch instead of
+		// the MOVE branch — causing a regression where dropping a
+		// row past the viewport left the dropped element off-screen
+		// while the cursor stayed in view.
+		//
+		// The y-coordinate of the release maps directly to the
+		// logical choice index via `top = 2 + (idx - offset)`
+		// (assuming `msgRowDelta === 0`); the registered area's
+		// `bounds.top` covers positions both above and below the
+		// currently-scrolled window so any drop on the LIST's
+		// logical extent — even one past the visible bottom — is
+		// resolved to the right `choiceIndex`.
+		if (enableDragReorder && dragSource !== null) {
+			for (let idx = 0; idx < activeChoices.length; idx++) {
+				if (idx >= offset && idx < offset + effective) continue;
+				if (activeChoices[idx].disabled) continue;
+				const areaTop = 1 + msgRowDelta + 1 + (idx - offset);
+				const extId = `multiselect-ext-${idx}`;
+				registerClickableArea({
+					id: extId,
 					type: "multiselect",
-					bounds: {
-						left: 0,
-						top: 1 + msgRowDelta + 1 + i,
-						width: 999,
-						height: 1,
-					},
+					bounds: { left: 0, top: areaTop, width: 999, height: 1 },
 					data: { choiceIndex: idx },
 				});
-				hoverableAreaIds.add(`hover-${areaId}`);
+				clickableAreaIds.add(extId);
+				registerHoverableArea({
+					id: `hover-${extId}`,
+					type: "multiselect",
+					bounds: { left: 0, top: areaTop, width: 999, height: 1 },
+					data: { choiceIndex: idx },
+				});
+				hoverableAreaIds.add(`hover-${extId}`);
 			}
+		}
 
-			const output = lines.join("\n");
+		const output = lines.join("\n");
 
 			if (linesRendered > 0) {
 				stdout.write(`\x1b[${linesRendered}A`);
@@ -285,7 +466,7 @@ function interactiveMultiselect<T>(
 		}
 
 		function getSelected(): T[] {
-			return [...checked].map((i) => choices[i].value);
+			return [...checked].map((i) => activeChoices[i].value);
 		}
 
 		function cleanup() {
@@ -339,9 +520,28 @@ function interactiveMultiselect<T>(
 				// Multiple clicks in one chunk toggle each in order;
 				// the cursor lands on the LAST clicked index.
 				const clickedIndices: number[] = [];
+				// Track which release events we already consumed as
+				// drag-reorder drops so the click-toggling branch
+				// below doesn't double-fire when the parser
+				// (rarely) emits both events for the same gesture.
+				let dragJustCommitted = false;
+
+				// Track whether anything visible actually changed so a
+				// chunk of repeated motion events landing on the same
+				// coordinate does NOT re-render. Drag handlers in
+				// the press/release/move branches above flag this
+				// flag directly so a press that paints a dragSource
+				// indicator triggers an immediate re-render.
+				let renderNeeded = false;
 
 				for (const mouseEvent of mouseEvents) {
 					if (mouseEvent.type === "click") {
+						// A click arrives when press and release
+						// happened at the SAME position. That's
+						// the parser's "no drag" signal: clear any
+						// pending drag state and toggle.
+						dragSource = null;
+						dragHover = null;
 						const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
 						if (
 							clickedArea &&
@@ -349,26 +549,189 @@ function interactiveMultiselect<T>(
 							clickedArea.data
 						) {
 							const actualIndex = clickedArea.data.choiceIndex as number;
-							if (!choices[actualIndex].disabled) {
+							if (!activeChoices[actualIndex].disabled) {
 								clickedIndices.push(actualIndex);
 							}
 						}
+					} else if (mouseEvent.type === "press") {
+						// Press event. With drag enabled, set
+						// `dragSource` to the row under the press
+						// so the drag visualisation shows up
+						// immediately. `dragHover` follows the
+						// cursor on subsequent move events.
+						// Without drag, press is a no-op for us
+						// (the parser emits the matching click).
+						if (enableDragReorder && mouseEvent.button === "left") {
+							const pressedArea = getClickedItem(
+								mouseEvent.x,
+								mouseEvent.y,
+							);
+							if (
+								pressedArea &&
+								pressedArea.type === "multiselect" &&
+								pressedArea.data
+							) {
+								const pressedIdx =
+									pressedArea.data.choiceIndex as number;
+								if (!activeChoices[pressedIdx].disabled) {
+									dragSource = pressedIdx;
+									dragHover = pressedIdx;
+									renderNeeded = true;
+								} else {
+									dragSource = null;
+									dragHover = null;
+								}
+							} else {
+								dragSource = null;
+								dragHover = null;
+							}
+						}
+					} else if (mouseEvent.type === "release") {
+						// Release event with left button. When
+						// dragSource is set, the parser already
+						// established that the press/release
+						// positions DIFFERS (otherwise it would
+						// have emitted a `click` instead), so this
+						// is a true drag completion. MOVE the
+						// source row to the drop target.
+						if (
+							enableDragReorder &&
+							mouseEvent.button === "left" &&
+							dragSource !== null
+						) {
+							const releasedArea = getClickedItem(
+								mouseEvent.x,
+								mouseEvent.y,
+							);
+							const sourceIdx = dragSource;
+							if (
+								releasedArea &&
+								releasedArea.type === "multiselect" &&
+								releasedArea.data
+							) {
+								const targetIdx =
+									releasedArea.data.choiceIndex as number;
+								if (
+									targetIdx !== sourceIdx &&
+									!activeChoices[targetIdx].disabled
+								) {
+									// MOVE (insertion): remove the
+									// source row, insert it at the
+									// target position. Elements
+									// between source and target
+									// shift up by one. This matches
+									// the natural drag-and-drop UX
+									// (a swap would feel surprising
+									// — the dropped element ends up
+									// where the cursor was, not at
+									// the original source's index).
+									const [moved] = activeChoices.splice(
+										sourceIdx,
+										1,
+									);
+									activeChoices.splice(targetIdx, 0, moved);
+
+							// Remap the checked set through the same helper
+							// used for the cursor so both follow the same
+							// logical row across the splice (helper is
+							// documented next to clampCursor above).
+							const newChecked = new Set<number>();
+							for (const oldIdx of checked) {
+								newChecked.add(
+									remapIndex(oldIdx, sourceIdx, targetIdx),
+								);
+							}
+							checked = newChecked;
+
+							// Cursor visually pinned to whichever logical
+							// row it was on before the move — including the
+							// splice-shift range when the cursor wasn't on
+							// the dragged row itself.
+							cursor = remapIndex(
+								cursor,
+								sourceIdx,
+								targetIdx,
+							);
+									// Always scroll to ensure the
+									// drop target is visible
+									// after the move — even when
+									// the cursor doesn't follow.
+									// Without this, dragging to a
+									// row past the pageSize
+									// boundary would leave the
+									// dropped element off-screen
+									// (cursor stayed in view, but
+									// the actual move landed
+									// elsewhere). Prioritising the
+									// drop target matches
+									// file-manager UX.
+									if (targetIdx < offset) {
+										offset = targetIdx;
+									} else if (
+										targetIdx >= offset + pageSize
+									) {
+										offset =
+											targetIdx - pageSize + 1;
+									}
+									// Clamp cursor into the new
+									// viewport. If the cursor
+									// followed the row, it's
+									// already at targetIdx which
+									// is now visible; if it
+									// stayed put it may now sit
+									// outside the scrolled
+									// viewport and needs
+									// re-clamping.
+									if (cursor < offset) offset = cursor;
+									if (cursor >= offset + pageSize)
+										offset = cursor - pageSize + 1;
+
+									dragJustCommitted = true;
+									renderNeeded = true;
+								}
+							}
+							// Always clear drag state on release;
+							// whether or not the drop was valid
+							// (no-op / cancelled / committed) the
+							// gesture is over.
+							dragSource = null;
+							dragHover = null;
+						}
 					} else if (mouseEvent.type === "move") {
 						lastMove = mouseEvent;
+						// During a drag, update dragHover so the
+						// drop-target preview tracks the cursor.
+						if (enableDragReorder && dragSource !== null) {
+							const hoveredArea = getHoveredItem(
+								mouseEvent.x,
+								mouseEvent.y,
+							);
+							const newDragHover =
+								hoveredArea && hoveredArea.data
+									? (hoveredArea.data.choiceIndex as number)
+									: null;
+							if (newDragHover !== dragHover) {
+								dragHover = newDragHover;
+								renderNeeded = true;
+							}
+						}
 					} else if (mouseEvent.type === "wheel") {
 						// Wheel scrolls the cursor; it does NOT toggle
 						// checkboxes — only space and click do.
 						if (mouseEvent.wheel === "up") wheelUp++;
 						else if (mouseEvent.wheel === "down") wheelDown++;
+						// Wheel also cancels any in-flight drag so a
+						// mid-gesture scroll doesn't leave stale
+						// dragSource/dragHover state on the next
+						// press.
+						if (enableDragReorder && dragSource !== null) {
+							dragSource = null;
+							dragHover = null;
+						}
 					}
 				}
 
-				// Track whether anything visible actually changed so a
-				// chunk of repeated motion events landing on the same
-				// coordinate does NOT re-render (the legacy contract
-				// that the `does not re-render when hovering same item`
-				// test pins).
-				let renderNeeded = false;
+			
 
 				if (lastMove) {
 					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
@@ -413,6 +776,14 @@ function interactiveMultiselect<T>(
 					if (cursor < offset) offset = cursor;
 					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 					renderNeeded = true;
+					// Skip the toggle if this click was emitted as
+					// a side-effect of a drag completion. The
+					// parser normally emits `release` (not
+					// `click`) for drag gestures because the
+					// press and release positions differ, but
+					// guard for the rare case the parser
+					// classifies both as a click.
+					if (dragJustCommitted) continue;
 					if (checked.has(cursor)) {
 						if (required && checked.size <= 1) continue;
 						checked.delete(cursor);
@@ -461,7 +832,7 @@ function interactiveMultiselect<T>(
 
 			if (lastChar === " ") {
 				buf = "";
-				if (!choices[cursor].disabled) {
+				if (!activeChoices[cursor].disabled) {
 					if (checked.has(cursor)) {
 						if (required && checked.size <= 1) {
 							render();

@@ -87,6 +87,8 @@ const values = await multiselect('Choose colors:', {
 | `choices` | `MultiselectChoice<T>[]` | — | Array of options |
 | `pageSize` | `number` | `10` | Max visible items before scrolling |
 | `required` | `boolean` | `false` | If true, at least one selection is enforced |
+| `wheelSensitivity` | `number` | `1` | Wheel-tick cursor step (see Wheel Sensitivity below) |
+| `enableDragReorder` | `boolean` | `false` | Allow press-and-drag to reorder the list (see Drag Reorder below) |
 | `colors` | `object` | — | Per-call color overrides |
 
 **MultiselectChoice fields:**
@@ -202,7 +204,7 @@ Wheel support ships automatically with `select()` — no extra opt-in required. 
   Scrolling on `multiselect()` and `tree()` is also supported with the same semantics — wheel moves the cursor only, it does not toggle checkboxes or expand branches. Use `Space` (multiselect) or `→`/`Space` (tree) for those actions.
 </Callout>
 
-#### Wheel Sensitivity
+#### Wheel Sensitivity <Badge type="warning">next</Badge>
 
 Pass `wheelSensitivity` on the options object for `select`, `multiselect`, or `tree` to make a single wheel tick advance the cursor by `N` rows instead of just one. Defaults to `1`. Values below `1` are coerced to `1` (fractional negatives or zero cannot disable wheel scrolling).
 
@@ -216,6 +218,110 @@ const value = await select("Pick", {
 ```
 
 The multiplier composes with multi-tick bursts: with `wheelSensitivity: 3` and a chunk of two consecutive wheel ticks, the cursor advances by `2 × 3 = 6` rows in a single render. Disabled items are still skipped per row (the loop calls `clampCursor` once per step). `multiselect` wheel scrolling never toggles checkboxes regardless of sensitivity, and `tree` cursor clamps at the ends (no wrap).
+
+### Drag Reorder <Badge type="warning">next</Badge>
+
+`multiselect()` supports press-and-drag reordering when `enableDragReorder: true`. Off by default to preserve the legacy contract that the `choices` array order is preserved end-to-end.
+
+```ts
+const order = await multiselect('Arrange in priority:', {
+  choices: [
+    { label: 'Critical', value: 'p0' },
+    { label: 'High',     value: 'p1', checked: true },
+    { label: 'Medium',   value: 'p2' },
+    { label: 'Low',      value: 'p3' },
+  ],
+  enableDragReorder: true,
+});
+```
+
+Semantics:
+
+- **Press left mouse button on a row** → starts the drag; the row gets the `multiselect.dragSource` color (default `yellow`).
+- **Move over another row** → that row gets the `multiselect.dropTarget` color (default `cyan`) as a live preview.
+- **Release on a different enabled row** → the dragged row **moves** (inserts, not swaps) to that position. Elements between source and target shift up by one to make room.
+- **Release on a disabled row, the same row, or outside any row** → drag is cancelled (no reorder).
+- **Press and release on the same row** → behaves as a click: toggles the checkbox. Drag never accidentally toggles checkboxes.
+- **Wheel scroll mid-drag** → cancels the in-flight drag cleanly (no stale state on the next press).
+
+Two important invariants:
+
+- The user's `choices` array is **never** mutated. The component keeps an internal copy and returns `.value` entries from that copy.
+- **Checked state follows the dragged row** to its new index. If row 2 was checked and you drag it to row 5, the element at row 5 is checked after the drop. Any rows that fell inside the splice window follow their new indices in **both** directions (downward drag pushes them up by one; upward drag pushes them down by one).
+
+The cursor is pinned to whichever **logical row** it was on before the move. When the cursor was sitting on the dragged row, it follows the row to its new index. When the cursor was sitting on a different row, that row may have shifted as part of the splice; the cursor follows the row to its new index (not the same absolute integer position, which would land on a different choice after the shift). This keeps the cursor visually anchored to the same prompt in BOTH drag directions.
+
+**Theme slots:** `multiselect.dragSource`, `multiselect.dropTarget` (both default to a foreground color; pass `{ fg, bg }` for a chip background).
+
+### Multi-click Gesture Detection <Badge type="warning">next</Badge>
+
+When running in a terminal with mouse support, the mouse parser detects multi-click gestures (`doubleclick`, `tripleclick`) by tracking consecutive clicks at the same position within a configurable time window.
+
+```ts
+configure({ gestureWindowMs: 1000 })
+// Three clicks within 1 second at (10,5):
+// → 'click' (clicks: 1)
+// → 'doubleclick' (clicks: 2)
+// → 'tripleclick' (clicks: 3)
+```
+
+| Config | Default | Effect |
+|--------|---------|--------|
+| `gestureWindowMs` | `500` | Time window for multi-click detection. Increase for SSH/tmux users (e.g. `800`–`1000`). Set `0` to fall back to `500`. |
+
+#### Double-click
+
+- Two consecutive left-button clicks at the **same** position within the window produce `{ type: 'doubleclick', clicks: 2 }`
+- Right-click and middle-click are also tracked but only left-button clicks can produce multi-click events
+- A single delayed click outside the window starts a new gesture
+
+#### Triple-click
+
+- Three consecutive clicks within the sliding window produce `{ type: 'tripleclick', clicks: 3 }`
+- After a triple-click, the gesture tracker resets so a fourth click starts a fresh gesture
+
+#### Context Menu
+
+- **Right-click** is always emitted as a dedicated `{ type: 'contextmenu' }` event regardless of gesture window
+- This lets consumers branch on `type === 'contextmenu'` without tracking button state
+
+### Strict Input Validation <Badge type="warning">next</Badge>
+
+Enable `configure({ useStrictInput: true })` to log warnings for every malformed SGR mouse sequence. Helps debug terminal emulators that send non-standard mouse protocols.
+
+```ts
+configure({ useStrictInput: true })
+```
+
+**Warning scenarios:**
+
+| Input | Warning |
+|-------|---------|
+| `hello` | `no SGR prefix found in 5 byte(s): "hello"` |
+| `junk\x1b[<0;10;5M` | `4 byte(s) before SGR prefix: "junk"` |
+| `\x1b[<0;10` | `incomplete SGR sequence after prefix: "0;10"` |
+| `\x1b[<66;10;5~` | `unknown wheel base code 66 (raw button=66); modifiers may be interfering` |
+| `\x1b[<64;5;3~junk` | `4 byte(s) between SGR sequences are not valid mouse data: "junk"` |
+
+When `useStrictInput` is `false` (default), all malformed sequences are silently consumed without warnings.
+
+### Wheel Scroll Hooks for Plugins <Badge type="warning">next</Badge>
+
+Plugins can subscribe to `wheel-up` and `wheel-down` events through the plugin event bus — useful for dashboards that display live scroll counters or animations.
+
+```ts
+let scrollCount = 0
+api.on('wheel-up', (event) => {
+  scrollCount++
+  api.shared.set('scroll-ups', scrollCount)
+})
+api.on('wheel-down', (event) => {
+  scrollCount--
+  api.shared.set('scroll-downs', scrollCount)
+})
+```
+
+The handler receives the full `MouseWheelEvent` (`wheel`, `x`, `y`, `modifiers`, `timestamp`). These hooks fire once per parsed SGR wheel sequence, so multi-tick bursts fan out to multiple handler calls.
 
 ## tree
 

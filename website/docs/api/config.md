@@ -57,6 +57,24 @@ console.log(getConfig().prefix) // 'dui'
 <Field name="prefix" type="string" default="'dui'">Prefix shown in every log line, e.g. `[mytool]`.</Field>
 <Field name="theme" type="DuiTheme">Global theme overrides. See [Theme](./theme).</Field>
 
+### Next version <Badge type="warning">next</Badge>
+
+<Field name="useStrictInput" type="boolean" default="false">Strict SGR mouse input validation. When `true`, the mouse parser logs warnings via `console.warn` for malformed bytes — garbage between valid sequences, unknown wheel codes, and incomplete escape sequences. Useful for debugging terminal emulators with non-standard mouse protocols.</Field>
+
+```ts
+configure({ useStrictInput: true })
+// Every malformed SGR sequence now warns:
+// [dui] mouse: 4 byte(s) before SGR prefix: "junk"
+```
+
+<Field name="gestureWindowMs" type="number" default="500">Multi‑click gesture window in milliseconds. Two clicks at the same position within this window produce a `doubleclick` event; three produce a `tripleclick`. Users in high‑latency environments (SSH, tmux) may want a longer window.</Field>
+
+```ts
+configure({ gestureWindowMs: 1000 })  // 1 second window for SSH
+```
+
+The gesture window is read live on every click comparison, so mid‑session reconfiguration is picked up immediately without re-enabling mouse tracking.
+
 <TerminalPreview command="node config.js">
 {`\x1b[1m[mytool]\x1b[0m Starting build...`}
 </TerminalPreview>

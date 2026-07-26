@@ -48,7 +48,8 @@ export interface TreeOptions<T = string> {
 	};
 }
 
-const POINTER = "\u276f";
+// ◆ (U+25C6) — filled diamond as cursor pointer, consistent with multiselect/select
+const POINTER = "\u25c6";
 const COLLAPSED = "\u25b6";
 const EXPANDED = "\u25bc";
 
