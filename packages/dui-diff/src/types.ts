@@ -32,6 +32,21 @@ export interface DiffOptions {
 	addColor?: ColorStyle;
 	/** Override deletion color (default: red). */
 	delColor?: ColorStyle;
+	/** Override move (source + dest) color (default: yellow). */
+	moveColor?: ColorStyle;
+	/**
+	 * Enable block-level move detection. When a contiguous block of
+	 * removed lines matches a block of added lines (by content hash),
+	 * both are rendered as "moves" instead of separate deletions and
+	 * insertions. Default: `false` (opt-in because detection is O(n²)
+	 * in the number of blocks).
+	 */
+	detectMoves?: boolean;
+	/**
+	 * Minimum consecutive lines for a block to be considered in move
+	 * detection. Default: `3`.
+	 */
+	moveMinLines?: number;
 	/** Override context color (default: dim). */
 	contextColor?: ColorStyle;
 	/** Override hunk header color (default: cyan). */
@@ -123,10 +138,10 @@ export interface PatchOptions {
 /**
  * Resolved color palette used by the renderer.
  * Each slot is a function that wraps a string with the appropriate ANSI codes.
- */
-export type DiffColorPalette = {
+ */	export type DiffColorPalette = {
 	add: (s: string) => string;
 	del: (s: string) => string;
+	move: (s: string) => string;
 	context: (s: string) => string;
 	hunk: (s: string) => string;
 	linenum: (s: string) => string;

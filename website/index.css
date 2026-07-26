@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap");
-
 @import "tailwindcss";
 @import "boltdocs/theme/reset.css";
 @import "./terminal-theme.css";
@@ -19,7 +17,56 @@ button,
 	cursor: default;
 }
 
-::selection {
-	background-color: var(--color-primary-500);
-	color: #ffffff;
+/* ── Global focus-visible ring for all interactive elements ─── */
+:focus-visible {
+	outline: 2px solid var(--color-terminal-green, #3fc972);
+	outline-offset: 2px;
+}
+
+/* ── DuiShowcase crossfade animations ──────────────────────── */
+.showcase-fade-in {
+	animation: showcaseFadeIn 0.25s ease-out both;
+}
+
+.showcase-fade-out {
+	animation: showcaseFadeOut 0.25s ease-in both;
+}
+
+@keyframes showcaseFadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes showcaseFadeOut {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+/* ShowMeButton overlay entrance */
+.animate-overlay-in {
+	animation: overlayIn 0.2s ease-out both;
+}
+
+@keyframes overlayIn {
+	from {
+		opacity: 0;
+		transform: scale(0.95) translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+/* ── Code block copy button positioning ────────────────────── */
+pre {
+	position: relative;
 }

@@ -19,35 +19,57 @@ function tColor(slot: string): {
 	return resolveColor(slot, getConfig().theme);
 }
 
+/**
+ * Render inline tokens to ANSI string, supporting nested children.
+ *
+ * For tokens with a `children` array, the children are rendered recursively
+ * and wrapped in the parent's ANSI codes. This correctly handles:
+ *   `**bold _and italic_**` → \x1b[1mbold \x1b[3mand italic\x1b[23m\x1b[22m
+ */
 function renderInline(tokens: InlineToken[]): string {
 	return tokens
 		.map((t) => {
+			// Use children when available, otherwise t.content
+			const inner =
+				t.children && t.children.length > 0
+					? renderInline(t.children)
+					: t.content;
+
 			switch (t.type) {
 				case "text":
 					return t.content;
 				case "bold":
-					return `\x1b[1m${t.content}\x1b[22m`;
+					return `\x1b[1m${inner}\x1b[22m`;
 				case "italic":
-					return `\x1b[3m${t.content}\x1b[23m`;
+					return `\x1b[3m${inner}\x1b[23m`;
+				case "strikethrough":
+					return `\x1b[9m${inner}\x1b[29m`;
 				case "code": {
 					const color = tColor("markdown.codeInline");
 					const fg = color.apply(t.content);
-					// Apply the chip background only when the theme
-					// provides one. Pass `{ fg, bg }` for a chip look;
-					// pass a plain string for fg-only styling.
 					return color.bg ? color.bg(fg) : fg;
 				}
 				case "link": {
 					const linkText = tColor("markdown.linkText").apply;
 					const linkUrl = tColor("markdown.linkUrl").apply;
-					return `\x1b[4m${linkText(t.content)}\x1b[24m${linkUrl(` (${t.url})`)}`;
+					const url = t.url ?? "";
+					// OSC 8 hyperlink: \x1b]8;;<url>\x1b\\<text>\x1b]8;;\x1b\\
+					const hyperlink = `\x1b]8;;${url}\x1b\\\x1b[4m${linkText(t.content)}\x1b[24m\x1b]8;;\x1b\\`;
+					return `${hyperlink}${linkUrl(` (${url})`)}`;
+				}
+				case "autolink": {
+					const linkUrl = tColor("markdown.linkUrl").apply;
+					const url = t.url ?? "";
+					// Auto‑links render as underlined URL with OSC 8 hyperlink support.
+					// No separate text label — the URL itself is the visible text.
+					return `\x1b]8;;${url}\x1b\\\x1b[4m${linkUrl(url)}\x1b[24m\x1b]8;;\x1b\\`;
 				}
 				case "image": {
 					const imageText = tColor("markdown.imageText").apply;
 					return imageText(`[image: ${t.alt || t.content}]`);
 				}
 				default:
-					return t.content;
+					return inner;
 			}
 		})
 		.join("");

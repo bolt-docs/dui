@@ -1,7 +1,7 @@
 ---
 name: dui
 description: Terminal UI library for Node.js (@bdocs/dui). Use when the project imports from '@bdocs/dui' or when building CLIs with colored output, boxes, tables, spinners, progress bars, interactive prompts, etc.
-version: 0.5.0
+version: 0.6.0
 
 ---
 
@@ -28,16 +28,28 @@ All modules are imported from `@bdocs/dui`:
 ```typescript
 import {
   configure, colors, box, table, spinner, input, select,
-  info, warn, error, success, debug, createLogger,
+  info, warn, error,  success, debug, createLogger,
   bullet, ordered, tasks, steps, divider, confirm,
   multiselect, tree, animate, createProgressBar,
   stripAnsi, visibleLength, wrapAnsiWord, renderLine,
   renderStatic, terminalWidth, formatLog,
-  usePlugin, usePluginAsync, unregisterPlugin, runRenderHook,
-  emit, DUI_VERSION, countRenderLines, colorize, parseColor,
+  usePlugin, usePluginAsync, unregisterPlugin, runRenderHook, runRenderHookAsync,
+  emit, renderWith, DUI_VERSION, countRenderLines, colorize, parseColor,
   interpolateColor, applyStyle, toAnsiFg, toAnsiBg, toAnsiFgBg,
-  isColorSupported, setColorSupported, colorMap, dividerLog,
-  double, single, round, createSpinner, lerp
+  isColorSupported, setColorSupported, refreshColorSupport, colorMap, dividerLog,
+  double, single, round, createSpinner, lerp,
+  badge, kbd, tabs, section, grid, modal,
+  gradient, gradientPresets, presets,
+  getAccessibilityInfo, isPlainMode, isReducedMotion, refreshAccessibility,
+  formatBoxPlain, formatDividerPlain, formatKbdPlain, formatModalPlain,
+  formatSectionPlain, formatTabsPlain, formatActionToken, formatActionTokens,
+  enableMouse, disableMouse, enableMouseMove, disableMouseMove,
+  onMouseEvent, parseSGRMouseData, parseSGRMouseDataAll,
+  registerClickableArea, unregisterClickableArea,
+  registerHoverableArea, unregisterHoverableArea,
+  getClickedItem, getHoveredItem, getMousePosition,
+  defineClass, getClass, removeClass, resetClasses, builtinClasses, applyClass,
+  resolveColor, resolveColorSimple, listPlugins, getPlugin, isPluginReady, awaitPluginsReady
 } from '@bdocs/dui'
 ```
 
@@ -114,10 +126,220 @@ toAnsiBg('#1a1a2e')   // → '\x1b[48;2;26;26;46m'
 ### Color control
 
 ```typescript
-import { isColorSupported, setColorSupported } from '@bdocs/dui'
+import { isColorSupported, setColorSupported, refreshColorSupport } from '@bdocs/dui'
 
 isColorSupported  // boolean, respects NO_COLOR and TTY
 setColorSupported(false)  // force disable (useful in tests)
+refreshColorSupport()    // re-detect terminal color support at runtime
+```
+
+## Badge
+
+```typescript
+import { badge } from '@bdocs/dui'
+
+// Status badges with colored backgrounds
+console.log(badge('PASS', 'success'))
+console.log(badge('FAIL', 'error'))
+console.log(badge('WARN', 'warning'))
+console.log(badge('INFO', 'info'))
+
+// Available statuses: 'success' | 'error' | 'warning' | 'info' | 'muted'
+// With custom label
+console.log(badge('ACTIVE', 'success', { label: 'Status' }))
+```
+
+## Kbd (keyboard shortcuts)
+
+```typescript
+import { kbd } from '@bdocs/dui'
+
+// Render keyboard shortcuts for different platforms
+console.log(kbd('Ctrl+C'))                    // Auto-detects platform
+console.log(kbd('Cmd+S', { platform: 'mac' })) // Force macOS style
+console.log(kbd('Ctrl+Shift+P', { platform: 'win' }))
+
+// Supports: mac, win, linux
+// Mac: ⌘ ⌥ ⇧ ⌃
+// Win/Linux: Ctrl Alt Shift Win
+```
+
+## Tabs
+
+```typescript
+import { tabs } from '@bdocs/dui'
+
+// Horizontal tabs for organizing sections
+console.log(tabs([
+  { label: 'Overview', active: true },
+  { label: 'Settings', active: false },
+  { label: 'Help', active: false, disabled: true },
+]))
+
+// With colors
+console.log(tabs([
+  { label: 'Code', active: true },
+  { label: 'Preview', active: false },
+], {
+  colors: {
+    active: { fg: '#22c55e', bg: '#1a1a2e' },
+    inactive: '#888',
+  },
+}))
+```
+
+## Section
+
+```typescript
+import { section } from '@bdocs/dui'
+
+// Section header with optional suffix
+console.log(section('Configuration'))
+console.log(section('Package Details', 'v2.0.0'))
+
+// With colors
+console.log(section('Build Output', { colors: { title: '#ff6600', suffix: '#888' } }))
+```
+
+## Grid
+
+```typescript
+import { grid } from '@bdocs/dui'
+
+// Grid layout with columns
+console.log(grid([
+  { content: 'Left cell', width: 20 },
+  { content: 'Center cell', width: 20, align: 'center' },
+  { content: 'Right cell', width: 20, align: 'right' },
+]))
+```
+
+## Modal
+
+```typescript
+import { modal } from '@bdocs/dui'
+
+// Interactive modal dialog
+const choice = await modal('Delete file?', {
+  buttons: [
+    { label: 'Cancel', value: false },
+    { label: 'Delete', value: true, variant: 'danger' },
+  ],
+})
+```
+
+## Gradient
+
+```typescript
+import { gradient, gradientPresets } from '@bdocs/dui'
+
+// Create color gradients for terminal output
+const sunset = gradient('#ff6b6b', '#ffd93d')
+console.log(sunset('Sunset gradient'))
+
+// Built-in presets
+console.log(gradientPresets.ocean('Deep blue text'))
+console.log(gradientPresets.neon('Bright neon text'))
+
+// Available presets: ocean, sunset, neon, forest, candy, fire, ice, aurora
+```
+
+## Preset themes
+
+```typescript
+import { presets } from '@bdocs/dui'
+
+// Apply a pre-built theme palette
+configure({ theme: presets.forest })
+configure({ theme: presets.ocean })
+configure({ theme: presets.dracula })
+
+// Available: forest, ocean, dracula, nord, solarized, monokai, github, oneDark
+```
+
+## Plain mode (accessibility)
+
+```typescript
+import {
+  isPlainMode, isReducedMotion, refreshAccessibility, getAccessibilityInfo,
+  formatBoxPlain, formatDividerPlain, formatKbdPlain,
+  formatModalPlain, formatSectionPlain, formatTabsPlain,
+  formatActionToken, formatActionTokens,
+} from '@bdocs/dui'
+
+// Detect accessibility state
+isPlainMode()       // true when ANSI-free text-only output is active
+isReducedMotion()   // true when user prefers reduced motion
+refreshAccessibility()  // re-detect
+
+// Accessibility info object
+getAccessibilityInfo()
+// → { plain: boolean, reducedMotion: boolean, colorBlind: boolean }
+
+// Format components for plain (non-ANSI) output
+formatBoxPlain(['content'], { title: 'Box' })
+formatDividerPlain()
+formatKbdPlain('Ctrl+C')
+formatModalPlain('message', { buttons: [...] })
+formatSectionPlain('title')
+formatTabsPlain([...])
+
+// Action tokens (screen-reader-friendly)
+formatActionToken('Build complete', 'success')
+formatActionTokens(['Build', 'Test', 'Deploy'])
+```
+
+## Mouse support
+
+```typescript
+import {
+  enableMouse, disableMouse, enableMouseMove, disableMouseMove,
+  onMouseEvent, parseSGRMouseData, parseSGRMouseDataAll,
+  registerClickableArea, unregisterClickableArea,
+  registerHoverableArea, unregisterHoverableArea,
+  getClickedItem, getHoveredItem, getMousePosition,
+} from '@bdocs/dui'
+
+// Enable SGR mouse tracking
+enableMouse()
+enableMouseMove()  // also track hover (position without clicks)
+
+// Subscribe to raw mouse events
+onMouseEvent((event) => {
+  if (event.type === 'click') console.log('Click at:', event.x, event.y)
+  if (event.type === 'wheel') console.log('Wheel:', event.wheel, event.x, event.y)
+  if (event.type === 'move') console.log('Moved to:', event.x, event.y)
+})
+
+// Parse mouse data from stdin buffer
+const events = parseSGRMouseDataAll(buffer)
+// → Array<MouseEvent | MouseWheelEvent>
+
+// Register interactive areas (used by select, multiselect, tree internally)
+registerClickableArea({ id: 'btn-1', type: 'custom', bounds: { left: 0, top: 0, width: 10, height: 1 }, data: {} })
+getClickedItem(x, y)  // → the clickable area at (x, y) or undefined
+getMousePosition()    // → { x, y } or null
+
+// Cleanup
+disableMouse()
+disableMouseMove()
+```
+
+## Style classes
+
+```typescript
+import { defineClass, getClass, removeClass, resetClasses, builtinClasses, applyClass } from '@bdocs/dui'
+
+// Define and apply custom style classes
+defineClass('my-style', { fg: '#ff6600', bg: '#1a1a2e', bold: true })
+const styled = applyClass('my-style', 'text content')
+
+// Built-in classes: 'hover', 'active', 'selected', 'disabled'
+builtinClasses()  // → Map of registered classes
+
+// Manage classes
+removeClass('my-style')
+resetClasses()  // clear all custom classes
 ```
 
 ## Semantic logger
@@ -715,21 +937,88 @@ type PluginEvents = {
   unregister:      () => void
   configure:       (config: DuiConfig) => void
   'theme-changed': (theme: DuiTheme) => void
+  'plain-changed': (plain: boolean) => void
   'before-render': (ctx: RenderContext) => void
   'after-render':  (ctx: RenderContext) => void
   'terminal-resize': (cols: number, rows: number) => void
+  'wheel-up':   (event: MouseWheelEvent) => void
+  'wheel-down': (event: MouseWheelEvent) => void
 }
 
 api.on('register', () => { /* fired after this plugin's setup resolves */ })
 api.on('configure', (config) => { /* fired on every configure() */ })
 api.on('theme-changed', (theme) => { /* fired only when configure() touches theme */ })
+api.on('plain-changed', (plain) => { /* fired when configure({ plain }) toggles accessibility */ })
+api.on('wheel-up', (event) => { /* fired on every SGR wheel-up (button 64) */ })
+api.on('wheel-down', (event) => { /* fired on every SGR wheel-down (button 65) */ })
 ```
 
 The plugin bus is bridged to `configure()` via `onConfigChange` to avoid circular imports — your `register` handler intentionally fires *once* after a queued `usePluginAsync` chain drains.
 
+### Async render hooks
+
+```typescript
+import { runRenderHookAsync } from '@bdocs/dui'
+
+// Hooks can be sync or async; they chain in priority order
+await runRenderHookAsync('my-channel', input, ctx)
+
+// Priority: higher = runs first. "first" = first, "last" = last.
+api.registerRenderHook('my-channel', async (input, ctx) => {
+  return transform(input)
+}, { priority: 'first' })
+
+// The sync runRenderHook throws if it encounters an async hook
+```
+
+### Plugin renderers + capabilities
+
+```typescript
+import { renderWith, listPlugins, getPlugin, isPluginReady, awaitPluginsReady } from '@bdocs/dui'
+
+// Register a renderer (like qrcode, image, markdown)
+api.registerRenderer('my-renderer', (input, opts) => {
+  return renderedOutput
+})
+
+// Discover renderers registered by other plugins
+const renderer = api.getRenderer('qrcode')
+if (renderer) {
+  const result = await renderer('https://example.com')
+}
+
+// Or use the exported helper (throws if no renderer registered)
+const output = await renderWith('qrcode', 'https://example.com')
+
+// Introspect plugin capabilities
+api.capabilities.themeSlots   // → ['my.slot']
+api.capabilities.renderHooks  // → ['my-channel']
+api.capabilities.renderers    // → ['my-renderer']
+
+// Global introspection
+listPlugins()  // → PluginMeta[] (sorted by registration order)
+getPlugin('@dui-toolkit/plugin-markdown')  // → PluginMeta | undefined
+isPluginReady('@dui-toolkit/plugin-qrcode')  // → boolean
+
+// Wait for plugins to finish loading
+await awaitPluginsReady(['@dui-toolkit/plugin-markdown', '@dui-toolkit/plugin-diff'])
+```
+
+### Plugin shared state
+
+```typescript
+// Each plugin has its own namespace for sharing data
+api.shared.set('counter', 0)
+api.shared.get('counter')      // → 0
+api.shared.has('counter')      // → true
+api.shared.keys()              // → ['counter']
+api.shared.delete('counter')   // → true
+// Shared map is automatically cleared on unregisterPlugin(name)
+```
+
 ### Real example — what an `@dui-toolkit/plugin-*` looks like
 
-The shipped plugins opt into the v2 surface: `markdownPlugin`, `diffPlugin`, `chartPlugin`, `qrcodePlugin`, `imagePlugin` are each a `DuiPlugin` whose `setup()` registers the slots the renderer consumes. Each declares `peerDependencies: { dui: '^0.5.0' }` so a major-version mismatch warns via `logger.warn` at boot.
+The shipped plugins opt into the v2 surface: `markdownPlugin`, `diffPlugin`, `chartPlugin`, `qrcodePlugin`, `imagePlugin`, `notifyPlugin` are each a `DuiPlugin` whose `setup()` registers the slots the renderer consumes. Each declares `peerDependencies: { dui: '^0.6.0' }` so a major-version mismatch warns via `logger.warn` at boot.
 
 See [`examples/16-plugin-stack`](https://github.com/bolt-docs/dui/tree/master/examples/16-plugin-stack) for a composition example that registers three plugins in one chain and applies a unified theme.
 

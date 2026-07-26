@@ -12,6 +12,8 @@ import { renderMatrixRows } from "./render";
 import type { QRCodeRenderOptions } from "./types";
 import { formatLabel, resolveCellChars, wrapRowSgr } from "./utils";
 
+export type { AnimateQrOptions, QrAnimationMode } from "./animate";
+export { animateQr } from "./animate";
 export type { QrBitMatrix } from "./render";
 export { renderMatrixRows } from "./render";
 export type { ErrorCorrectionLevel, QRCodeRenderOptions } from "./types";

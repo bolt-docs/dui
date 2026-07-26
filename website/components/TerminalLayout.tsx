@@ -16,11 +16,20 @@ export default function TerminalLayout({ children }: LayoutProps) {
 
 	return (
 		<DocsLayout>
+			{/* Skip-to-content link for keyboard users */}
+			<a href="#main-content" className="skip-to-content">
+				Skip to content
+			</a>
+
 			<TerminalNavbar />
 			<DocsLayout.Body className="max-w-[88rem] mx-auto w-full bg-main h-full">
 				<TerminalSidebar />
 
-				<DocsLayout.Content className="scroll-smooth">
+				<DocsLayout.Content
+					id="main-content"
+					className="scroll-smooth outline-none"
+					tabIndex={-1}
+				>
 					<DocsLayout.ContentMdx className="terminal-content-mdx max-w-4xl mx-auto pt-8 pb-20 px-6">
 						<DocsLayout.Header>
 							<div className="flex flex-col gap-3 mb-4 border-b border-strong pb-4">
@@ -37,18 +46,20 @@ export default function TerminalLayout({ children }: LayoutProps) {
 								</div>
 							</div>
 							{currentRoute?.title && (
-								<h1 className="text-3xl font-bold text-body mt-6 mb-2 font-mono">
+								<h1 className="text-3xl font-bold text-body mt-6 mb-2 font-display tracking-tight">
 									{currentRoute.title}
 								</h1>
 							)}
 							{currentRoute?.description && (
-								<p className="text-paragraph mb-8 text-sm leading-relaxed">
+								<p className="text-paragraph mb-8 text-sm leading-relaxed max-w-prose">
 									{currentRoute.description}
 								</p>
 							)}
 						</DocsLayout.Header>
 
-						<ErrorBoundary>{children}</ErrorBoundary>
+						<main id="docs-content">
+							<ErrorBoundary>{children}</ErrorBoundary>
+						</main>
 
 						<TerminalPageNav />
 					</DocsLayout.ContentMdx>

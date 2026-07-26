@@ -10,6 +10,12 @@ import TerminalPreview from '../../../components/TerminalPreview'
 import { confirm, formatLog, input, multiselect, select, tree } from '@bdocs/dui'
 ```
 
+## Live demo
+
+<ConfirmPromptDemo />
+
+---
+
 ## input
 
 ```ts

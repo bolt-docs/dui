@@ -86,20 +86,24 @@ export function truncateTo(s: string, max: number, suffix = "…"): string {
  */
 export function gutterFor(
 	style: GutterStyle,
-	kind: "add" | "del" | "context",
+	kind: "add" | "del" | "move" | "context",
 ): string {
 	switch (style) {
 		case "bracket":
 			if (kind === "context") return " │ │";
+			if (kind === "move") return " │M│";
 			return kind === "add" ? " │+│" : " │-│";
 		case "bar":
 			if (kind === "context") return " |  ";
+			if (kind === "move") return " | M";
 			return kind === "add" ? " | +" : " | -";
 		case "compact":
 			if (kind === "context") return "    ";
+			if (kind === "move") return " M  ";
 			return kind === "add" ? " +  " : " -  ";
 		case "arrow":
 			if (kind === "context") return " ↔  ";
+			if (kind === "move") return " ⇄  ";
 			return kind === "add" ? " →  " : " ←  ";
 	}
 }

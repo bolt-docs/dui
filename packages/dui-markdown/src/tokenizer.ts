@@ -1,8 +1,10 @@
 export interface InlineToken {
-	type: "text" | "bold" | "italic" | "code" | "link" | "image";
+	type: "text" | "bold" | "italic" | "strikethrough" | "code" | "link" | "image" | "autolink";
 	content: string;
 	url?: string;
 	alt?: string;
+	/** Nested inline tokens (for `**bold _and italic_**`). */
+	children?: InlineToken[];
 }
 
 export interface BlockTokenHeading {
@@ -60,70 +62,186 @@ const CHECKBOX_RE = /^\[([ xX])\]\s+(.*)$/;
 const QUOTE_RE = /^>\s?(.*)$/;
 const TABLE_RE = /^\|(.+)\|$/;
 const THEMATIC_BREAK_RE = /^(-{3,}|\*{3,}|_{3,})\s*$/;
-const BOLD_RE = /\*\*(.+?)\*\*/g;
-const ITALIC_RE = /\*(.+?)\*/g;
-const CODE_RE = /`([^`]+)`/g;
-const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
-const IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
+/* ── Inline tokenizer (char-by-char state machine) ──────────── */
+
+type DelimType = "bold" | "italic" | "strikethrough" | "code";
+
+/**
+ * Parse inline text into a flat array of InlineToken, with children
+ * nested for `**bold _italic_**` → bold [text, italic [text]].
+ *
+ * Algorithm:
+ *  1. Walk the string char-by-char.
+ *  2. When a delimiter opens (`**`, `*`, `~~`, `` ` ``), push it on a stack.
+ *  3. When a delimiter closes, pop from the stack and extract the
+ *     substring delimited by open and close, then recursively
+ *     tokenize it as children.
+ *  4. Links (`[text](url)`) and images (`![alt](url)`) are matched
+ *     inline when not inside code spans.
+ *  5. Unmatched delimiters render as literal text.
+ */
 export function tokenizeInline(text: string): InlineToken[] {
-	const tokens: InlineToken[] = [];
-	let remaining = text;
+	const result: InlineToken[] = [];
+	let pos = 0;
 
-	const regexps: { re: RegExp; build: (...m: string[]) => InlineToken }[] = [
-		{
-			re: IMAGE_RE,
-			build: (_, alt, url) => ({
-				type: "image" as const,
-				content: alt || url,
-				alt,
+	while (pos < text.length) {
+		const remaining = text.slice(pos);
+
+		// Images: ![alt](url)
+		const imgMatch = remaining.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+		if (imgMatch) {
+			result.push({
+				type: "image",
+				content: imgMatch[1] || imgMatch[2],
+				alt: imgMatch[1] || undefined,
+				url: imgMatch[2],
+			});
+			pos += imgMatch[0].length;
+			continue;
+		}
+
+		// Auto‑links: bare URL like https://example.com
+		const autoUrlMatch = remaining.match(
+			/^(https?:\/\/[^\s<>"'(){}[\]]+(?:\([^\s<>"'(){}[\]]*\))*[^\s<>"'(){}[\].,;:!?]*)/i,
+		);
+		if (autoUrlMatch) {
+			const url = autoUrlMatch[1];
+			result.push({
+				type: "autolink",
+				content: url,
 				url,
-			}),
-		},
-		{
-			re: LINK_RE,
-			build: (_, content, url) => ({ type: "link" as const, content, url }),
-		},
-		{
-			re: CODE_RE,
-			build: (_, content) => ({ type: "code" as const, content }),
-		},
-		{
-			re: BOLD_RE,
-			build: (_, content) => ({ type: "bold" as const, content }),
-		},
-		{
-			re: ITALIC_RE,
-			build: (_, content) => ({ type: "italic" as const, content }),
-		},
-	];
+			});
+			pos += url.length;
+			continue;
+		}
 
-	while (remaining.length > 0) {
-		let found = false;
-		for (const { re, build } of regexps) {
-			re.lastIndex = 0;
-			const match = re.exec(remaining);
-			if (match && match.index === 0) {
-				if (match.index > 0) {
-					tokens.push({
-						type: "text",
-						content: remaining.slice(0, match.index),
-					});
-				}
-				tokens.push(build(...match));
-				remaining = remaining.slice(match[0].length);
-				found = true;
-				break;
+		// Links: [text](url)
+		const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
+		if (linkMatch) {
+			result.push({
+				type: "link",
+				content: linkMatch[1],
+				url: linkMatch[2],
+			});
+			pos += linkMatch[0].length;
+			continue;
+		}
+
+		// Inline code: `text`
+		if (text[pos] === "`") {
+			let fenceLen = 1;
+			while (text[pos + fenceLen] === "`") fenceLen++;
+			const closeIdx = text.indexOf("`".repeat(fenceLen), pos + fenceLen);
+			if (closeIdx >= 0) {
+				const content = text.slice(pos + fenceLen, closeIdx);
+				result.push({ type: "code", content });
+				pos = closeIdx + fenceLen;
+				continue;
 			}
 		}
-		if (!found) {
-			tokens.push({ type: "text", content: remaining[0] });
-			remaining = remaining.slice(1);
+
+		// Strikethrough: ~~text~~
+		if (
+			text[pos] === "~" &&
+			text[pos + 1] === "~" &&
+			text[pos + 2] !== undefined
+		) {
+			const closeIdx = text.indexOf("~~", pos + 2);
+			if (closeIdx >= 0) {
+				const inner = text.slice(pos + 2, closeIdx);
+				result.push({
+					type: "strikethrough",
+					content: inner,
+					children: tokenizeInline(inner),
+				});
+				pos = closeIdx + 2;
+				continue;
+			}
+		}
+
+		// Bold: **text**
+		if (
+			text[pos] === "*" &&
+			text[pos + 1] === "*" &&
+			text[pos + 2] !== undefined &&
+			text[pos + 2] !== "*"
+		) {
+			const closeIdx = text.indexOf("**", pos + 2);
+			if (closeIdx >= 0) {
+				const inner = text.slice(pos + 2, closeIdx);
+				result.push({
+					type: "bold",
+					content: inner,
+					children: tokenizeInline(inner),
+				});
+				pos = closeIdx + 2;
+				continue;
+			}
+		}
+
+		// Italic: *text* (only when not inside **)
+		if (
+			text[pos] === "*" &&
+			text[pos + 1] !== "*" &&
+			text[pos + 1] !== undefined
+		) {
+			const closeIdx = text.indexOf("*", pos + 1);
+			if (closeIdx >= 0 && text[closeIdx + 1] !== "*") {
+				const inner = text.slice(pos + 1, closeIdx);
+				result.push({
+					type: "italic",
+					content: inner,
+					children: tokenizeInline(inner),
+				});
+				pos = closeIdx + 1;
+				continue;
+			}
+		}
+
+		// Regular character — accumulate into a text token
+		let textContent = "";
+		while (pos < text.length) {
+			const ch = text[pos];
+			const next = text[pos + 1] ?? "";
+
+			// Stop at any delimiter start
+			if (
+				ch === "`" ||
+				ch === "[" ||
+				(ch === "!" && next === "[") ||
+				(ch === "~" && next === "~") ||
+				(ch === "*" && next === "*") ||
+				(ch === "*" && next !== "*")
+			)
+				break;
+
+			// Stop at URL start (so https://… gets its own autolink token)
+			if (
+				ch === "h" &&
+				text.slice(pos, pos + 8).toLowerCase() === "https://"
+			) {
+				break;
+			}
+			if (
+				ch === "h" &&
+				text.slice(pos, pos + 7).toLowerCase() === "http://"
+			) {
+				break;
+			}
+
+			textContent += ch;
+			pos++;
+		}
+		if (textContent) {
+			result.push({ type: "text", content: textContent });
 		}
 	}
 
-	return tokens;
+	return result;
 }
+
+/* ── Block-level tokenizer ───────────────────────────────────── */
 
 function parseListItem(line: string): {
 	checked: boolean | null;

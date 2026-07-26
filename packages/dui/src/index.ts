@@ -202,3 +202,40 @@ export {
 	visibleLength,
 	wrapAnsiWord,
 } from "./utils";
+export type { PaginateOptions } from "./paginate";
+export {
+	paginate,
+	paginateInteractive,
+	terminalHeight,
+} from "./paginate";
+export type { SurfaceCell, SurfaceOptions } from "./surface";
+export { RenderSurface, SurfaceOverlay } from "./surface";
+export type { TerminalCapabilities } from "./capabilities";
+export {
+	colorDepthLabel,
+	getCapabilities,
+	hasHyperlinks,
+	hasKitty,
+	hasTrueColor,
+	refreshCapabilities,
+	setCapabilities,
+} from "./capabilities";
+export type { BatchHandle, BatchOptions } from "./batch";
+export { createBatch, getDefaultBatch, resetDefaultBatch } from "./batch";
+export type {
+	JsonNode,
+	JsonNodeType,
+	JsonOutputOptions,
+	JsonStyles,
+	JsonMeta,
+} from "./json-output";
+export {
+	ansiToJson,
+	diffNode,
+	formatJson,
+	imageNode,
+	parseSgr,
+	progressNode,
+	spinnerNode,
+	widgetNode,
+} from "./json-output";

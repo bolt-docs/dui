@@ -35,6 +35,8 @@ const cfg = getConfig()
 console.log(cfg.prefix)
 ```
 
+<ShowMeButton demo="logger" />
+
 ## Theming
 
 Define a global color theme that every component picks up automatically:
@@ -55,6 +57,8 @@ configure({
 })
 ```
 
+<ShowMeButton demo="theme" />
+
 ### Preset palettes
 
 DUI ships with curated color presets that you can use as a theme:
@@ -64,6 +68,8 @@ import { configure, presets } from '@bdocs/dui'
 
 configure({ theme: presets.dracula })
 ```
+
+
 
 Available presets: `dracula`, `nord`, `gruvbox`, `solarized`, `catppuccin`, `oneDark`, `monokai`, `github`.
 
@@ -100,6 +106,8 @@ error('Failed to connect', err)
 debug('Verbose trace')  // only shown with DEBUG or BOLTDOCS_DEBUG env
 ```
 
+<ShowMeButton demo="logger" />
+
 ## Box
 
 ```ts
@@ -110,6 +118,8 @@ double('Title', ['Content'])
 single('Title', ['Content'])
 round('Title', ['Content'])
 ```
+
+<ShowMeButton demo="box" />
 
 ## Lists
 
@@ -123,6 +133,8 @@ tasks([
   { label: 'Configure', done: false },
 ])
 ```
+
+<ShowMeButton demo="lists" />
 
 ## Divider
 
@@ -142,6 +154,8 @@ badge({ label: 'PASS', status: 'success' })  // green badge
 badge({ label: 'FAIL', status: 'error' })    // red badge
 ```
 
+<ShowMeButton demo="badge" />
+
 ## Kbd (Keyboard Shortcut)
 
 ```ts
@@ -159,6 +173,8 @@ import { section } from '@bdocs/dui'
 section({ title: 'Configuration' })  // "── Configuration ──────"
 section({ title: 'Logs', align: 'left' })
 ```
+
+<ShowMeButton demo="section" />
 
 ## Tabs
 
@@ -194,6 +210,8 @@ grid({
 })
 ```
 
+
+
 ## Progress
 
 ```ts
@@ -225,6 +243,8 @@ const result = await task('installing', 3, async (ctx) => {
 })
 ```
 
+<ShowMeButton demo="progress" />
+
 ## Spinner
 
 ```ts
@@ -235,6 +255,8 @@ sp.start()
 // ... work ...
 sp.stop('success', 'Done!')
 ```
+
+<ShowMeButton demo="spinner" />
 
 ## Interactive Prompts
 
@@ -278,6 +300,8 @@ const value = await tree('Select config:', {
 const ok = await confirm('Continue?')
 ```
 
+<ShowMeButton demo="confirm" />
+
 ## Animation
 
 ```ts
@@ -309,6 +333,8 @@ tl.add({ duration: 500, onFrame: render2 }, { after: true })
 tl.play()
 ```
 
+<ShowMeButton demo="animation" />
+
 ## Preset Palettes
 
 ```ts
@@ -323,6 +349,8 @@ configure({ theme: presets.oneDark })
 configure({ theme: presets.monokai })
 configure({ theme: presets.github })
 ```
+
+<ShowMeButton demo="gradient" />
 
 ## Gradient
 

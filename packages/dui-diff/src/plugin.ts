@@ -6,6 +6,7 @@ import type { DiffOptions } from "./types";
 const DEFAULTS: Record<keyof typeof SLOTS, string> = {
 	add: "#22c55e",
 	del: "#dc2626",
+	move: "#eab308",
 	context: "#888888",
 	hunk: "#06b6d4",
 	linenum: "#94a3b8",

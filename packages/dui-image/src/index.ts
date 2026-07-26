@@ -18,7 +18,16 @@ export {
 export type { GifFrame, GifOptions } from "./gif";
 // ── GIF animation ──────────────────────────────────────────────
 export { animateGif, renderGifFrames } from "./gif";
+export type { LoadResult } from "./load";
+// ── Image loading (sharp optional) ─────────────────────────────
+export { hasSharp, loadPixels, nearestNeighborResize } from "./load";
 export { imagePlugin } from "./plugin";
-export type { ImageRenderOptions } from "./render";
+export type { ImageRenderOptions, KittyRenderOptions } from "./render";
 // ── High-level rendering ───────────────────────────────────────
-export { renderAnsi, renderImage } from "./render";
+export {
+	deleteKittyImage,
+	queryKittyCapabilities,
+	renderAnsi,
+	renderImage,
+	renderKitty,
+} from "./render";

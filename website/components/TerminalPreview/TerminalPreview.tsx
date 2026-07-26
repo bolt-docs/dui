@@ -1,4 +1,4 @@
-import { AnimatedProgressBar, ansiToReact } from "./ansi";
+import { AnimatedProgressBar, ansiToReact, FG_COLORS, BRIGHT_FG_COLORS } from "./ansi";
 import { TERMINAL_COLORS } from "./constants";
 
 export { AnimatedProgressBar };
@@ -11,11 +11,13 @@ export interface TerminalPreviewProps {
 	screenClassName?: string;
 }
 
+const DIVIDER_CHARS = new Set(["─", "═", "━", "·", "-", "*"]);
+
 function isDividerLine(line: string): boolean {
 	const clean = line.replace(/\u001b\[[0-9;]*m/g, "").trim();
 	if (clean.length < 5) return false;
 	const char = clean[0];
-	if (!["─", "═", "━", "·", "-", "*"].includes(char)) return false;
+	if (!DIVIDER_CHARS.has(char)) return false;
 	for (let i = 1; i < clean.length; i++) {
 		if (clean[i] !== char) return false;
 	}
@@ -27,32 +29,8 @@ function extractAnsiColor(line: string): string | undefined {
 	if (!match) return undefined;
 	const codes = match[1].split(";").map(Number);
 	for (const code of codes) {
-		if (code >= 30 && code <= 37) {
-			const colorsMap = [
-				"black",
-				"red",
-				"green",
-				"yellow",
-				"blue",
-				"magenta",
-				"cyan",
-				"white",
-			];
-			return colorsMap[code - 30];
-		}
-		if (code >= 90 && code <= 97) {
-			const brightColorsMap = [
-				"gray",
-				"bright-red",
-				"bright-green",
-				"bright-yellow",
-				"bright-blue",
-				"bright-magenta",
-				"bright-cyan",
-				"bright-white",
-			];
-			return brightColorsMap[code - 90];
-		}
+		if (code >= 30 && code <= 37) return FG_COLORS[code - 30];
+		if (code >= 90 && code <= 97) return BRIGHT_FG_COLORS[code - 90];
 	}
 	return undefined;
 }
@@ -109,27 +87,37 @@ export default function TerminalPreview({
 	}
 
 	return (
-		<div className="my-6 overflow-hidden rounded-lg border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs sm:text-sm">
+		<div
+			className="my-8 overflow-hidden rounded-xl border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs sm:text-sm shadow-sm"
+			style={{ contentVisibility: "auto", containIntrinsicSize: "200px" }}
+			role="region"
+			aria-label={`Terminal preview: ${title}`}
+		>
 			{/* Terminal Top Bar */}
-			<div className="flex items-center border-b dark:border-neutral-900 border-strong dark:bg-neutral-900/60 bg-neutral-100 text-neutral-700 dark:text-black px-4 py-2 select-none">
-				<div className="text-xs text-neutral-500 dark:text-neutral-500 font-semibold">
+			<div className="flex items-center border-b border-strong bg-soft/80 dark:bg-neutral-900/80 text-neutral-600 dark:text-neutral-400 px-4 py-2.5 select-none gap-3">
+				<div className="flex items-center gap-1.5">
+					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
+					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
+					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
+				</div>
+				<div className="text-xs text-neutral-500 dark:text-neutral-500 font-medium font-sans tracking-tight">
 					{title}
 				</div>
 			</div>
 
 			{/* Terminal Screen */}
 			<div
-				className={`p-4 overflow-x-auto whitespace-pre font-mono ${screenClassName || ""}`}
+				className={`p-5 overflow-x-auto overflow-y-auto whitespace-pre font-mono leading-relaxed ${screenClassName || ""}`}
 			>
 				{command && (
-					<div className="mb-2 text-neutral-500 dark:text-neutral-400 select-none">
-						<span className="text-green-600 dark:text-green-500 font-bold">
+					<div className="mb-3 text-neutral-500 dark:text-neutral-400 select-none text-xs">
+						<span className="text-terminal-green font-bold">
 							${" "}
 						</span>
 						{command}
 					</div>
 				)}
-				<div className="flex flex-col gap-0 leading-tight tracking-normal font-mono select-text">
+				<div className="flex flex-col gap-0 leading-snug tracking-normal font-mono select-text">
 					{contentLines.map((line, idx) => {
 						if (isDividerLine(line)) {
 							const clean = line.replace(/\u001b\[[0-9;]*m/g, "").trim();

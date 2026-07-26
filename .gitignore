@@ -9,3 +9,7 @@ coverage/
 .DS_Store
 package-lock.json
 yarn.lock
+.agents/
+.agents.bak/
+.freebuff/
+.vite-react-ssg-temp/
