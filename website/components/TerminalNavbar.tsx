@@ -22,7 +22,7 @@ export function TerminalNavbar() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const showSidebarToggle = pathname.startsWith("/docs");
 	return (
-		<Navbar className="bg-main backdrop-blur-md border-b border-strong">
+		<Navbar className="bg-main backdrop-blur-md border-b border-strong shadow-none">
 			<Navbar.Content className="max-w-352 mx-auto w-full px-6">
 				<Navbar.Left>
 					{showSidebarToggle ? (

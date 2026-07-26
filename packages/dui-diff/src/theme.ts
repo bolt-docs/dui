@@ -48,6 +48,7 @@ import type { DiffColorPalette, DiffOptions } from "./types";
 export const SLOTS = {
 	add: "diff.add",
 	del: "diff.del",
+	move: "diff.move",
 	context: "diff.context",
 	hunk: "diff.hunk",
 	linenum: "diff.linenum",
@@ -62,13 +63,13 @@ export type SlotKey = keyof typeof SLOTS;
 
 /**
  * Resolve the entire palette for one diff render call.
- */
-export function getPalette(options: DiffOptions = {}): DiffColorPalette {
+ */	export function getPalette(options: DiffOptions = {}): DiffColorPalette {
 	const themeSlice = readThemeSlice();
 
 	return {
 		add: resolveSlot("add", options.addColor, themeSlice),
 		del: resolveSlot("del", options.delColor, themeSlice),
+		move: resolveSlot("move", options.moveColor, themeSlice),
 		context: resolveSlot("context", options.contextColor, themeSlice),
 		hunk: resolveSlot("hunk", options.hunkColor, themeSlice),
 		linenum: resolveSlot("linenum", options.linenumColor, themeSlice),
@@ -170,7 +171,7 @@ function paintFromColorStyle(
  * `NO_COLOR` / `FORCE_COLOR` / TTY detection. See
  * https://no-color.org for the spec.
  */
-// biome-ignore lint/correctness/noUnusedVariables: kept for future slot gating
+	// biome-ignore lint/correctness/noUnusedVariables: kept for future slot gating
 function detectColorsAtRenderTime(): boolean {
 	if ("NO_COLOR" in process.env) return false;
 	if (
@@ -215,6 +216,8 @@ function defaultFor(slot: SlotKey): (s: string) => string {
 		// line-number and content emissions are bundled separately.
 		case "linenum":
 			return compound("90", "39"); // bold + bright black
+		case "move":
+			return wrap("33", "39"); // yellow (single)
 		case "gutter":
 			return compound("90", "39"); // bold + bright black
 		case "fileHeader":

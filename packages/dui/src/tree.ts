@@ -18,15 +18,37 @@ import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
 
+/**
+ * A single node in the tree hierarchy.
+ *
+ * @template T The type of the value associated with this node (default `string`).
+ */
 export interface TreeNode<T = string> {
+	/** Display label shown in the tree. */
 	label: string;
+	/** Value returned when this node (or a leaf under it) is selected. */
 	value?: T;
+	/** When true, the node cannot be selected or toggled. */
 	disabled?: boolean;
+	/**
+	 * Initial expanded state for branch nodes (ignored for leaves).
+	 * Takes precedence over `initialExpanded` when explicitly set.
+	 */
 	expanded?: boolean;
+	/**
+	 * Child nodes. If present and non-empty, this node is treated as a
+	 * branch (collapsible/expandable). Omit or set to empty for leaves.
+	 */
 	children?: TreeNode<T>[];
 }
 
+/**
+ * Options for configuring the tree prompt.
+ *
+ * @template T The type of values in the tree (default `string`).
+ */
 export interface TreeOptions<T = string> {
+	/** Root-level tree nodes to display. Must have at least one entry. */
 	tree: TreeNode<T>[];
 	pageSize?: number;
 	initialExpanded?: boolean;
@@ -65,6 +87,36 @@ interface FlatItem<T> {
 
 const MESSAGE_HELP = "(Use arrow keys, space to toggle, or click)";
 
+/**
+ * Interactive tree navigation prompt.
+ *
+ * Renders a tree structure where users can navigate with arrow keys,
+ * expand/collapse branches with ←/→ or Space, and select a leaf with
+ * Enter. Supports mouse click and hover, wheel scrolling with
+ * configurable sensitivity, disabled nodes, and non-TTY fallback.
+ *
+ * @param message Prompt text shown above the tree.
+ * @param options Tree nodes and configuration.
+ * @returns The value of the selected leaf, or `undefined` if cancelled.
+ * @throws {Error} When `options.tree` is empty or user presses Escape.
+ *
+ * @example
+ * ```ts
+ * const file = await tree('Select a file', {
+ *   tree: [
+ *     {
+ *       label: 'src',
+ *       children: [
+ *         { label: 'index.ts', value: 'src/index.ts' },
+ *         { label: 'utils.ts', value: 'src/utils.ts' },
+ *       ],
+ *     },
+ *     { label: 'package.json', value: 'package.json' },
+ *   ],
+ *   initialExpanded: true,
+ * })
+ * ```
+ */
 export async function tree<T = string>(
 	message: string,
 	options: TreeOptions<T>,
@@ -365,26 +417,6 @@ function interactiveTree<T>(
 			readline.clearScreenDown(stdout);
 			stdout.write(finalLine);
 			resolve(item.value);
-		}
-
-		function handleTreeClick(flatIndex: number) {
-			if (flatIndex < 0 || flatIndex >= flat.length) return;
-			const item = flat[flatIndex];
-			if (item.disabled) return;
-
-			cursor = flatIndex;
-
-			if (item.isBranch) {
-				if (item.expanded) {
-					expanded.delete(item.node);
-				} else {
-					expanded.add(item.node);
-				}
-				rebuildFlat();
-				render();
-			} else {
-				finalize();
-			}
 		}
 
 		function onData(data: string | Buffer) {

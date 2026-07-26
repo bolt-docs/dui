@@ -14,4 +14,5 @@ export type {
 	BlockTokenThematicBreak,
 	InlineToken,
 } from "./tokenizer";
+export { tokenizeInline } from "./tokenizer";
 export { tokenize } from "./tokenizer";

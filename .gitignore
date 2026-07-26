@@ -12,3 +12,4 @@ yarn.lock
 .agents/
 .agents.bak/
 .freebuff/
+.vite-react-ssg-temp/

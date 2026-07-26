@@ -1,33 +1,40 @@
 import React from "react";
 import { TERMINAL_COLORS } from "./constants";
 
-const SPINNER_CHARS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-const BOX_CHARS = [
-	"┌",
-	"┐",
-	"└",
-	"┘",
-	"─",
-	"│",
-	"┏",
-	"┓",
-	"┗",
-	"┛",
-	"━",
-	"┃",
-	"╔",
-	"╗",
-	"╚",
-	"╝",
-	"═",
-	"║",
-	"╭",
-	"╮",
-	"╰",
-	"╯",
+/* ── Shared ANSI parsing tables — exported for reuse ─────── */
+
+export const SPINNER_CHARS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+export const BOX_CHARS = [
+	"┌", "┐", "└", "┘", "─", "│",
+	"┏", "┓", "┗", "┛", "━", "┃",
+	"╔", "╗", "╚", "╝", "═", "║",
+	"╭", "╮", "╰", "╯",
 ];
-const PROGRESS_CHARS = ["█", "░"];
-const RAW_CHAR_PATTERN = /([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏┌┐└┘─│┏┓┗┛━┃╔╗╚╝═║╭╮╰╯█░])/g;
+
+export const PROGRESS_CHARS = ["█", "░"];
+
+export const RAW_CHAR_PATTERN = /([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏┌┐└┘─│┏┓┗┛━┃╔╗╚╝═║╭╮╰╯█░])/g;
+
+/* ── ANSI color code → named color maps ────────────────────── */
+
+export const FG_COLORS = [
+	"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+] as const;
+
+export const BG_COLORS = [
+	"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+] as const;
+
+export const BRIGHT_FG_COLORS = [
+	"gray", "bright-red", "bright-green", "bright-yellow",
+	"bright-blue", "bright-magenta", "bright-cyan", "bright-white",
+] as const;
+
+export const BRIGHT_BG_COLORS = [
+	"gray", "bright-red", "bright-green", "bright-yellow",
+	"bright-blue", "bright-magenta", "bright-cyan", "bright-white",
+] as const;
 
 type CharType = "spinner" | "box" | "progress" | null;
 function charType(ch: string): CharType {
@@ -191,50 +198,10 @@ function applyAnsiCode(styles: ActiveStyles, seq: string): ActiveStyles {
 				s.bgColor = "";
 				break;
 			default:
-				if (code >= 30 && code <= 37)
-					s.color = [
-						"black",
-						"red",
-						"green",
-						"yellow",
-						"blue",
-						"magenta",
-						"cyan",
-						"white",
-					][code - 30];
-				else if (code >= 90 && code <= 97)
-					s.color = [
-						"gray",
-						"bright-red",
-						"bright-green",
-						"bright-yellow",
-						"bright-blue",
-						"bright-magenta",
-						"bright-cyan",
-						"bright-white",
-					][code - 90];
-				else if (code >= 40 && code <= 47)
-					s.bgColor = [
-						"black",
-						"red",
-						"green",
-						"yellow",
-						"blue",
-						"magenta",
-						"cyan",
-						"white",
-					][code - 40];
-				else if (code >= 100 && code <= 107)
-					s.bgColor = [
-						"gray",
-						"bright-red",
-						"bright-green",
-						"bright-yellow",
-						"bright-blue",
-						"bright-magenta",
-						"bright-cyan",
-						"bright-white",
-					][code - 100];
+				if (code >= 30 && code <= 37) s.color = FG_COLORS[code - 30];
+				else if (code >= 90 && code <= 97) s.color = BRIGHT_FG_COLORS[code - 90];
+				else if (code >= 40 && code <= 47) s.bgColor = BG_COLORS[code - 40];
+				else if (code >= 100 && code <= 107) s.bgColor = BRIGHT_BG_COLORS[code - 100];
 				break;
 		}
 	}
@@ -324,4 +291,4 @@ export function ansiToReact(text: string): React.ReactNode[] {
 	return nodes;
 }
 
-export { AnimatedProgressBar, SPINNER_CHARS };
+export { AnimatedProgressBar };

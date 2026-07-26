@@ -25,6 +25,9 @@ export { oscNotify } from "./backends/osc.js";
 export { terminalNotify } from "./backends/terminal.js";
 export { bellNotify } from "./backends/bell.js";
 
+export { createNotifyQueue, QueueDestroyedError } from "./queue.js";
+export type { NotifyQueueHandle, NotifyQueueOptions } from "./queue.js";
+
 export type {
 	NotifyAction,
 	NotifyBackend,

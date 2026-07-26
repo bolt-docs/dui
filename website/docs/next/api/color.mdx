@@ -10,6 +10,12 @@ import TerminalPreview from '../../../components/TerminalPreview'
 import { colors, colorize, parseColor, interpolateColor, toAnsiFg, toAnsiBg, toAnsiFgBg, applyStyle, setColorSupported, renderLine, renderStatic } from '@bdocs/dui'
 ```
 
+## Live demo
+
+<ColorsDemo />
+
+---
+
 The color engine replaces `picocolors` entirely. It supports 16 named ANSI colors, true color 24-bit (hex, rgb, rgba, oklch), and separate foreground/background painting. It also provides a chalk-like chainable API with individual close codes for proper nested style support.
 
 ---

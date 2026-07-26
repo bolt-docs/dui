@@ -13,6 +13,8 @@
 
 // ── Renderers ─────────────────────────────────────────────────
 export { diff } from "./core";
+export { detectMoves } from "./move";
+export type { LineBlock, MovePair, MoveDetectOptions } from "./move";
 // ── Plugin entry point ────────────────────────────────────────
 export { diffPlugin } from "./plugin";
 export {

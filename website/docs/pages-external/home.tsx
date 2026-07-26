@@ -1,16 +1,66 @@
 import { type BoltdocsLocale, useI18n } from "boltdocs/client";
 import { Link } from "boltdocs/primitives";
-import { AnimatedTerminal } from "../../components/AnimatedTerminal";
+import { lazy, Suspense } from "react";
 import { Card } from "../../components/mdx/Card";
 import PackageManager from "../../components/PackageManager";
-import {
-	ColorsDemo,
-	ProgressBarDemo,
-	SpinnerDemo,
-	StepsDemo,
-	TableDemo,
-} from "../../components/ShowcasePreviews";
 import { TerminalBackground } from "../../components/TerminalBackground";
+import LazySection from "../../components/LazySection";
+import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
+
+// Code-split heavy components — they load as separate JS chunks only
+// when LazySection's IntersectionObserver triggers the render.
+const loadDuiShowcase = () => import("../../components/DuiShowcase");
+const loadAnimatedTerminal = () =>
+	import("../../components/AnimatedTerminal").then((m) => ({
+		default: m.AnimatedTerminal,
+	}));
+const DuiShowcase = lazy(loadDuiShowcase);
+const AnimatedTerminal = lazy(loadAnimatedTerminal);
+
+/**
+ * Skeleton shown in the brief gap between LazySection flipping
+ * `shouldRender → true` and the dynamic chunk finishing download.
+ * Matches the shape of the content being loaded so the reserved
+ * space (set by LazySection's `containIntrinsicSize`) stays filled.
+ */
+function CarouselFallback() {
+	return (
+		<div className="flex flex-col gap-4 py-6">
+			<div className="rounded-xl border border-strong overflow-hidden min-h-[400px] bg-white/30 dark:bg-black/20 animate-pulse">
+				<div className="p-6 flex flex-col gap-4">
+					<div className="h-4 w-1/4 rounded bg-neutral-300/60 dark:bg-neutral-700/50" />
+					<div className="flex-1 min-h-[280px] rounded-lg border border-strong bg-white/30 dark:bg-black/20" />
+					<div className="flex gap-2 justify-center">
+						{[1, 2, 3, 4, 5].map((i) => (
+							<div
+								key={i}
+								className="h-2 w-2 rounded-full bg-neutral-300/60 dark:bg-neutral-700/50"
+							/>
+						))}
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function TerminalFallback() {
+	return (
+		<div className="flex flex-col gap-0 rounded-xl border border-strong overflow-hidden animate-pulse">
+			<div className="h-10 bg-neutral-200/60 dark:bg-neutral-800/60 border-b border-strong" />
+			<div className="p-6 flex flex-col gap-3 min-h-[340px]">
+				<div className="h-4 w-1/3 rounded bg-neutral-300/60 dark:bg-neutral-700/50" />
+				{[72, 55, 83, 41, 68, 30, 91, 60].map((w, i) => (
+					<div
+						key={i}
+						className="h-3 rounded bg-neutral-300/60 dark:bg-neutral-700/50"
+						style={{ width: `${w}%` }}
+					/>
+				))}
+			</div>
+		</div>
+	);
+}
 
 const t = (strings: Record<BoltdocsLocale, string>, locale: BoltdocsLocale) =>
 	strings[locale] || strings.en;
@@ -24,26 +74,7 @@ const TRANSLATIONS = {
 	apiReference: { en: "API Reference →", es: "Referencia API →" },
 	modulesTitle: { en: "modules", es: "módulos" },
 	showcaseTitle: { en: "showcase", es: "demostración" },
-	progressBarDesc: {
-		en: "Dynamic progress indicator for long-running CLI tasks. Automatically adjusts to the terminal width, supports custom filled/empty characters, and dynamically switches to a clean multi-line mode in non-TTY environments (like CI/CD).",
-		es: "Indicador dinámico de progreso para tareas CLI de larga duración. Se ajusta automáticamente al ancho de la terminal, admite caracteres personalizados de llenado y cambia dinámicamente a un modo limpio de varias líneas en entornos sin TTY (como CI/CD).",
-	},
-	colorsDesc: {
-		en: "A robust 24-bit True Color engine supporting HEX, RGB, RGBA, and OKLCH color spaces. Style text and backgrounds easily, or interpolate colors to generate terminal gradients.",
-		es: "Un robusto motor de color real de 24 bits compatible con los espacios de color HEX, RGB, RGBA y OKLCH. Estiliza texto y fondos con facilidad o interpola colores para generar degradados en la terminal.",
-	},
-	spinnerDesc: {
-		en: "Animated spinners powered by elegant braille frames. They run non-blockingly, support clean status indicators (success, fail, warn, info), and restore terminal cursor states on exit.",
-		es: "Spinners animados potenciados por elegantes cuadros braille. Se ejecutan de manera no bloqueante, admiten indicadores de estado limpios (success, fail, warn, info) y restauran el estado del cursor de la terminal al salir.",
-	},
-	stepsDesc: {
-		en: "Pipeline timelines with automatic connection lines. Displays colored status icons (pending, running, success, error) to track steps in multi-phase CLI automation tasks.",
-		es: "Líneas de tiempo para pipelines con líneas de conexión automáticas. Muestra iconos de estado coloreados (pending, running, success, error) para rastrear pasos en tareas complejas de automatización CLI.",
-	},
-	tableDesc: {
-		en: "Construct tables using box-drawing characters with full column alignment, custom padding, and text-wrapping. Built-in ANSI-aware length calculators prevent border breaks.",
-		es: "Construye tablas usando caracteres de dibujo de cajas con alineación de columnas completa, espaciado personalizado y ajuste de texto. Los calculadores de longitud compatibles con ANSI evitan que se rompan los bordes.",
-	},
+
 	installationTitle: { en: "installation", es: "instalación" },
 	installationDesc: {
 		en: "Install the zero-dependency CLI package using your preferred node manager.",
@@ -67,33 +98,8 @@ export function HomePage() {
 	const txt = (key: keyof typeof TRANSLATIONS) =>
 		TRANSLATIONS[key][locale] || TRANSLATIONS[key].en;
 
-	const showcaseItems = [
-		{
-			demo: <ProgressBarDemo />,
-			title: "ProgressBar",
-			descKey: "progressBarDesc" as const,
-		},
-		{
-			demo: <ColorsDemo />,
-			title: "Colors Engine",
-			descKey: "colorsDesc" as const,
-		},
-		{
-			demo: <SpinnerDemo />,
-			title: "Spinners",
-			descKey: "spinnerDesc" as const,
-		},
-		{
-			demo: <StepsDemo />,
-			title: "Step Timelines",
-			descKey: "stepsDesc" as const,
-		},
-		{
-			demo: <TableDemo />,
-			title: "Table & Layouts",
-			descKey: "tableDesc" as const,
-		},
-	];
+	// Prefetch lazy chunks during idle time (while user reads hero)
+	useIdlePrefetch([loadDuiShowcase, loadAnimatedTerminal]);
 
 	return (
 		<div className="min-h-screen bg-main/80 text-paragraph font-mono relative overflow-x-hidden">
@@ -146,68 +152,59 @@ export function HomePage() {
 				</div>
 			</section>
 
-			<section className="border-b border-strong px-6 py-16 relative">
-				<div className="mx-auto max-w-4xl">
-					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-12">
-						<span className="text-terminal-green font-mono">#</span> 02 /{" "}
-						{txt("showcaseTitle")}
-					</h2>
+			<LazySection shape="carousel" minHeight="480px">
+				<section className="border-b border-strong px-6 py-16 relative">
+					<div className="mx-auto max-w-4xl">
+						<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8">
+							<span className="text-terminal-green font-mono">#</span> 02 /{" "}
+							{txt("showcaseTitle")}
+						</h2>
 
-					<div className="flex flex-col gap-16 md:gap-24">
-						{showcaseItems.map((item) => (
-							<div
-								key={item.title}
-								className="grid grid-cols-1 md:grid-cols-5 gap-8 items-center"
-							>
-								<div className="md:col-span-3 order-1">{item.demo}</div>
-								<div className="md:col-span-2 order-2">
-									<h3 className="text-lg font-bold text-body mb-2 flex items-center gap-2">
-										<span className="text-terminal-green">/</span> {item.title}
-									</h3>
-									<p className="text-sm text-muted leading-relaxed">
-										{txt(item.descKey)}
+						<Suspense fallback={<CarouselFallback />}>
+							<DuiShowcase />
+						</Suspense>
+					</div>
+				</section>
+			</LazySection>
+
+			<LazySection shape="terminal-big" minHeight="400px">
+				<section className="border-b border-strong px-6 py-16 relative">
+					<div className="mx-auto max-w-4xl">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+							<div className="flex flex-col gap-4">
+								<div>
+									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
+										<span className="text-terminal-green font-mono">#</span> 03 /{" "}
+										{txt("installationTitle")}
+									</h2>
+									<p className="text-xs text-muted mt-1 leading-relaxed">
+										{txt("installationDesc")}
 									</p>
 								</div>
+								<PackageManager className="my-0" />
+								<div className="text-xs text-dim leading-relaxed border-l border-strong pl-3 py-1 mt-2">
+									{txt("importNote")}
+								</div>
 							</div>
-						))}
-					</div>
-				</div>
-			</section>
 
-			<section className="border-b border-strong px-6 py-16 relative">
-				<div className="mx-auto max-w-4xl">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-						<div className="flex flex-col gap-4">
-							<div>
-								<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
-									<span className="text-terminal-green font-mono">#</span> 03 /{" "}
-									{txt("installationTitle")}
-								</h2>
-								<p className="text-xs text-muted mt-1 leading-relaxed">
-									{txt("installationDesc")}
-								</p>
-							</div>
-							<PackageManager className="my-0" />
-							<div className="text-xs text-dim leading-relaxed border-l border-strong pl-3 py-1 mt-2">
-								{txt("importNote")}
+							<div className="flex flex-col gap-4">
+								<div>
+									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
+										<span className="text-terminal-green font-mono">#</span> 04 /{" "}
+										{txt("interactiveDemoTitle")}
+									</h2>
+									<p className="text-xs text-muted mt-1 leading-relaxed">
+										{txt("interactiveDemoDesc")}
+									</p>
+								</div>
+								<Suspense fallback={<TerminalFallback />}>
+									<AnimatedTerminal />
+								</Suspense>
 							</div>
 						</div>
-
-						<div className="flex flex-col gap-4">
-							<div>
-								<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
-									<span className="text-terminal-green font-mono">#</span> 04 /{" "}
-									{txt("interactiveDemoTitle")}
-								</h2>
-								<p className="text-xs text-muted mt-1 leading-relaxed">
-									{txt("interactiveDemoDesc")}
-								</p>
-							</div>
-							<AnimatedTerminal />
-						</div>
 					</div>
-				</div>
-			</section>
+				</section>
+			</LazySection>
 		</div>
 	);
 }

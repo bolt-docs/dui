@@ -60,8 +60,8 @@ describe("tokenizeInline", () => {
 
 	it("parses plain text", () => {
 		const tokens = tokenizeInline("just plain text");
-		expect(tokens).toHaveLength(15); // one per character
-		expect(tokens[0]).toMatchObject({ type: "text", content: "j" });
+		expect(tokens).toHaveLength(1); // whole string is one text token
+		expect(tokens[0]).toMatchObject({ type: "text", content: "just plain text" });
 	});
 
 	it("handles empty input", () => {

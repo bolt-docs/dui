@@ -6,6 +6,14 @@ description: Column-based layout primitive for side-by-side CLI dashboards.
 
 # `grid(opts)` — column layout
 
+## Live demo
+
+<GridDemo />
+
+---
+
+
+
 Renders multiple text columns side-by-side on the same set of output rows. Every column is wrapped independently via `wrapAnsiWord` to honor its allocated width; the resulting column lines are then zipped together by row index — shorter columns pad with spaces so rows align.
 
 ```ts

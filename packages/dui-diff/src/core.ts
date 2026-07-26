@@ -26,6 +26,7 @@
 
 import { terminalWidth, visibleLength } from "@bdocs/dui";
 import { type Hunk, structuredPatch } from "diff";
+import { detectMoves } from "./move";
 import { getPalette } from "./theme";
 import type { DiffOptions, DiffResult } from "./types";
 import { formatLineNo, gutterFor, truncateTo } from "./utils";
@@ -44,6 +45,8 @@ export function diff(
 		header: showHeader = true,
 		filename,
 		gutterStyle = "bracket",
+		detectMoves: enableMoveDetection = false,
+		moveMinLines = 3,
 	} = options;
 
 	const maxCols = maxWidth ?? terminalWidth();
@@ -76,8 +79,21 @@ export function diff(
 		lines.push("");
 	}
 
+	// ── Move detection (opt-in) ───────────────────────────────
+	let moveLines: Set<string> | undefined;
+	if (enableMoveDetection) {
+		moveLines = runMoveDetection(patch.hunks, moveMinLines);
+	}
+
 	for (const hunk of patch.hunks) {
-		lines.push(...renderHunk(hunk, { lineNumbers, gutterStyle, palette }));
+		lines.push(
+			...renderHunk(hunk, {
+				lineNumbers,
+				gutterStyle,
+				palette,
+				moveLines,
+			}),
+		);
 	}
 
 	const widthClipped = lines.map((l) =>
@@ -96,14 +112,64 @@ export function diff(
 
 // ── Rendering ─────────────────────────────────────────────────
 
+/* ── Move detection runner ──────────────────────────────────── */
+
+/**
+ * Run move detection across all hunks and return a Set of
+ * `"<kind>:<lineNo>"` strings identifying lines that are part of
+ * a moved block. This allows the renderer to check if a specific
+ * removed or added line belongs to a move pair.
+ */
+function runMoveDetection(
+	hunks: Hunk[],
+	minLines: number,
+): Set<string> {
+	const removedLines: Array<{ text: string; lineNo: number }> = [];
+	const addedLines: Array<{ text: string; lineNo: number }> = [];
+
+	for (const hunk of hunks) {
+		let oldLine = hunk.oldStart - 1;
+		let newLine = hunk.newStart - 1;
+
+		for (const raw of hunk.lines) {
+			const stripped = raw.slice(1);
+			if (raw.startsWith("+")) {
+				newLine++;
+				addedLines.push({ text: stripped, lineNo: newLine });
+			} else if (raw.startsWith("-")) {
+				oldLine++;
+				removedLines.push({ text: stripped, lineNo: oldLine });
+			} else if (raw.startsWith(" ")) {
+				oldLine++;
+				newLine++;
+			}
+		}
+	}
+
+	const moves = detectMoves(removedLines, addedLines, { minLines });
+	const moveLines = new Set<string>();
+
+	for (const pair of moves) {
+		for (let i = 0; i < pair.source.lines.length; i++) {
+			moveLines.add(`-:${pair.source.startLine + i}`);
+		}
+		for (let i = 0; i < pair.dest.lines.length; i++) {
+			moveLines.add(`+:${pair.dest.startLine + i}`);
+		}
+	}
+
+	return moveLines;
+}
+
 interface RenderHunkOpts {
 	lineNumbers: boolean;
 	gutterStyle: NonNullable<DiffOptions["gutterStyle"]>;
 	palette: ReturnType<typeof getPalette>;
+	moveLines?: Set<string>;
 }
 
 function renderHunk(hunk: Hunk, opts: RenderHunkOpts): string[] {
-	const { lineNumbers, gutterStyle, palette } = opts;
+	const { lineNumbers, gutterStyle, palette, moveLines } = opts;
 
 	const oldRange =
 		hunk.oldLines === 0
@@ -128,9 +194,10 @@ function renderHunk(hunk: Hunk, opts: RenderHunkOpts): string[] {
 		const stripped = raw.slice(1); // drop leading " "/"+"/"-"
 		if (raw.startsWith("+")) {
 			newLine++;
+			const isMove = moveLines?.has(`+:${newLine}`) ?? false;
 			out.push(
 				renderLine({
-					kind: "add",
+					kind: isMove ? "move" : "add",
 					oldNo: null,
 					newNo: newLine,
 					ln: stripped,
@@ -141,9 +208,10 @@ function renderHunk(hunk: Hunk, opts: RenderHunkOpts): string[] {
 			);
 		} else if (raw.startsWith("-")) {
 			oldLine++;
+			const isMove = moveLines?.has(`-:${oldLine}`) ?? false;
 			out.push(
 				renderLine({
-					kind: "del",
+					kind: isMove ? "move" : "del",
 					oldNo: oldLine,
 					newNo: null,
 					ln: stripped,
@@ -172,7 +240,7 @@ function renderHunk(hunk: Hunk, opts: RenderHunkOpts): string[] {
 }
 
 interface RenderLineOpts {
-	kind: "add" | "del" | "context";
+	kind: "add" | "del" | "move" | "context";
 	oldNo: number | null;
 	newNo: number | null;
 	ln: string;
@@ -203,9 +271,11 @@ function renderLine(opts: RenderLineOpts): string {
 			? ""
 			: kind === "context"
 				? " "
-				: kind === "add"
-					? "+"
-					: "-";
+				: kind === "move"
+					? "~"
+					: kind === "add"
+						? "+"
+						: "-";
 	const head = `${gutter}${marker} `;
 
 	const paint =
@@ -213,6 +283,8 @@ function renderLine(opts: RenderLineOpts): string {
 			? palette.add
 			: kind === "del"
 				? palette.del
-				: palette.context;
+				: kind === "move"
+					? palette.move
+					: palette.context;
 	return lineNoCol + paint(head + ln);
 }
