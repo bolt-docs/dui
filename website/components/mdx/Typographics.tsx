@@ -74,14 +74,14 @@ const Li = (props: React.HTMLAttributes<HTMLLIElement>) => (
 
 const Pre = (props: React.HTMLAttributes<HTMLPreElement>) => (
 	<pre
-		className="overflow-x-auto rounded-xl border border-strong bg-code-bg p-5 my-8 text-sm leading-relaxed font-mono shadow-sm"
+		className="overflow-x-auto rounded-lg border border-strong bg-code-bg p-5 my-8 text-sm leading-relaxed font-mono"
 		{...props}
 	/>
 );
 
 const Code = (props: React.HTMLAttributes<HTMLElement>) => (
 	<code
-		className="rounded-md px-1.5 py-0.5 bg-code-bg text-code-text text-[0.875em] font-mono border border-strong/50"
+		className="rounded px-1.5 py-0.5 bg-code-bg text-code-text text-[0.8125em] font-mono border border-strong/60"
 		{...props}
 	/>
 );
