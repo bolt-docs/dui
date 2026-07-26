@@ -1,9 +1,11 @@
 import {
+	useConfig,
 	useI18n,
 	useLocalizedTo,
 	useRoutes,
 	useSidebar,
 	useUI,
+	useVersion,
 } from "boltdocs/client";
 import { Button, Sidebar } from "boltdocs/primitives";
 import { Menu } from "lucide-react";
@@ -91,6 +93,76 @@ function TerminalSidebarItem({ route, activePath, activeRoute }: ItemProps) {
 			className={linkClass}
 		/>
 	);
+}function SidebarVersionSelector() {
+	const version = useVersion();
+	const config = useConfig();
+	const navVersionConfig = config?.versions;
+
+	if (!navVersionConfig?.versions || navVersionConfig.versions.length <= 1)
+		return null;
+
+	const items = version.availableVersions ?? [];
+	const label = version.currentVersionLabel ?? version.currentVersion ?? "?";
+
+	return (
+		<div className="flex items-center gap-2 px-2 py-1.5 border border-strong rounded-none font-mono text-xs">
+			<span className="text-dim">v</span>
+			<span className="text-terminal-green font-semibold">{label}</span>
+			<div className="flex gap-0.5 ml-auto">
+				{items.map(
+					(item: { value: string; label: string; isCurrent: boolean }) => (
+						<Button
+							key={item.value}
+							onPress={() => version.handleVersionChange(item.value)}
+							className={`font-mono text-[10px] px-1.5 py-0.5 rounded-none border transition-none ${
+								item.isCurrent
+									? "border-terminal-green text-terminal-green bg-soft"
+									: "border-strong text-muted hover:text-body hover:bg-soft"
+							}`}
+						>
+							{item.label}
+						</Button>
+					),
+				)}
+			</div>
+		</div>
+	);
+}
+
+function MobileSidebarVersionSelector() {
+	const version = useVersion();
+	const config = useConfig();
+	const navVersionConfig = config?.versions;
+
+	if (!navVersionConfig?.versions || navVersionConfig.versions.length <= 1)
+		return null;
+
+	const items = version.availableVersions ?? [];
+	const label = version.currentVersionLabel ?? version.currentVersion ?? "?";
+
+	return (
+		<div className="flex items-center gap-2 font-mono text-xs">
+			<span className="text-dim">v</span>
+			<span className="text-terminal-green font-semibold">{label}</span>
+			<div className="flex gap-1 ml-auto">
+				{items.map(
+					(item: { value: string; label: string; isCurrent: boolean }) => (
+						<Button
+							key={item.value}
+							onPress={() => version.handleVersionChange(item.value)}
+							className={`font-mono text-[10px] px-1.5 py-0.5 rounded-none border transition-none ${
+								item.isCurrent
+									? "border-terminal-green text-terminal-green bg-soft"
+									: "border-strong text-muted hover:text-body hover:bg-soft"
+							}`}
+						>
+							{item.label}
+						</Button>
+					),
+				)}
+			</div>
+		</div>
+	);
 }
 
 export function TerminalSidebar() {
@@ -140,6 +212,10 @@ export function TerminalSidebar() {
 
 	const sidebarContent = (
 		<Sidebar.Content className="terminal-sidebar p-3 pt-6 pb-4 [&_button>svg]:hidden [&_button]:after:content-['+'] [&_button]:after:font-mono [&_button]:after:text-[10px] [&_button]:after:text-dim [&_button:has(.rotate-90)]:after:content-['-'] **:[[class*='border-l']]:border-strong [&_.border-l]:border-strong">
+			{/* Version selector at the top of the sidebar */}
+			<div className="px-2 mb-4">
+				<SidebarVersionSelector />
+			</div>
 			<div className="flex flex-col gap-3">
 				{ungrouped.length > 0 && (
 					<Sidebar.Group className="flex flex-col gap-0.5">
@@ -209,6 +285,10 @@ export function TerminalSidebar() {
 					</Button>
 				</Sidebar.Header>
 				<Sidebar.Content className="p-4">
+					{mobileLocaleSwitcher && (
+							<div className="px-1 mb-4">
+							<MobileSidebarVersionSelector />
+						</div>
 					{mobileLocaleSwitcher && (
 						<div className="flex gap-2 mb-6">{mobileLocaleSwitcher}</div>
 					)}

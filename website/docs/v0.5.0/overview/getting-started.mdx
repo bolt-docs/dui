@@ -1,0 +1,32 @@
+---
+title: Getting Started
+sidebarPosition: 2
+description: Install and configure DUI v0.5.0.
+---
+
+## Installation
+
+```bash
+pnpm add @bdocs/dui
+```
+
+## Configuration
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({ prefix: 'mytool' })
+```
+
+## Example
+
+```ts
+import { configure, info, success, box, bullet } from '@bdocs/dui'
+
+configure({ prefix: 'example' })
+
+info('Starting process...')
+console.log(bullet(['Parse input', 'Transform data', 'Write output']))
+console.log(box(['Completed successfully'], { title: 'Result', style: 'double' }))
+success('All done!')
+```

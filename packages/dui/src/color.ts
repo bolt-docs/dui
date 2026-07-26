@@ -2,7 +2,12 @@
  * Detect color support from env vars and TTY state.
  */
 function detectColorSupport(): boolean {
-	if ("NO_COLOR" in process.env) return false;
+	// RFC NO_COLOR: only a non-empty value means "off". Empty string means
+	// "no preference" — treat as unset. This matches the `accessibility.ts`
+	// heuristic in `readEnv()` so the two colour-detection paths are
+	// consistent across the library (empty string is falsy in JS, so
+	// the `&&` short-circuits before the `!== ""` check).
+	if (process.env.NO_COLOR) return false;
 	if (process.env.FORCE_COLOR && process.env.FORCE_COLOR !== "0") return true;
 	return process.stdout?.isTTY ?? false;
 }

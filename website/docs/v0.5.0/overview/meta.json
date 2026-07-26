@@ -1,0 +1,6 @@
+{
+	"title": "Overview",
+	"icon": "BookOpen",
+	"order": 1,
+	"pages": ["index", "getting-started"]
+}

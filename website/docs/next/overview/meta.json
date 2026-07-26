@@ -2,5 +2,5 @@
 	"title": "Overview",
 	"icon": "BookOpen",
 	"order": 1,
-	"pages": ["index", "getting-started", "ai-agents", "llm"]
+	"pages": ["index", "getting-started", "v0.6.0-features", "ai-agents", "llm"]
 }
