@@ -1,5 +1,137 @@
 # @bdocs/dui
 
+## 0.6.0-next.2
+
+### Minor Changes
+
+- [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - New accessibility layer — auto-detected text-only fallback when
+  the host signals non-ANSI conditions, with a forced opt-in flag
+  orthogonal to theme presets.
+
+  Heuristic overlay (any one triggers plain mode):
+
+  - `NO_COLOR` env var set to a non-empty value ([no-color.org](https://no-color.org)).
+  - `TERM=dumb`.
+  - `process.stdout?.isTTY === false` (piped-to-file / CI / `tee` / `less`).
+  - Screen reader presence — `brltty` (Linux via `pgrep -f brltty`),
+    VoiceOver (macOS via `defaults read com.apple.universalaccess voiceOverOn`),
+    NVDA / JAWS (Windows via PowerShell `Get-Process`). Probes are
+    cached on the first call and run with a 100 ms hard timeout so
+    startup stays fast.
+  - `PREFERS_REDUCED_MOTION=1` / `REDUCE_MOTION=1` (separate
+    `isReducedMotion()` getter — animation cadence only).
+
+  Forced fallback:
+
+  - `configure({ plain: true })` — flips every widget + every notify
+    call into text-only output.
+  - Composes with presets: `configure({ theme: presets.dracula, plain: true })`
+    resolves the Dracula palette (still observable through
+    `getConfig().theme`) but renders as text-only.
+
+  Plain-mode output format:
+
+  ```
+  box: <title>
+    <line>
+    <line>
+  actions:
+    [<id>] <label>
+  ```
+
+  Widgets with early-return paths: `box`, `badge`, `section`,
+  `divider`. The `box` / `badge` early-returns skip SGR resolution
+  entirely so plain-mode `box()` is roughly 6× faster on hot paths
+  than the styled variant (no border math, no padding calc, no
+  `resolveColor`). `modal`, `tabs`, `kbd` keep their styled paint
+  under the standard path; consumers needing them in plain mode
+  emit their own multi-line text via `formatModalPlain` /
+  `formatTabsPlain` / `formatKbdPlain` from `packages/dui/src/plain.ts`.
+
+  Public API additions:
+
+  ```ts
+  import {
+    isPlainMode, // opts + config-aware getter
+    isReducedMotion, // PREFERS_REDUCED_MOTION + plain-aware
+    getAccessibilityInfo, // structured {noColor, dumbTerm, nonTty,
+    //             screenReader, reducedMotion,
+    //             plainOverride}
+    refreshAccessibility, // re-probe (e.g. after env mutation in tests)
+    type AccessibilityInfo,
+  } from "@bdocs/dui";
+  ```
+
+  Tests:
+
+  - `packages/dui/tests/accessibility.test.ts` — each heuristic
+    independently + the `plain: true` global override + per-call
+    opts-level override + `refreshAccessibility()` cache refresh.
+  - `packages/dui/tests/plain-mode.test.ts` — `box`, `badge`,
+    `section`, `divider` plain-mode output shape and `prefix:`
+    markers, no SGR in body, no box drawing glyphs.
+  - `packages/dui-notify/tests/notify.test.ts` — five new cases
+    exercising the `notify.plain: true` opt-in: bell text path,
+    terminal box-skip, no `notify-send` spawn under `force: "os"`,
+    NO_COLOR env auto-detect.
+
+- [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Add curated theme palette presets — `dracula`, `nord`, `solarized`,
+  `catppuccin`, `gruvbox` — exported as `presets` from `@bdocs/dui`.
+  Each preset is a `Partial<DuiTheme>` so a single
+  `configure({ theme: presets.dracula })` retints every widget
+  (`badge`, `modal`, `tabs`, `box`, `section`, `spinner`, `progress`,
+  `markdown`, `kbd`) without touching code. The registry is typed as
+  `Readonly<Record<PresetName, DuiThemePreset>>` and frozen at
+  runtime to prevent accidental palette mutation.
+
+  Highlights:
+
+  - `PresetName` union keeps palette identifiers type-checked so
+    misspelled names surface at compile time.
+  - Partial cascade + per-slot fallback (each palette only overrides
+    the high-impact surfaces; the rest fall through to the built-in
+    defaults).
+  - Per-call overrides remain on top via standard spread:
+    `configure({ theme: { ...presets.dracula, error: "#ff00ff" } })`.
+  - `tests/presets.test.ts` exercises the registry shape, palette
+    distinctness (no duplicate hexes), cascade correctness into
+    `badge`, `modal`, `tabs`, `section`, and resetConfig isolation.
+  - `examples/20-presets/index.ts` renders the same composition under
+    each of the five palettes for side-by-side comparison.
+  - `website/docs/api/presets.mdx` documents each palette with
+    swatch tables + extend-on-your-own guidance.
+
+- [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - ## v0.7.0-next — Animation and color control
+
+  ### Animation API (`animate()` / `animateProgress()`)
+
+  - **`AnimationHandle.pause()` / `.resume()`** — Pause and resume a running animation. The internal clock tracks accumulated time across pause/resume cycles so the animation continues exactly where it stopped.
+  - **`AnimationHandle.seek(progress)`** — Jump to any point in the animation (0..1). Renders the frame at that position immediately. Running animations continue from the new virtual start time.
+  - **`AnimationHandle.progress`** — Read the current animation progress (0..1) at any time.
+  - **`AnimationHandle.paused`** — Read whether the animation is currently paused.
+
+  ```ts
+  const anim = animate({ keyframes, duration: 2000, onFrame });
+  anim.pause();
+  console.log(anim.progress, anim.paused); // e.g. 0.42, true
+  anim.resume();
+  anim.seek(0.5); // jump to halfway
+  ```
+
+  ### Color parsing
+
+  - **HSL / HSLA color format** — `parseColor()` now accepts `hsl(H, S%, L%)` and `hsla(H, S%, L%, A)` strings. The standard HSL→RGB conversion is used.
+
+  ```ts
+  parseColor("hsl(120, 100%, 50%)"); // { r: 0, g: 255, b: 0 }
+  parseColor("hsla(0, 100%, 50%, 0.5)"); // { r: 255, g: 0, b: 0, a: 0.5 }
+  ```
+
+  ### Gradient presets (`gradient()` / `gradientPresets`)
+
+  - **`gradient(count, stops)`** — Generate N evenly-spaced hex colours by interpolating through `GradientStop` positions. Powers colour ramps for bar charts, sparklines, and progress bars.
+  - **`gradientPresets`** — 8 curated presets: `sunset`, `ocean`, `forest`, `royal`, `fire`, `ice`, `rainbow`, `terminal`.
+
 ## 0.6.0-next.1
 
 ### Minor Changes
