@@ -1,3 +1,4 @@
+import { Badge } from "../components/mdx/Badge";
 import Callout from "../components/mdx/Callout";
 import { Card } from "../components/mdx/Card";
 import { Cards } from "../components/mdx/Cards";
@@ -12,6 +13,7 @@ import TerminalPreview, {
 export default {
 	...table,
 	...typographics,
+	Badge,
 	TerminalPreview,
 	AnimatedProgressBar,
 	PackageManager,
