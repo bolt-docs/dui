@@ -518,6 +518,7 @@ export function QrCodeDemo() {
 		let line = "   ";
 		for (const ch of row) {
 			if (ch === "█") line += `${green}█${reset}`;
+			else if (ch === "░") line += `${dim}░${reset}`;
 			else line += " ";
 		}
 		return line;
@@ -633,6 +634,7 @@ export function NotifyDemo() {
 	const green = "\u001b[38;2;74;222;128m";
 	const cyan = "\u001b[38;2;34;211;238m";
 	const yellow = "\u001b[38;2;254;202;87m";
+	const red = "\u001b[38;2;248;113;113m";
 	const white = "\u001b[38;2;230;230;230m";
 	const borderDim = "\u001b[90m";
 
