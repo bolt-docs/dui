@@ -1,0 +1,133 @@
+---
+title: What's New in v0.6.0-next
+sidebarPosition: 5
+description: Complete list of features shipping in the v0.6.0-next release.
+---
+
+## Interactive Prompts Overhaul
+
+### Plugin API v2
+
+- **`usePluginAsync(plugin)`** — async registration is now canonical. Plugins can declare `description`, `tags`, `homepage`, `author`, `dependsOn` metadata.
+- **Lifecycle observability** — `awaitPluginsReady([names])` and `isPluginReady(name)` let you wait for plugins to settle. Status (`loading` / `ready` / `error`) exposed via `getPlugin(name)` and `listPlugins()`.
+- **Peer-dependency warnings** surface on major-version mismatch between plugin and DUI core.
+
+### Wheel Scrolling
+
+- **`select`, `multiselect`, `tree`** — every prompt reads multi-tick SGR bursts correctly (prior implementation only kept the last tick in a chunk).
+- **`wheelSensitivity?: number`** — multiplies the per-burst magnitude (`wheelSensitivity: 3` + two ticks = 6 rows/second).
+- **Plugin wheel hooks** — `PluginEvents` gained `"wheel-up"` and `"wheel-down"` pre-filtered events for dashboards.
+
+### Drag-and-Drop Reordering
+
+- **`multiselect({ enableDragReorder: true })`** — press-and-drag any enabled row to MOVE (insert, not swap) into a new position.
+- **Live color previews** — `multiselect.dragSource` / `multiselect.dropTarget` theme slots highlight the dragged row and drop target.
+- **Checked state follows** — the element's checked flag preserves across the move, and the cursor stays visually pinned to its original logical choice via `remapIndex`.
+- **Dropping past `pageSize`** — clickable areas extend during active drag so a release on a row past the viewport resolves correctly and scrolls to the drop.
+
+### MouseEvent Discriminated Union
+
+- `type === "wheel"` narrows to `MouseWheelEvent` and forces reading `event.wheel` instead of `event.button`.
+- `MouseWheelEvent.button` is `undefined` at runtime and marked `@deprecated`.
+
+## Native Widget Set
+
+New terminal primitives for building CLIs and TUIs:
+
+### Badge
+
+`badge({ label, status? })` — status chip with five severity levels (`info` / `success` / `warning` / `error` / `neutral`) and compound `{ fg, bg }` color overrides.
+
+### Kbd
+
+`kbd({ keys, separator?, platform? })` — keyboard hint with auto platform detection (`darwin` → Mac glyphs like `⌘ ⌥ ⇧ ⎋`; `win32` → full names).
+
+### Section
+
+`section({ title, width?, align? })` — single-line labeled divider that truncates titles to preserve strict one-row geometry.
+
+### Tabs
+
+`tabs({ items, active, style? })` — segmented control with `underline` / `pill` / `boxed` render modes.
+
+### Modal
+
+`modal({ title?, content, width?, buttons?, style? })` — overlay dialog with title + content + auto-composed `[ label ]` button footer (primary/secondary coloring).
+
+### Grid
+
+`grid({ columns, width?, gap? })` — column-based layout that wraps each cell independently and zips rows top-down, supporting fixed widths and `"1fr"`/`"2fr"` flex units.
+
+### Extended Border Styles
+
+`BoxBorderStyle` extended with `thick`, `ascii`, `dashed`, and `dotted`:
+
+```ts
+box(['Content'], { style: 'ascii' })   // +---+
+box(['Content'], { style: 'dashed' })  // ┌┄┄┐
+box(['Content'], { style: 'dotted' })  // ┌┈┈┐
+```
+
+## Preset Palettes
+
+Curated color preset themes you can use as drop-in `configure({ theme: ... })`:
+
+| Preset | Description |
+|--------|-------------|
+| `presets.dracula` | Dracula dark theme |
+| `presets.nord` | Nord arctic theme |
+| `presets.gruvbox` | Gruvbox retro theme |
+| `presets.solarized` | Solarized precision theme |
+| `presets.catppuccin` | Catppuccin latte/macchiato |
+| `presets.oneDark` | Atom One Dark theme |
+| `presets.monokai` | Monokai vibrant theme |
+| `presets.github` | GitHub-inspired theme |
+
+## Accessibility Layer
+
+- **`isPlainMode()`** — true when output should be text-only (no ANSI). Auto-detects `NO_COLOR`, `TERM=dumb`, screen readers (brltty / VoiceOver / NVDA / JAWS).
+- **`isReducedMotion()`** — true when animation should be suppressed.
+- **`configure({ plain: true })`** — force plain mode globally.
+- **Per-call override** — `notify({ ..., plain: true })` for one-shot text-only output.
+- **Widget support** — `box`, `badge`, `section`, `divider`, `modal`, `tabs`, `kbd` all render text-only fallbacks.
+
+## Gradient Presets
+
+Curated color ramps for bar-chart palettes, sparkline fills, and animated colour sweeps:
+
+| Preset | Colors |
+|--------|--------|
+| `gradientPresets.sunset` | `#ff6b6b` → `#ffa94d` → `#ffd43b` |
+| `gradientPresets.ocean` | `#63e6be` → `#3bc9db` → `#4dabf7` |
+| `gradientPresets.forest` | `#2f9e44` → `#69db7c` → `#c0eb75` |
+| `gradientPresets.royal` | `#6741d9` → `#cc5de8` → `#f06595` |
+| `gradientPresets.fire` | `#c92a2a` → `#e03131` → `#ff922b` |
+| `gradientPresets.ice` | `#74c0fc` → `#99e9f2` → `#f8f9fa` |
+| `gradientPresets.rainbow` | Full ROYGBIV spectrum |
+| `gradientPresets.terminal` | Classic amber-terminal green |
+
+## Style System
+
+- **`defineClass(name, style)`** — register a named style class with `{ fg, bg, bold, dim, italic, underline }`.
+- **`applyClass(name, text)`** — apply a named style class to text at render time.
+- Built-in classes: `hover`, `active`, `selected`, `disabled`, `pointer`.
+
+## Markdown Plugin Updates
+
+- Headings render without the literal `#` marker.
+- Indentation scales with depth (H1 single indent, H2 deeper).
+- H1/H2 use `bold` for a typographic hierarchy.
+
+## Diff Plugin
+
+- Slot key renamed `thunk` → `hunk` (the old name was a typo).
+- The `diff.hunk` default cyan now resolves correctly via `resolveColor('diff.hunk', theme)`.
+
+## Animation Additions (v0.5.0 stable)
+
+- 25 easing presets: linear, ease-in/out/in-out, quad, cubic, quart, quint, sine, expo, circ, back, elastic, bounce
+- `createEasing(x1, y1, x2, y2)` — CSS-style cubic-bezier custom easing
+- `createSpring(config?)` — Spring physics with stiffness/damping/mass
+- `animateProgress(config)` — Simplified progress animation (0→1) without keyframes
+- `createTimeline()` — Sequence or overlap multiple animations
+- Configurable `fps` on both `animate()` and `animateProgress()`

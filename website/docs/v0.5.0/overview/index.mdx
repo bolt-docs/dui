@@ -1,0 +1,45 @@
+---
+title: DUI v0.5.0
+sidebarPosition: 1
+description: Terminal UI utilities for Node.js CLI apps (v0.5.0 stable).
+---
+
+**DUI v0.5.0** — the stable release of the terminal UI toolkit.
+
+This version includes the core widget set: boxes, colors, logging, lists,
+dividers, progress bars, spinners, animations, and interactive prompts.
+
+## Quick Start
+
+```bash
+pnpm add @bdocs/dui
+```
+
+```ts
+import { configure, info, box } from '@bdocs/dui'
+
+configure({ prefix: 'myapp' })
+info('Hello from DUI v0.5.0!')
+console.log(box(['Stable release'], { title: 'v0.5.0', style: 'double' }))
+```
+
+## Core Modules
+
+- **Logger** — `info`, `warn`, `error`, `success`, `debug` with prefix
+- **Box** — Double, single, and round border styles with titles
+- **Lists** — Bullet points, numbered lists, and task checklists
+- **Divider** — Horizontal line separators
+- **Colors** — Hex, RGB, HSL color parsing and ANSI painting
+- **Progress** — Animated progress bars
+- **Spinner** — Terminal spinners with braille frames
+- **Animation** — Keyframe animation engine
+- **Prompts** — Interactive confirm, select, and input
+
+## Differences from v0.6.0 (next)
+
+- No plugin system v2 (wheel scrolling, drag-reorder)
+- No accessibility layer (plain mode, screen reader detection)
+- No preset themes (Dracula, Nord, etc.)
+- No native widgets (badge, kbd, section, tabs, modal, grid)
+- No gradient presets
+- No animated progress bar (smooth fill)

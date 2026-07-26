@@ -10,6 +10,10 @@ export default defineConfig({
 				label: "Next (v0.6.0)",
 				path: "next",
 			},
+			{
+				label: "v0.5.0",
+				path: "v0.5.0",
+			},
 		],
 	},
 	i18n: {
@@ -61,7 +65,7 @@ export default defineConfig({
 			light: "/light.svg",
 			alt: "DUI Logo",
 		},
-		editLink: "https://github.com/bolt-docs/dui/edit/main/website/docs/next/:path",
+		editLink: "https://github.com/bolt-docs/dui/edit/main/website/docs/:version/:path",
 		githubRepo: "bolt-docs/dui",
 	},
 	robots: {

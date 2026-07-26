@@ -617,7 +617,8 @@ function interactiveTree<T>(
 			} else if (lastChar === "\x03") {
 				cleanup();
 				stdout.write("\n");
-				process.exit(1);
+				// Standard Unix convention: 128 + SIGINT(2) = 130.
+				process.exit(130);
 			} else if (
 				buf.length > 1 ||
 				(text.length > 0 && text[text.length - 1] !== "\x1b")

@@ -21,9 +21,10 @@ configure({ prefix: 'mytool' })
 ### Fields
 
 <Field name="prefix" type="string" default="'dui'">Prefix in log lines, e.g. `[mytool]`.</Field>
-<Field name="devServerTitle" type="string" default="'dev server'" deprecated>Title of the dev-server box.</Field>
-<Field name="previewServerTitle" type="string" default="'preview server'" deprecated>Title of the preview-server box.</Field>
-<Field name="updateCommand" type="string" default="'npm install dui@latest'" deprecated>Command shown in update notification.</Field>
+<Field name="theme" type="DuiTheme" default="—">Global color theme overrides for every component.</Field>
+<Field name="plain" type="boolean" default="false">Force text-only output (no ANSI, no borders, no spinner animation, no bell). Composes with the auto-detect `isPlainMode()` heuristic.</Field>
+<Field name="useStrictInput" type="boolean" default="false">Strict SGR mouse input validation. When `true`, logs warnings for malformed mouse sequences.</Field>
+<Field name="gestureWindowMs" type="number" default="500">Multi‑click gesture window in milliseconds. Higher values help in high-latency environments (SSH, tmux, remote desktop).</Field>
 
 ### Reading Config
 
@@ -34,22 +35,307 @@ const cfg = getConfig()
 console.log(cfg.prefix)
 ```
 
-## Example
+## Theming
+
+Define a global color theme that every component picks up automatically:
 
 ```ts
-import { configure, info, success, box, double, bullet } from '@bdocs/dui'
+import { configure } from '@bdocs/dui'
 
-configure({ prefix: 'example' })
-
-info('Starting process...')
-console.log(bullet(['Parse input', 'Transform data', 'Write output']))
-console.log(double(['Completed successfully'], { title: 'Result' }))
-success('All done!')
+configure({
+  prefix: 'build',
+  theme: {
+    success: '#22c55e',
+    error:   '#ef4444',
+    warning: '#eab308',
+    info:    '#3b82f6',
+    muted:   '#6b7280',
+    accent:  '#22d3ee',
+  },
+})
 ```
 
-## Official plugins
+### Preset palettes
 
-Optional packages extend DUI for markdown, charts, images, diffs, and QR codes:
+DUI ships with curated color presets that you can use as a theme:
+
+```ts
+import { configure, presets } from '@bdocs/dui'
+
+configure({ theme: presets.dracula })
+```
+
+Available presets: `dracula`, `nord`, `gruvbox`, `solarized`, `catppuccin`, `oneDark`, `monokai`, `github`.
+
+## Accessibility
+
+DUI includes a built-in accessibility layer that auto-detects when plain text output is needed:
+
+```ts
+import { isPlainMode, isReducedMotion, configure } from '@bdocs/dui'
+
+// Force plain mode globally
+configure({ plain: true })
+
+// Check current state
+if (isPlainMode()) {
+  // Output will be text-only, no ANSI
+}
+if (isReducedMotion()) {
+  // Skip animation cadences
+}
+```
+
+Auto-detection triggers on: `NO_COLOR`, `TERM=dumb`, screen reader present (brltty / VoiceOver / NVDA), or explicit `configure({ plain: true })`.
+
+## Logger
+
+```ts
+import { info, warn, error, success, debug } from '@bdocs/dui'
+
+info('Starting build...')
+success('Build completed!')
+warn('Deprecated API used')
+error('Failed to connect', err)
+debug('Verbose trace')  // only shown with DEBUG or BOLTDOCS_DEBUG env
+```
+
+## Box
+
+```ts
+import { box, double, single, round } from '@bdocs/dui'
+
+box(['Line 1', 'Line 2'], { title: 'Status', style: 'double' })
+double('Title', ['Content'])
+single('Title', ['Content'])
+round('Title', ['Content'])
+```
+
+## Lists
+
+```ts
+import { bullet, ordered, tasks } from '@bdocs/dui'
+
+bullet(['Item A', 'Item B'])
+ordered(['First', 'Second'])
+tasks([
+  { label: 'Install', done: true },
+  { label: 'Configure', done: false },
+])
+```
+
+## Divider
+
+```ts
+import { divider, dividerLog } from '@bdocs/dui'
+
+divider()          // returns "──────..." (fits terminal)
+dividerLog()       // prints directly
+```
+
+## Badge
+
+```ts
+import { badge } from '@bdocs/dui'
+
+badge({ label: 'PASS', status: 'success' })  // green badge
+badge({ label: 'FAIL', status: 'error' })    // red badge
+```
+
+## Kbd (Keyboard Shortcut)
+
+```ts
+import { kbd } from '@bdocs/dui'
+
+kbd({ keys: ['⌘', 'K'] })       // macOS-style
+kbd({ keys: ['Ctrl', 'K'] })    // cross-platform
+```
+
+## Section
+
+```ts
+import { section } from '@bdocs/dui'
+
+section({ title: 'Configuration' })  // "── Configuration ──────"
+section({ title: 'Logs', align: 'left' })
+```
+
+## Tabs
+
+```ts
+import { tabs } from '@bdocs/dui'
+
+tabs({ items: [{ label: 'Active', active: true }, { label: 'Other' }] })
+```
+
+## Modal
+
+```ts
+import { modal } from '@bdocs/dui'
+
+const boxed = modal({
+  title: 'Confirm',
+  content: ['Are you sure?'],
+  buttons: [{ label: 'OK', primary: true }, { label: 'Cancel' }],
+})
+```
+
+## Grid
+
+```ts
+import { grid } from '@bdocs/dui'
+
+grid({
+  columns: [
+    { content: 'Left cell', width: '1fr' },
+    { content: 'Right cell', width: '1fr', align: 'right' },
+  ],
+  width: 60,
+})
+```
+
+## Progress
+
+```ts
+import { createProgressBar, createAnimatedProgressBar, task } from '@bdocs/dui'
+
+// Discrete bar
+const bar = createProgressBar({ width: 30 })
+bar.start(100)
+bar.update(50, 'compiling...')
+bar.stop('done!')
+
+// Smooth-fill animated bar
+const animBar = createAnimatedProgressBar({
+  width: 40,
+  easing: 'ease-out-elastic',
+  animDuration: 600,
+})
+animBar.start(100)
+animBar.update(50)
+
+// High-level task wrapper
+const result = await task('installing', 3, async (ctx) => {
+  await step1()
+  ctx.update(1, 'fetched')
+  await step2()
+  ctx.update(2, 'compiled')
+  await step3()
+  ctx.update(3, 'deployed')
+})
+```
+
+## Spinner
+
+```ts
+import { createSpinner } from '@bdocs/dui'
+
+const sp = createSpinner('loading...')
+sp.start()
+// ... work ...
+sp.stop('success', 'Done!')
+```
+
+## Interactive Prompts
+
+```ts
+import { input, select, multiselect, tree, confirm } from '@bdocs/dui'
+
+// Text input with validation
+const name = await input('Enter your name:', {
+  default: 'User',
+  validate: (v) => v.length >= 2 || 'Too short',
+})
+
+// Single select
+const color = await select('Pick a color:', {
+  choices: [
+    { label: 'Red',   value: 'red' },
+    { label: 'Green', value: 'green', disabled: true },
+    { label: 'Blue',  value: 'blue' },
+  ],
+})
+
+// Multi-select with drag-to-reorder
+const values = await multiselect('Choose colors:', {
+  choices: [
+    { label: 'Red',   value: 'red', checked: true },
+    { label: 'Green', value: 'green' },
+  ],
+  enableDragReorder: true,
+})
+
+// Tree navigation
+const value = await tree('Select config:', {
+  tree: [
+    { label: 'root', children: [
+      { label: 'child', value: 'child' },
+    ]},
+  ],
+})
+
+// Confirm prompt
+const ok = await confirm('Continue?')
+```
+
+## Animation
+
+```ts
+import { animate, animateProgress, createTimeline } from '@bdocs/dui'
+
+// Keyframe animation
+const anim = animate({
+  keyframes: [
+    { offset: 0,   content: '•', fg: '#ff0000' },
+    { offset: 0.5, content: '►', fg: '#ffff00' },
+    { offset: 1,   content: '■', fg: '#00ff00' },
+  ],
+  duration: 1000,
+  easing: 'ease-out-elastic',
+  onFrame: (frame) => render(frame.content, frame.fg),
+})
+
+// Smooth progress animation
+animateProgress({
+  duration: 2000,
+  easing: 'ease-out',
+  onFrame: (p) => renderBar(p),
+})
+
+// Timeline for sequencing animations
+const tl = createTimeline()
+tl.add({ duration: 500, onFrame: render1 })
+tl.add({ duration: 500, onFrame: render2 }, { after: true })
+tl.play()
+```
+
+## Preset Palettes
+
+```ts
+import { configure, presets } from '@bdocs/dui'
+
+configure({ theme: presets.dracula })
+configure({ theme: presets.nord })
+configure({ theme: presets.gruvbox })
+configure({ theme: presets.solarized })
+configure({ theme: presets.catppuccin })
+configure({ theme: presets.oneDark })
+configure({ theme: presets.monokai })
+configure({ theme: presets.github })
+```
+
+## Gradient
+
+```ts
+import { gradient, gradientPresets } from '@bdocs/dui'
+
+const sunsetPalette = gradient(6, gradientPresets.sunset)
+// → ["#ff6b6b", "#ffa94d", "#ffd43b", ...]
+```
+
+## Plugins
+
+Official plugins extend DUI for markdown, charts, images, diffs, and QR codes:
 
 ```bash
 pnpm add @dui-toolkit/plugin-markdown
@@ -57,6 +343,22 @@ pnpm add @dui-toolkit/plugin-chart
 pnpm add @dui-toolkit/plugin-image
 pnpm add @dui-toolkit/plugin-diff
 pnpm add @dui-toolkit/plugin-qrcode
+pnpm add @dui-toolkit/plugin-notify
 ```
 
-See the [Plugins](/docs/plugins) section for install instructions and full API docs.
+See the [Plugins](/docs/next/plugins) section for install instructions and full API docs.
+
+## Example
+
+```ts
+import { configure, info, success, box, double, bullet, badge, section } from '@bdocs/dui'
+
+configure({ prefix: 'example' })
+
+info('Starting process...')
+console.log(section({ title: 'Steps' }))
+console.log(bullet(['Parse input', 'Transform data', 'Write output']))
+console.log(double(['Completed successfully'], { title: 'Result' }))
+badge({ label: 'OK', status: 'success' })
+success('All done!')
+```

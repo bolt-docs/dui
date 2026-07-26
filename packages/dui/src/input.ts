@@ -203,7 +203,8 @@ function interactiveInput(
 			} else if (key.name === "c" && key.ctrl) {
 				cleanup();
 				stdout.write("\n");
-				process.exit(1);
+				// Standard Unix convention: 128 + SIGINT(2) = 130.
+				process.exit(130);
 			} else if (key.name === "backspace") {
 				if (cursorPos > 0) {
 					buf = buf.slice(0, cursorPos - 1) + buf.slice(cursorPos);
