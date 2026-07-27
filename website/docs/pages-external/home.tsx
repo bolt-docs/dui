@@ -88,7 +88,7 @@ export function HomePage() {
 			<section className="border-b border-strong px-6 py-20 md:py-28 relative">
 				<div className="mx-auto max-w-4xl flex flex-col items-center md:items-start text-center md:text-left">
 					<div className="text-base text-dim mb-4 select-none self-center md:self-start">
-						{"// @bdocs/dui v0.6.0-next"}
+						{"// @bdocs/dui v0.5.0"}
 					</div>
 					<pre className="font-mono font-bold leading-none select-none text-terminal-green drop-shadow-[0_0_15px_rgba(74,222,128,0.35)] text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
 						{
@@ -100,14 +100,14 @@ export function HomePage() {
 					</p>
 					<div className="mt-8 flex flex-wrap justify-center md:justify-start gap-3">
 						<Link
-							href="/docs/next/overview/getting-started"
+							href="/docs/v0.5.0/overview/getting-started"
 							className="inline-flex items-center px-4 py-2 text-sm border border-strong text-body hover:bg-soft transition-all duration-150"
 						>
 							<span className="text-terminal-green mr-2">$</span>{" "}
 							{txt("gettingStarted")}
 						</Link>
 						<Link
-							href="/docs/next/api"
+							href="/docs/v0.5.0/api"
 							className="inline-flex items-center px-4 py-2 text-sm border border-strong text-muted hover:text-body hover:bg-soft transition-all duration-150"
 						>
 							{txt("apiReference")}

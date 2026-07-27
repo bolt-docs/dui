@@ -3,16 +3,16 @@ import { defineConfig } from "boltdocs";
 export default defineConfig({
 	base: "/docs",
 	versions: {
-		defaultVersion: "next",
+		defaultVersion: "v0.5.0",
 		prefix: "",
 		versions: [
 			{
-				label: "Next (v0.6.0)",
-				path: "next",
-			},
-			{
 				label: "v0.5.0",
 				path: "v0.5.0",
+			},
+			{
+				label: "Next (v0.6.0)",
+				path: "next",
 			},
 		],
 	},
@@ -43,16 +43,15 @@ export default defineConfig({
 				label: {
 					es: "Documentación",
 					en: "Documentation",
-				},
-				href: "/docs/next/overview",
+				},					href: "/docs/v0.5.0/overview",
 			},
 			{
 				label: "Plugins",
-				href: "/docs/next/plugins",
+				href: "/docs/v0.5.0/plugins",
 			},
 			{
 				label: "API",
-				href: "/docs/next/api",
+				href: "/docs/v0.5.0/api",
 			},
 		],
 		codeTheme: {
