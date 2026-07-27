@@ -51,6 +51,7 @@ const TRANSLATIONS = {
 	gettingStarted: { en: "Getting Started →", es: "Comenzar →" },
 	apiReference: { en: "API Reference →", es: "Referencia API →" },
 	modulesTitle: { en: "modules", es: "módulos" },
+	showcaseTitle: { en: "showcase", es: "demostración" },
 
 
 	installationTitle: { en: "installation", es: "instalación" },
@@ -137,7 +138,7 @@ export function HomePage() {
 				<div className="mx-auto max-w-4xl">
 					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-6">
 						<span className="text-terminal-green font-mono">#</span> 02 /{" "}
-						showcase
+											{txt("showcaseTitle")}
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 						<ListsDemo />
