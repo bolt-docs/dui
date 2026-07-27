@@ -203,51 +203,59 @@ export function TableDemo() {
 export function BoxesDemo() {
 	const [activeBox, setActiveBox] = useState(0);
 	const boxTypes = ["double", "single", "round"];
+	const typeLabels: Record<string, string> = {
+		double: "bold double border",
+		single: "thin single border",
+		round: "rounded border",
+	};
 
-	useInterval(() => setActiveBox((p) => (p + 1) % boxTypes.length), 2000);
+	useInterval(() => setActiveBox((p) => (p + 1) % boxTypes.length), 2200);
 
-	const doubleLines = [
-		"\u001b[90m╔══════════════════════╗\u001b[0m",
-		"\u001b[90m║\u001b[0m  \u001b[1mDUI Terminal UI\u001b[0m      \u001b[90m║\u001b[0m",
-		"\u001b[90m║\u001b[0m  Boxes & Borders      \u001b[90m║\u001b[0m",
-		"\u001b[90m║\u001b[0m  \u001b[38;2;108;92;231m━━━━━━━━━━━━━━━━━━━━\u001b[0m  \u001b[90m║\u001b[0m",
-		"\u001b[90m║\u001b[0m  ● double border      \u001b[90m║\u001b[0m",
-		"\u001b[90m║\u001b[0m  ● single border      \u001b[90m║\u001b[0m",
-		"\u001b[90m║\u001b[0m  ● round corners      \u001b[90m║\u001b[0m",
-		"\u001b[90m╚══════════════════════╝\u001b[0m",
+	const dim = "\u001b[90m";
+	const reset = "\u001b[0m";
+	const bold = "\u001b[1m";
+	const accent = "\u001b[38;2;108;92;231m";
+	const bullet = "\u001b[38;2;34;211;238m•\u001b[0m";
+
+	// All three variants share the exact same content width (20 visible chars)
+	const content = [
+		`  ${bold}DUI Terminal UI${reset} `,
+		`  Boxes & Borders   `,
+		`  ${accent}────────────────${reset}   `,
+		`  ${bullet} double border   `,
+		`  ${bullet} single border   `,
+		`  ${bullet} round corners   `,
 	];
 
-	const singleLines = [
-		"\u001b[90m┌────────────────────┐\u001b[0m",
-		"\u001b[90m│\u001b[0m  \u001b[1mDUI Terminal UI\u001b[0m    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  Boxes & Borders    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  \u001b[38;2;108;92;231m────────────────────\u001b[0m  \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  ● double border    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  ● single border    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  ● round corners    \u001b[90m│\u001b[0m",
-		"\u001b[90m└────────────────────┘\u001b[0m",
-	];
+	const innerW = 20;
 
-	const roundLines = [
-		"\u001b[90m╭────────────────────╮\u001b[0m",
-		"\u001b[90m│\u001b[0m  \u001b[1mDUI Terminal UI\u001b[0m    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  Boxes & Borders    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  \u001b[38;2;108;92;231m────────────────────\u001b[0m  \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  ● double border    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  ● single border    \u001b[90m│\u001b[0m",
-		"\u001b[90m│\u001b[0m  ● round corners    \u001b[90m│\u001b[0m",
-		"\u001b[90m╰────────────────────╯\u001b[0m",
-	];
+	const borders = {
+		double: { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" },
+		single: { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│" },
+		round: { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
+	};
 
-	const linesMap = [doubleLines, singleLines, roundLines];
+	const currentType = boxTypes[activeBox];
+	const b = borders[currentType as keyof typeof borders];
+	const top = `${dim}${b.tl}${b.h.repeat(innerW)}${b.tr}${reset}`;
+	const bottom = `${dim}${b.bl}${b.h.repeat(innerW)}${b.br}${reset}`;
+	const side = `${dim}${b.v}${reset}`;
+
+	const lines = [
+		top,
+		...content.map((line) => `${side}${line}${side}`),
+		bottom,
+		"",
+		`  ${dim}→ ${typeLabels[currentType]}${reset}`,
+	];
 
 	return (
 		<TerminalPreview
 			title="dui — boxes"
 			command="node boxes.js"
-			screenClassName="min-h-[160px] flex flex-col justify-start"
+			screenClassName="min-h-[200px] flex flex-col justify-start"
 		>
-			{linesMap[activeBox].join("\n")}
+			{lines.join("\n")}
 		</TerminalPreview>
 	);
 }
@@ -403,27 +411,25 @@ export function AnimationDemo() {
 	const t = frame / 60;
 
 	const easings = [
-		{ name: "linear", fn: (x: number) => x, color: "#ff6b6b" },
+		{ name: "linear", fn: (x: number) => x, color: "255;107;107" },
 		{
 			name: "ease-out",
 			fn: (x: number) => 1 - (1 - x) * (1 - x),
-			color: "#feca57",
+			color: "254;202;87",
 		},
 		{
 			name: "ease-in-out",
-			fn: (x: number) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2),
-			color: "#48dbfb",
+			fn: (x: number) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2),
+			color: "72;219;251",
 		},
 	];
 
 	const lines = easings.map((e) => {
 		const p = e.fn(t);
-		const pos = Math.round(p * 30);
-		const hexPairs = e.color.replace("#", "").match(/../g);
-		const colorSeq = hexPairs ? hexPairs.join(";") : "0;0;0";
-		const bar = `\u001b[38;2;0;0;0;48;2;${colorSeq}m \u001b[0m`.repeat(pos);
-		const rest = "\u001b[90m·\u001b[0m".repeat(Math.max(0, 30 - pos));
-		return `  \u001b[90m${e.name.padEnd(14)}\u001b[0m ${bar}${rest}`;
+		const pos = Math.round(p * 28);
+		const bar = `\u001b[38;2;${e.color}m█\u001b[0m`.repeat(pos);
+		const rest = "\u001b[90m░\u001b[0m".repeat(Math.max(0, 28 - pos));
+		return `  \u001b[90m${e.name.padEnd(12)}\u001b[0m ${bar}${rest}`;
 	});
 
 	return (
@@ -433,7 +439,7 @@ export function AnimationDemo() {
 			screenClassName="min-h-[160px] flex flex-col justify-start"
 		>
 			{[
-				"  \u001b[1mEasing Curves\u001b[0m",
+				"  \u001b[1mEasing Curves (60 fps)\u001b[0m",
 				"",
 				...lines,
 				"",
@@ -836,30 +842,30 @@ export function GridDemo() {
 	const bgDim = "\u001b[48;2;60;60;60;38;2;200;200;200m";
 
 	const lines = [
-		`${bold}${green}╭── ${reset}${bold}System Dashboard${reset}${green} ───────────────────────────────────╮${reset}`,
-		`${green}│${reset}                                                            ${green}│${reset}`,
-		`${green}│${reset}  ${bold}CPU${reset}  ${cyan}████████████░░░░░░${reset}  ${white}65%${reset}  ${dim}${bold}||${reset}  ${bold}MEM${reset}  ${yellow}██████░░░░░░░░░░${reset}  ${white}3.2/8 GB${reset}  ${green}│${reset}`,
-		`${green}│${reset}  ${bold}DSK${reset}  ${magenta}████████░░░░░░░░░░${reset}  ${white}42%${reset}  ${dim}${bold}||${reset}  ${bold}NET${reset}  ${blue}████████████░░░░${reset}  ${white}1.5 MB/s${reset}  ${green}│${reset}`,
-		`${green}│${reset}                                                            ${green}│${reset}`,
-		`${green}│${reset}  ${dim}── Services ────────────────────────────────────${reset}  ${green}│${reset}`,
-		`${green}│${reset}                                                            ${green}│${reset}`,
-		`${green}│${reset}   ${bgGreen} API ${reset}  ${green}●${reset} ${green}api-gateway${reset}   ${dim}uptime: 12d 4h${reset}                 ${green}│${reset}`,
-		`${green}│${reset}   ${bgRed} DB  ${reset}  ${red}●${reset} ${red}postgres-main${reset}  ${dim}uptime: 2h 18m${reset}  ${red}!${reset}              ${green}│${reset}`,
-		`${green}│${reset}   ${bgDim} CACHE ${reset}  ${dim}●${reset} ${dim}redis-cluster${reset}  ${dim}uptime: 12d 4h${reset}               ${green}│${reset}`,
-		`${green}│${reset}                                                            ${green}│${reset}`,
-		`${green}│${reset}  ${dim}── Alerts ──────────────────────────────────────${reset}  ${green}│${reset}`,
-		`${green}│${reset}                                                            ${green}│${reset}`,
-		`${green}│${reset}  ${red}✖${reset} Disk usage on ${bold}/dev/sda1${reset} at 87%  ${dim}[threshold: 80%]${reset}  ${green}│${reset}`,
+		`${bold}${green}╭── ${reset}${bold}System Dashboard${reset}${green} ───────────────────────╮${reset}`,
+		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}│${reset}  ${bold}CPU${reset}  ${cyan}██████████░░░░░${reset}  ${white}65%${reset}    ${bold}MEM${reset}  ${yellow}████░░░░░░░░${reset}  ${white}3.2/8 GB${reset}  ${green}│${reset}`,
+		`${green}│${reset}  ${bold}DSK${reset}  ${magenta}██████░░░░░░░░░${reset}  ${white}42%${reset}    ${bold}NET${reset}  ${blue}████████░░░░${reset}  ${white}1.5 MB/s${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}│${reset}  ${dim}── Services ──────────────────────────────${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}│${reset}   ${bgGreen} API ${reset}  ${green}●${reset} ${green}api-gateway${reset}   ${dim}uptime: 12d 4h${reset}        ${green}│${reset}`,
+		`${green}│${reset}   ${bgRed} DB  ${reset}  ${red}●${reset} ${red}postgres-main${reset}  ${dim}uptime: 2h 18m${reset}  ${red}!${reset}     ${green}│${reset}`,
+		`${green}│${reset}   ${bgDim} CACHE ${reset}  ${dim}●${reset} ${dim}redis-cluster${reset}  ${dim}uptime: 12d 4h${reset}      ${green}│${reset}`,
+		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}│${reset}  ${dim}── Alerts ────────────────────────────────${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}│${reset}  ${red}✖${reset} Disk use /dev/sda1 87% ${dim}[threshold: 80%]${reset}   ${green}│${reset}`,
 		`${green}│${reset}  ${yellow}⚠${reset} SSL cert expires in 14 days              ${green}│${reset}`,
-		`${green}│${reset}                                                            ${green}│${reset}`,
-		`${green}╰── ${reset}${dim}Grid • Section • Divider • Badge${reset}${green} ─────────────────────────╯${reset}`,
+		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}╰── ${reset}${dim}Grid • Section • Divider • Badge${reset}${green} ─────────────╯${reset}`,
 	];
 
 	return (
 		<TerminalPreview
 			title="dui — grid & layout"
 			command="node dashboard.js"
-			screenClassName="min-h-[320px] flex flex-col justify-start"
+			screenClassName="min-h-[360px] flex flex-col justify-start"
 		>
 			{[
 				`  ${dim}${bold}╭── layout demo ───────────────────────────────╮${reset}`,
