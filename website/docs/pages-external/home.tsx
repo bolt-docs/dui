@@ -1,48 +1,36 @@
 import { type BoltdocsLocale, useI18n } from "boltdocs/client";
 import { Link } from "boltdocs/primitives";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Card } from "../../components/mdx/Card";
 import PackageManager from "../../components/PackageManager";
 import { TerminalBackground } from "../../components/TerminalBackground";
 import LazySection from "../../components/LazySection";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
+import {
+	AnimationDemo,
+	BoxesDemo,
+	ChartDemo,
+	ColorsDemo,
+	ConfirmPromptDemo,
+	DiffDemo,
+	GridDemo,
+	ImageDemo,
+	ListsDemo,
+	LoggerDemo,
+	NotifyDemo,
+	ProgressBarDemo,
+	QrCodeDemo,
+	SpinnerDemo,
+	StepsDemo,
+	TableDemo,
+} from "../../components/ShowcasePreviews";
 
-// Code-split heavy components — they load as separate JS chunks only
-// when LazySection's IntersectionObserver triggers the render.
-const loadDuiShowcase = () => import("../../components/DuiShowcase");
+// Code-split only the AnimatedTerminal — demos are light enough to import directly
 const loadAnimatedTerminal = () =>
 	import("../../components/AnimatedTerminal").then((m) => ({
 		default: m.AnimatedTerminal,
 	}));
-const DuiShowcase = lazy(loadDuiShowcase);
 const AnimatedTerminal = lazy(loadAnimatedTerminal);
-
-/**
- * Skeleton shown in the brief gap between LazySection flipping
- * `shouldRender → true` and the dynamic chunk finishing download.
- * Matches the shape of the content being loaded so the reserved
- * space (set by LazySection's `containIntrinsicSize`) stays filled.
- */
-function CarouselFallback() {
-	return (
-		<div className="flex flex-col gap-4 py-6">
-			<div className="rounded-xl border border-strong overflow-hidden min-h-[400px] bg-white/30 dark:bg-black/20 animate-pulse">
-				<div className="p-6 flex flex-col gap-4">
-					<div className="h-4 w-1/4 rounded bg-neutral-300/60 dark:bg-neutral-700/50" />
-					<div className="flex-1 min-h-[280px] rounded-lg border border-strong bg-white/30 dark:bg-black/20" />
-					<div className="flex gap-2 justify-center">
-						{[1, 2, 3, 4, 5].map((i) => (
-							<div
-								key={i}
-								className="h-2 w-2 rounded-full bg-neutral-300/60 dark:bg-neutral-700/50"
-							/>
-						))}
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-}
 
 function TerminalFallback() {
 	return (
@@ -74,6 +62,11 @@ const TRANSLATIONS = {
 	apiReference: { en: "API Reference →", es: "Referencia API →" },
 	modulesTitle: { en: "modules", es: "módulos" },
 	showcaseTitle: { en: "showcase", es: "demostración" },
+	coreTitle: { en: "core widgets", es: "widgets principales" },
+	interactiveTitle: { en: "interactive", es: "interactivos" },
+	advancedTitle: { en: "advanced", es: "avanzados" },
+	pluginsTitle: { en: "plugins", es: "plugins" },
+	pluginTitle: { en: "plugins", es: "plugins" },
 
 	installationTitle: { en: "installation", es: "instalación" },
 	installationDesc: {
@@ -91,6 +84,192 @@ const TRANSLATIONS = {
 	},
 } as const;
 
+/* ── Demo catalogue ───────────────────────────────────────── */
+
+interface DemoEntry {
+	id: string;
+	component: React.ComponentType;
+	title: string;
+	desc: string;
+	tag: "core" | "interactive" | "advanced" | "plugin";
+}
+
+const DEMOS: DemoEntry[] = [
+	{
+		id: "progress",
+		component: ProgressBarDemo,
+		title: "ProgressBar",
+		desc: "Dynamic progress indicator for long-running CLI tasks.",
+		tag: "core",
+	},
+	{
+		id: "colors",
+		component: ColorsDemo,
+		title: "Colors Engine",
+		desc: "24-bit True Color with HEX, RGB, RGBA, and OKLCH support.",
+		tag: "core",
+	},
+	{
+		id: "spinner",
+		component: SpinnerDemo,
+		title: "Spinners",
+		desc: "Animated braille-frame spinners with clean status indicators.",
+		tag: "core",
+	},
+	{
+		id: "steps",
+		component: StepsDemo,
+		title: "Step Timelines",
+		desc: "Pipeline timelines with connection lines and colored status icons.",
+		tag: "core",
+	},
+	{
+		id: "table",
+		component: TableDemo,
+		title: "Table & Layout",
+		desc: "Box-drawing character tables with column alignment and wrapping.",
+		tag: "core",
+	},
+	{
+		id: "boxes",
+		component: BoxesDemo,
+		title: "Boxes & Borders",
+		desc: "Double, single, and round border styles for structured output.",
+		tag: "core",
+	},
+	{
+		id: "lists",
+		component: ListsDemo,
+		title: "Lists & Tasks",
+		desc: "Bullet points, numbered lists, and task checklists.",
+		tag: "core",
+	},
+	{
+		id: "logger",
+		component: LoggerDemo,
+		title: "Logger",
+		desc: "Structured logging — info, warn, error, success, debug.",
+		tag: "core",
+	},
+	{
+		id: "grid",
+		component: GridDemo,
+		title: "Grid & Layout",
+		desc: "Grid, section, divider, and badge for complex terminal layouts.",
+		tag: "core",
+	},
+	{
+		id: "prompts",
+		component: ConfirmPromptDemo,
+		title: "Prompts",
+		desc: "Interactive confirm prompts with default values and SIGINT handling.",
+		tag: "interactive",
+	},
+	{
+		id: "animation",
+		component: AnimationDemo,
+		title: "Animation",
+		desc: "25+ easing functions, spring physics, keyframe timelines.",
+		tag: "advanced",
+	},
+	{
+		id: "chart",
+		component: ChartDemo,
+		title: "Charts",
+		desc: "Bar, column, line, pie, and sparkline charts with true color.",
+		tag: "plugin",
+	},
+	{
+		id: "diff",
+		component: DiffDemo,
+		title: "Diff",
+		desc: "Unified, side-by-side, and word-level diff rendering.",
+		tag: "plugin",
+	},
+	{
+		id: "qrcode",
+		component: QrCodeDemo,
+		title: "QR Code",
+		desc: "Scannable QR codes with custom colors, labels, and error correction.",
+		tag: "plugin",
+	},
+	{
+		id: "notify",
+		component: NotifyDemo,
+		title: "Notify",
+		desc: "Cross-platform desktop notifications — osascript, notify-send, powershell.",
+		tag: "plugin",
+	},
+	{
+		id: "image",
+		component: ImageDemo,
+		title: "Image Rendering",
+		desc: "ANSI image renderer using 4-shade dither with kitty/iterm2 support.",
+		tag: "plugin",
+	},
+];
+
+function groupByTag(demos: DemoEntry[]): Record<string, DemoEntry[]> {
+	const groups: Record<string, DemoEntry[]> = {};
+	for (const d of demos) {
+		if (!groups[d.tag]) groups[d.tag] = [];
+		groups[d.tag].push(d);
+	}
+	return groups;
+}
+
+const TAG_LABELS: Record<string, string> = {
+	core: "core widgets",
+	interactive: "interactive",
+	advanced: "advanced",
+	plugin: "plugins",
+};
+
+const TAG_ORDER = ["core", "interactive", "advanced", "plugin"];
+const TAG_NUMBERS = ["02", "03", "04", "05"];
+
+/* ── Demo card component ───────────────────────────────────── */
+
+function DemoCard({ entry }: { entry: DemoEntry }) {
+	const DemoComponent = entry.component;
+	return (
+		<div
+			className="group flex flex-col rounded-xl border border-strong bg-white/[0.02] hover:bg-soft/50 transition-all duration-200 overflow-hidden"
+			style={{
+				contentVisibility: "auto",
+				containIntrinsicSize: "320px",
+			}}
+		>
+			{/* Demo terminal preview */}
+			<div className="flex-1 min-h-0">
+				<DemoComponent />
+			</div>
+			{/* Footer label */}
+			<div className="border-t border-strong/50 px-4 py-2 flex items-center justify-between bg-soft/30">
+				<span className="text-xs font-bold text-body font-mono">
+					<svg
+						className="inline-block mr-1.5 -mt-0.5 text-terminal-green"
+						width="10"
+						height="10"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="3"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<polyline points="9 18 15 12 9 6" />
+					</svg>
+					{entry.title}
+				</span>
+				<span className="text-[10px] text-dim uppercase tracking-wider">
+					{entry.tag}
+				</span>
+			</div>
+		</div>
+	);
+}
+
 export function HomePage() {
 	const { currentLocale } = useI18n();
 	const locale = (currentLocale || "en") as BoltdocsLocale;
@@ -99,7 +278,9 @@ export function HomePage() {
 		TRANSLATIONS[key][locale] || TRANSLATIONS[key].en;
 
 	// Prefetch lazy chunks during idle time (while user reads hero)
-	useIdlePrefetch([loadDuiShowcase, loadAnimatedTerminal]);
+	useIdlePrefetch([loadAnimatedTerminal]);
+
+	const grouped = useMemo(() => groupByTag(DEMOS), []);
 
 	return (
 		<div className="min-h-screen bg-main/80 text-paragraph font-mono relative overflow-x-hidden">
@@ -136,6 +317,7 @@ export function HomePage() {
 				</div>
 			</section>
 
+			{/* ── Modules section ──────────────────────────────────── */}
 			<section className="border-b border-strong px-6 py-16 relative">
 				<div className="mx-auto max-w-4xl">
 					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-6">
@@ -152,21 +334,33 @@ export function HomePage() {
 				</div>
 			</section>
 
-			<LazySection shape="carousel" minHeight="480px">
-				<section className="border-b border-strong px-6 py-16 relative">
-					<div className="mx-auto max-w-4xl">
-						<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8">
-							<span className="text-terminal-green font-mono">#</span> 02 /{" "}
-							{txt("showcaseTitle")}
-						</h2>
+			{/* ── Demo gallery — grouped by tag ─────────────────────── */}
+			{TAG_ORDER.map((tag, ti) => {
+				const demos = grouped[tag];
+				if (!demos || demos.length === 0) return null;
+				return (
+					<section
+						key={tag}
+						className="border-b border-strong px-6 py-16 relative"
+					>
+						<div className="mx-auto max-w-4xl">
+							<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8">
+								<span className="text-terminal-green font-mono">#</span>{" "}
+								{TAG_NUMBERS[ti] || String(ti + 2).padStart(2, "0")} /{" "}
+								{txt((tag + "Title") as keyof typeof TRANSLATIONS, locale) || tag}
+							</h2>
 
-						<Suspense fallback={<CarouselFallback />}>
-							<DuiShowcase />
-						</Suspense>
-					</div>
-				</section>
-			</LazySection>
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+								{demos.map((entry) => (
+									<DemoCard key={entry.id} entry={entry} />
+								))}
+							</div>
+						</div>
+					</section>
+				);
+			})}
 
+			{/* ── Installation + Interactive demo ───────────────────── */}
 			<LazySection shape="terminal-big" minHeight="400px">
 				<section className="border-b border-strong px-6 py-16 relative">
 					<div className="mx-auto max-w-4xl">
@@ -174,8 +368,8 @@ export function HomePage() {
 							<div className="flex flex-col gap-4">
 								<div>
 									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
-										<span className="text-terminal-green font-mono">#</span> 03 /{" "}
-										{txt("installationTitle")}
+										<span className="text-terminal-green font-mono">#</span>{" "}
+										06 / {txt("installationTitle")}
 									</h2>
 									<p className="text-xs text-muted mt-1 leading-relaxed">
 										{txt("installationDesc")}
@@ -190,8 +384,8 @@ export function HomePage() {
 							<div className="flex flex-col gap-4">
 								<div>
 									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
-										<span className="text-terminal-green font-mono">#</span> 04 /{" "}
-										{txt("interactiveDemoTitle")}
+										<span className="text-terminal-green font-mono">#</span>{" "}
+										07 / {txt("interactiveDemoTitle")}
 									</h2>
 									<p className="text-xs text-muted mt-1 leading-relaxed">
 										{txt("interactiveDemoDesc")}
