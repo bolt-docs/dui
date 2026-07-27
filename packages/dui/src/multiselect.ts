@@ -506,10 +506,70 @@ function interactiveMultiselect<T>(
 				buf = buf.slice(-32);
 			}
 
-			// Process every SGR mouse sequence in arrival order so a
-			// single chunk with several wheel ticks (fast scroll)
-			// advances the cursor by the full burst count rather
-			// than just the last tick.
+			// ── Arrow keys FIRST ──────────────────────────────────────
+			// Check keyboard navigation BEFORE mouse events so arrow keys
+			// are never eaten by mouse-tracking data arriving in the same
+			// chunk. Mouse events are only processed when no arrow key
+			// matched, ensuring keyboard always has priority.
+			if (buf.includes("\x1b[A")) {
+				buf = "";
+				hoveredIndex = null;
+				cursor = clampCursor(cursor - 1);
+				if (cursor < offset) offset = cursor;
+				render();
+				return;
+			}
+			if (buf.includes("\x1b[B")) {
+				buf = "";
+				hoveredIndex = null;
+				cursor = clampCursor(cursor + 1);
+				if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+				render();
+				return;
+			}
+
+			// ── Escape key (debounced) ────────────────────────────────
+			// When `\x1b` arrives alone it might be the start of a CSI
+			// sequence (arrow key, function key) split across chunks.
+			// Instead of cancelling immediately, flag a pending escape;
+			// if the NEXT chunk doesn't extend it, cancel then.
+			// The flag is cleared on every `onData` call so a follow-up
+			// byte within the same microtask prevents the cancel.
+			if (buf === "\x1b") {
+				// Defer cancel: wait for the next data chunk. If it's
+				// part of a CSI sequence, buf will no longer be just
+				// `"\x1b"` and we'll process it as an escape sequence.
+				// If no more data arrives (or the next chunk doesn't
+				// complete a CSI sequence), the fallthrough below will
+				// clear buf and the next data event will re-evaluate.
+				//
+				// Use a microtask delay so the next poll round sees
+				// whether more bytes are queued before committing to
+				// cancel. This avoids the 200 ms timeout approach that
+				// would make Escape feel sluggish.
+				Promise.resolve().then(() => {
+					if (done) return;
+					// If buf is still exactly `"\x1b"` after the
+					// microtask, no CSI sequence arrived — cancel.
+					if (buf !== "\x1b") return;
+					buf = "";
+					cleanup();
+					if (linesRendered > 0) {
+						stdout.write(`\x1b[${linesRendered}A`);
+					} else {
+						stdout.write("\x1b[H");
+					}
+					readline.cursorTo(stdout, 0);
+					readline.clearScreenDown(stdout);
+					reject(new Error("Cancelled"));
+				});
+				return;
+			}
+
+			// ── Mouse events ──────────────────────────────────────────
+			// Process SGR mouse sequences only after keyboard has been
+			// checked. Mouse data is consumed from buf here so arrow key
+			// bytes are preserved by the earlier checks.
 			const mouseEvents = parseSGRMouseDataAll(buf);
 			if (mouseEvents.length > 0) {
 				buf = "";
@@ -517,29 +577,12 @@ function interactiveMultiselect<T>(
 				let wheelUp = 0;
 				let wheelDown = 0;
 				let lastMove: (typeof mouseEvents)[number] | null = null;
-				// Multiple clicks in one chunk toggle each in order;
-				// the cursor lands on the LAST clicked index.
 				const clickedIndices: number[] = [];
-				// Track which release events we already consumed as
-				// drag-reorder drops so the click-toggling branch
-				// below doesn't double-fire when the parser
-				// (rarely) emits both events for the same gesture.
 				let dragJustCommitted = false;
-
-				// Track whether anything visible actually changed so a
-				// chunk of repeated motion events landing on the same
-				// coordinate does NOT re-render. Drag handlers in
-				// the press/release/move branches above flag this
-				// flag directly so a press that paints a dragSource
-				// indicator triggers an immediate re-render.
 				let renderNeeded = false;
 
 				for (const mouseEvent of mouseEvents) {
 					if (mouseEvent.type === "click") {
-						// A click arrives when press and release
-						// happened at the SAME position. That's
-						// the parser's "no drag" signal: clear any
-						// pending drag state and toggle.
 						dragSource = null;
 						dragHover = null;
 						const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
@@ -554,13 +597,6 @@ function interactiveMultiselect<T>(
 							}
 						}
 					} else if (mouseEvent.type === "press") {
-						// Press event. With drag enabled, set
-						// `dragSource` to the row under the press
-						// so the drag visualisation shows up
-						// immediately. `dragHover` follows the
-						// cursor on subsequent move events.
-						// Without drag, press is a no-op for us
-						// (the parser emits the matching click).
 						if (enableDragReorder && mouseEvent.button === "left") {
 							const pressedArea = getClickedItem(
 								mouseEvent.x,
@@ -587,13 +623,6 @@ function interactiveMultiselect<T>(
 							}
 						}
 					} else if (mouseEvent.type === "release") {
-						// Release event with left button. When
-						// dragSource is set, the parser already
-						// established that the press/release
-						// positions DIFFERS (otherwise it would
-						// have emitted a `click` instead), so this
-						// is a true drag completion. MOVE the
-						// source row to the drop target.
 						if (
 							enableDragReorder &&
 							mouseEvent.button === "left" &&
@@ -615,92 +644,32 @@ function interactiveMultiselect<T>(
 									targetIdx !== sourceIdx &&
 									!activeChoices[targetIdx].disabled
 								) {
-									// MOVE (insertion): remove the
-									// source row, insert it at the
-									// target position. Elements
-									// between source and target
-									// shift up by one. This matches
-									// the natural drag-and-drop UX
-									// (a swap would feel surprising
-									// — the dropped element ends up
-									// where the cursor was, not at
-									// the original source's index).
-									const [moved] = activeChoices.splice(
-										sourceIdx,
-										1,
-									);
+									const [moved] = activeChoices.splice(sourceIdx, 1);
 									activeChoices.splice(targetIdx, 0, moved);
 
-							// Remap the checked set through the same helper
-							// used for the cursor so both follow the same
-							// logical row across the splice (helper is
-							// documented next to clampCursor above).
-							const newChecked = new Set<number>();
-							for (const oldIdx of checked) {
-								newChecked.add(
-									remapIndex(oldIdx, sourceIdx, targetIdx),
-								);
-							}
-							checked = newChecked;
-
-							// Cursor visually pinned to whichever logical
-							// row it was on before the move — including the
-							// splice-shift range when the cursor wasn't on
-							// the dragged row itself.
-							cursor = remapIndex(
-								cursor,
-								sourceIdx,
-								targetIdx,
-							);
-									// Always scroll to ensure the
-									// drop target is visible
-									// after the move — even when
-									// the cursor doesn't follow.
-									// Without this, dragging to a
-									// row past the pageSize
-									// boundary would leave the
-									// dropped element off-screen
-									// (cursor stayed in view, but
-									// the actual move landed
-									// elsewhere). Prioritising the
-									// drop target matches
-									// file-manager UX.
-									if (targetIdx < offset) {
-										offset = targetIdx;
-									} else if (
-										targetIdx >= offset + pageSize
-									) {
-										offset =
-											targetIdx - pageSize + 1;
+									const newChecked = new Set<number>();
+									for (const oldIdx of checked) {
+										newChecked.add(remapIndex(oldIdx, sourceIdx, targetIdx));
 									}
-									// Clamp cursor into the new
-									// viewport. If the cursor
-									// followed the row, it's
-									// already at targetIdx which
-									// is now visible; if it
-									// stayed put it may now sit
-									// outside the scrolled
-									// viewport and needs
-									// re-clamping.
+									checked = newChecked;
+									cursor = remapIndex(cursor, sourceIdx, targetIdx);
+
+									if (targetIdx < offset) offset = targetIdx;
+									else if (targetIdx >= offset + pageSize)
+										offset = targetIdx - pageSize + 1;
+
 									if (cursor < offset) offset = cursor;
-									if (cursor >= offset + pageSize)
-										offset = cursor - pageSize + 1;
+									if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 
 									dragJustCommitted = true;
 									renderNeeded = true;
 								}
 							}
-							// Always clear drag state on release;
-							// whether or not the drop was valid
-							// (no-op / cancelled / committed) the
-							// gesture is over.
 							dragSource = null;
 							dragHover = null;
 						}
 					} else if (mouseEvent.type === "move") {
 						lastMove = mouseEvent;
-						// During a drag, update dragHover so the
-						// drop-target preview tracks the cursor.
 						if (enableDragReorder && dragSource !== null) {
 							const hoveredArea = getHoveredItem(
 								mouseEvent.x,
@@ -716,22 +685,14 @@ function interactiveMultiselect<T>(
 							}
 						}
 					} else if (mouseEvent.type === "wheel") {
-						// Wheel scrolls the cursor; it does NOT toggle
-						// checkboxes — only space and click do.
 						if (mouseEvent.wheel === "up") wheelUp++;
 						else if (mouseEvent.wheel === "down") wheelDown++;
-						// Wheel also cancels any in-flight drag so a
-						// mid-gesture scroll doesn't leave stale
-						// dragSource/dragHover state on the next
-						// press.
 						if (enableDragReorder && dragSource !== null) {
 							dragSource = null;
 							dragHover = null;
 						}
 					}
 				}
-
-			
 
 				if (lastMove) {
 					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
@@ -748,10 +709,6 @@ function interactiveMultiselect<T>(
 				const wheelNet = wheelDown - wheelUp;
 				if (wheelNet !== 0) {
 					hoveredIndex = null;
-					// Same sensitivity-multiplied magnitude as `select`.
-					// Wheel here only scrolls the cursor; it never
-					// toggles checkboxes, so sensitivity only affects
-					// navigation speed, not selection semantics.
 					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
 					const dir = wheelNet < 0 ? -1 : 1;
 					for (let i = 0; i < magnitude; i++) {
@@ -762,27 +719,11 @@ function interactiveMultiselect<T>(
 					renderNeeded = true;
 				}
 
-				// Apply each click in order. Each click sets the
-				// cursor and toggles its checkbox; multiple clicks
-				// in one chunk honour the order they arrived in.
-				// The `renderNeeded = true` line lives at the TOP of
-				// the loop body, BEFORE the toggle's `if (required
-				// && checked.size <= 1) continue` early-return, so a
-				// click that updates the cursor but skips the toggle
-				// (the required + last-item + already-checked guard)
-				// still triggers a render of the new cursor position.
 				for (const idx of clickedIndices) {
 					cursor = idx;
 					if (cursor < offset) offset = cursor;
 					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 					renderNeeded = true;
-					// Skip the toggle if this click was emitted as
-					// a side-effect of a drag completion. The
-					// parser normally emits `release` (not
-					// `click`) for drag gestures because the
-					// press and release positions differ, but
-					// guard for the rare case the parser
-					// classifies both as a click.
 					if (dragJustCommitted) continue;
 					if (checked.has(cursor)) {
 						if (required && checked.size <= 1) continue;
@@ -795,36 +736,6 @@ function interactiveMultiselect<T>(
 				if (renderNeeded) {
 					render();
 				}
-				return;
-			}
-
-			if (buf.includes("\x1b[A")) {
-				buf = "";
-				hoveredIndex = null;
-				cursor = clampCursor(cursor - 1);
-				if (cursor < offset) offset = cursor;
-				render();
-				return;
-			}
-			if (buf.includes("\x1b[B")) {
-				buf = "";
-				hoveredIndex = null;
-				cursor = clampCursor(cursor + 1);
-				if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
-				render();
-				return;
-			}
-
-			if (buf === "\x1b") {
-				cleanup();
-				if (linesRendered > 0) {
-					stdout.write(`\x1b[${linesRendered}A`);
-				} else {
-					stdout.write("\x1b[H");
-				}
-				readline.cursorTo(stdout, 0);
-				readline.clearScreenDown(stdout);
-				reject(new Error("Cancelled"));
 				return;
 			}
 
