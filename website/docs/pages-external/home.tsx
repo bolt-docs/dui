@@ -1,6 +1,6 @@
 import { type BoltdocsLocale, useI18n } from "boltdocs/client";
 import { Link } from "boltdocs/primitives";
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense } from "react";
 import { Card } from "../../components/mdx/Card";
 import PackageManager from "../../components/PackageManager";
 import { TerminalBackground } from "../../components/TerminalBackground";
@@ -61,7 +61,6 @@ const TRANSLATIONS = {
 	gettingStarted: { en: "Getting Started →", es: "Comenzar →" },
 	apiReference: { en: "API Reference →", es: "Referencia API →" },
 	modulesTitle: { en: "modules", es: "módulos" },
-	showcaseTitle: { en: "showcase", es: "demostración" },
 	coreTitle: { en: "core widgets", es: "widgets principales" },
 	interactiveTitle: { en: "interactive", es: "interactivos" },
 	advancedTitle: { en: "advanced", es: "avanzados" },
