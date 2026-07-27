@@ -41,6 +41,9 @@ importers:
       '@dui-toolkit/plugin-markdown':
         specifier: workspace:*
         version: link:../packages/dui-markdown
+      '@dui-toolkit/plugin-notify':
+        specifier: workspace:*
+        version: link:../packages/dui-notify
       '@dui-toolkit/plugin-qrcode':
         specifier: workspace:*
         version: link:../packages/dui-qrcode

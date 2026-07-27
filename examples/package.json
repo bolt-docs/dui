@@ -22,6 +22,7 @@
 		"hover": "npx tsx 17-hover/index.ts",
 		"multiselect-drag-reorder": "npx tsx 18-multiselect-drag-reorder/index.ts",
 		"mouse-gestures": "npx tsx 21-mouse-gestures/index.ts",
+		"notify": "npx tsx 19-notify/index.ts",
 		"all": "npm run colors && npm run boxes && npm run lists && npm run tables && npm run steps && npm run progress && npm run animation && npm run image && npm run plugin-stack"
 	},
 	"dependencies": {
@@ -30,6 +31,7 @@
 		"@dui-toolkit/plugin-chart": "workspace:*",
 		"@dui-toolkit/plugin-markdown": "workspace:*",
 		"@dui-toolkit/plugin-diff": "workspace:*",
+		"@dui-toolkit/plugin-notify": "workspace:*",
 		"@dui-toolkit/plugin-qrcode": "workspace:*",
 		"tsx": "^4.19.0"
 	}
