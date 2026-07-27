@@ -218,13 +218,6 @@ function groupByTag(demos: DemoEntry[]): Record<string, DemoEntry[]> {
 	return groups;
 }
 
-const TAG_LABELS: Record<string, string> = {
-	core: "core widgets",
-	interactive: "interactive",
-	advanced: "advanced",
-	plugin: "plugins",
-};
-
 const TAG_ORDER = ["core", "interactive", "advanced", "plugin"];
 const TAG_NUMBERS = ["02", "03", "04", "05"];
 
@@ -273,14 +266,13 @@ function DemoCard({ entry }: { entry: DemoEntry }) {
 export function HomePage() {
 	const { currentLocale } = useI18n();
 	const locale = (currentLocale || "en") as BoltdocsLocale;
-
 	const txt = (key: keyof typeof TRANSLATIONS) =>
 		TRANSLATIONS[key][locale] || TRANSLATIONS[key].en;
 
 	// Prefetch lazy chunks during idle time (while user reads hero)
 	useIdlePrefetch([loadAnimatedTerminal]);
 
-	const grouped = useMemo(() => groupByTag(DEMOS), []);
+	const grouped = groupByTag(DEMOS);
 
 	return (
 		<div className="min-h-screen bg-main/80 text-paragraph font-mono relative overflow-x-hidden">
@@ -347,7 +339,7 @@ export function HomePage() {
 							<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8">
 								<span className="text-terminal-green font-mono">#</span>{" "}
 								{TAG_NUMBERS[ti] || String(ti + 2).padStart(2, "0")} /{" "}
-								{txt((tag + "Title") as keyof typeof TRANSLATIONS, locale) || tag}
+								{txt((tag + "Title") as keyof typeof TRANSLATIONS) || tag}
 							</h2>
 
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
