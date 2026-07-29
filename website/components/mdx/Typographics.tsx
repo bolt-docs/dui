@@ -72,6 +72,20 @@ const Li = (props: React.HTMLAttributes<HTMLLIElement>) => (
 	<li className="leading-7" {...props} />
 );
 
+const Pre = (props: React.HTMLAttributes<HTMLPreElement>) => (
+	<pre
+		className="overflow-x-auto rounded-lg border border-strong bg-code-bg p-5 my-8 text-sm leading-relaxed font-mono"
+		{...props}
+	/>
+);
+
+const Code = (props: React.HTMLAttributes<HTMLElement>) => (
+	<code
+		className="rounded px-1.5 py-0.5 bg-code-bg text-code-text text-[0.8125em] font-mono border border-strong/60"
+		{...props}
+	/>
+);
+
 export const typographics = {
 	a: Anchor,
 	blockquote: Blockquote,
@@ -84,4 +98,7 @@ export const typographics = {
 	ul: Ul,
 	ol: Ol,
 	li: Li,
+	pre: Pre,
+	code: Code,
+	inlineCode: Code,
 };
