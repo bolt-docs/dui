@@ -3,7 +3,7 @@ import { defineConfig } from "boltdocs";
 export default defineConfig({
 	base: "/docs",
 	versions: {
-		defaultVersion: "v0.5.0",
+		defaultVersion: "next",
 		prefix: "",
 		versions: [
 			{
@@ -43,7 +43,8 @@ export default defineConfig({
 				label: {
 					es: "Documentación",
 					en: "Documentation",
-				},					href: "/docs/v0.5.0/overview",
+				},
+				href: "/docs/v0.5.0/overview",
 			},
 			{
 				label: "Plugins",
@@ -64,7 +65,8 @@ export default defineConfig({
 			light: "/light.svg",
 			alt: "DUI Logo",
 		},
-		editLink: "https://github.com/bolt-docs/dui/edit/main/website/docs/:version/:path",
+		editLink:
+			"https://github.com/bolt-docs/dui/edit/main/website/docs/:version/:path",
 		githubRepo: "bolt-docs/dui",
 	},
 	robots: {

@@ -1,0 +1,32 @@
+---
+title: Primeros Pasos
+sidebarPosition: 2
+description: Instala y configura DUI v0.5.0.
+---
+
+## Instalación
+
+```bash
+pnpm add @bdocs/dui
+```
+
+## Configuración
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({ prefix: 'mytool' })
+```
+
+## Ejemplo
+
+```ts
+import { configure, info, success, box, bullet } from '@bdocs/dui'
+
+configure({ prefix: 'example' })
+
+info('Iniciando proceso...')
+console.log(bullet(['Parsear entrada', 'Transformar datos', 'Escribir salida']))
+console.log(box(['Completado exitosamente'], { title: 'Resultado', style: 'double' }))
+success('¡Todo listo!')
+```

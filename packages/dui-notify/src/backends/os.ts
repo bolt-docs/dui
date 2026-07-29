@@ -26,13 +26,9 @@
  * accessibility preference still wins, but no `notify-send` /
  * `osascript` / `powershell.exe` is invoked.
  */
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import type {
-	NotifyLevel,
-	NotifyOptions,
-	NotifyResult,
-} from "../types.js";
+import type { NotifyLevel, NotifyOptions, NotifyResult } from "../types.js";
 
 // Urgency mapping for `notify-send -u` (libnotify).
 const URGENCY: Record<NotifyLevel, "low" | "normal" | "critical"> = {
@@ -44,17 +40,11 @@ const URGENCY: Record<NotifyLevel, "low" | "normal" | "critical"> = {
 };
 
 function escapeAppleString(s: string): string {
-	return s
-		.replace(/\\/g, "\\\\")
-		.replace(/"/g, '\\"')
-		.replace(/\n/g, " ");
+	return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
 }
 
 function escapePwshString(s: string): string {
-	return s
-		.replace(/`/g, "``")
-		.replace(/"/g, '""')
-		.replace(/\n/g, "; ");
+	return s.replace(/`/g, "``").replace(/"/g, '""').replace(/\n/g, "; ");
 }
 
 /**
@@ -62,9 +52,7 @@ function escapePwshString(s: string): string {
  * the defer guards across `dismissed` + `action`, so callers never
  * observe double-resolve and never see a stranded promise.
  */
-function makeOsResult(
-	id: string,
-): {
+function makeOsResult(id: string): {
 	dismissed: Promise<void>;
 	action: Promise<string | undefined>;
 	teardown(actionId?: string): void;
@@ -150,9 +138,7 @@ function tryCaptureAction(
 	}
 
 	if (proc.stdout) {
-		proc.stdout.on("data", (chunk: Buffer) =>
-			feed(chunk.toString("utf8")),
-		);
+		proc.stdout.on("data", (chunk: Buffer) => feed(chunk.toString("utf8")));
 	}
 	proc.on("error", () => {
 		if (!resolved) dismissOnly();
