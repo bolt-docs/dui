@@ -69,8 +69,6 @@ export function steps(items: StepItem[], opts?: StepsOptions): string {
 				icon = runningStyle("●");
 				break;
 			case "pending":
-				icon = pendingStyle("○");
-				break;
 			default:
 				icon = pendingStyle("○");
 				break;

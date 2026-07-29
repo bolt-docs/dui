@@ -49,9 +49,6 @@ export interface SectionOptions {
 	};
 }
 
-function truncate(s: string, max: number): string {
-	return truncateByCells(s, max);
-}
 
 export function section(opts: SectionOptions): string {
 	// Plain-mode fallback — emit a single-line `section: -- <title>
@@ -95,7 +92,7 @@ export function section(opts: SectionOptions): string {
 
 	// 4 = the 2 leading dashes + 2 separator spaces (one around title).
 	const maxTitleLen = Math.max(0, width - 4);
-	const title = truncate(opts.title, maxTitleLen);
+	const title = truncateByCells(opts.title, maxTitleLen);
 	const titleLen = visibleLength(title);
 
 	if (align === "center") {

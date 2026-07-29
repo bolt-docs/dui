@@ -72,11 +72,6 @@ export interface BoxOptions {
 	actions?: BoxAction[];
 }
 
-function truncate(s: string, max: number): string {
-	// Use the cell-aware helper so CJK titles don't overflow the
-	// requested width when `slice` would otherwise cut mid‑char.
-	return truncateByCells(s, max);
-}
 
 function buildBoxBase(
 	lines: string[],
@@ -104,7 +99,7 @@ function buildBoxBase(
 	);
 
 	if (opts.title) {
-		const title = truncate(opts.title, opts.width - 4);
+		const title = truncateByCells(opts.title, opts.width - 4);
 		const titleLen = visibleLength(title);
 		const remaining = Math.max(0, opts.width - titleLen - 3);
 		result.push(
