@@ -11,7 +11,7 @@
  *   - `notify-send` spawns explode the process table with short-lived
  *     children.
  *   - The OSC escape stream becomes an incomprehensible wall of
- *     `\\x1b]99;...\\x1b\\\\` sequences.
+ *     `\x1b]99;...\x1b\\` sequences.
  *
  * ## Solution
  *
@@ -90,8 +90,10 @@ export interface NotifyQueueOptions {
 
 interface QueuedItem {
 	opts: NotifyOptions;
-	resolve: (result: NotifyResult) => void;
-	reject: (err: Error) => void;
+	resolvers: Array<{
+		resolve: (result: NotifyResult) => void;
+		reject: (err: Error) => void;
+	}>;
 	debounceKey: string;
 	levelPriority: number;
 	enqueuedAt: number;
@@ -236,13 +238,26 @@ export function createNotifyQueue(
 	let pendingFlush: (() => void) | null = null;
 
 	// Mutable options so `configure()` can update them at runtime.
-	const opts = { debounceMs, throttleMs, maxQueueSize, batchTerminal, onDropped };
+	const mutableOpts = {
+		debounceMs,
+		throttleMs,
+		maxQueueSize,
+		batchTerminal,
+		onDropped,
+	};
 
 	// ── Dispatch ───────────────────────────────────────────────
 
 	function doDispatch(item: QueuedItem): void {
 		if (destroyed) return;
-		backend(item.opts).then(item.resolve).catch(item.reject);
+		backend(item.opts).then(
+			(result) => {
+				for (const { resolve } of item.resolvers) resolve(result);
+			},
+			(err) => {
+				for (const { reject } of item.resolvers) reject(err);
+			},
+		);
 	}
 
 	function doDispatchBatch(items: QueuedItem[]): void {
@@ -253,14 +268,16 @@ export function createNotifyQueue(
 			(i) => (i.opts.force ?? "auto") === "auto" || i.opts.force === "terminal",
 		);
 
-		if (opts.batchTerminal && allTerminal && items.length > 1) {
+		if (mutableOpts.batchTerminal && allTerminal && items.length > 1) {
 			const merged = mergeBatch(items);
+			// Collect all resolvers across all items
+			const allResolvers = items.flatMap((i) => i.resolvers);
 			backend(merged).then(
 				(result) => {
-					for (const item of items) item.resolve(result);
+					for (const { resolve } of allResolvers) resolve(result);
 				},
 				(err) => {
-					for (const item of items) item.reject(err);
+					for (const { reject } of allResolvers) reject(err);
 				},
 			);
 			return;
@@ -293,13 +310,13 @@ export function createNotifyQueue(
 		});
 
 		// Take one item (or one batch) off the queue
-		const batchSize = opts.batchTerminal ? Math.min(queue.length, 5) : 1;
+		const batchSize = mutableOpts.batchTerminal ? Math.min(queue.length, 5) : 1;
 		const batch = queue.splice(0, batchSize);
 		doDispatchBatch(batch);
 
 		// Schedule next drain after throttle interval
 		if (queue.length > 0) {
-			timer = setTimeout(drain, opts.throttleMs);
+			timer = setTimeout(drain, mutableOpts.throttleMs);
 			if (typeof timer === "object" && "unref" in timer) {
 				(timer as NodeJS.Timeout).unref();
 			}
@@ -321,9 +338,7 @@ export function createNotifyQueue(
 
 	// ── Enqueue ────────────────────────────────────────────────
 
-	function enqueue(
-		notifyOpts: NotifyOptions,
-	): Promise<NotifyResult> {
+	function enqueue(notifyOpts: NotifyOptions): Promise<NotifyResult> {
 		if (destroyed) {
 			return Promise.reject(new QueueDestroyedError());
 		}
@@ -334,6 +349,7 @@ export function createNotifyQueue(
 
 			if (existing) {
 				// Debounce — update the existing entry with the higher priority
+				// and add the new resolvers so ALL callers resolve together.
 				existing.opts.level = pickHighestLevel(
 					existing.opts.level,
 					notifyOpts.level,
@@ -341,22 +357,19 @@ export function createNotifyQueue(
 				existing.opts.body = notifyOpts.body ?? existing.opts.body;
 				existing.opts.title = notifyOpts.title ?? existing.opts.title;
 				existing.opts.ttl = notifyOpts.ttl ?? existing.opts.ttl;
-				// Resolve the new caller with the same promise chain
-				// (they both get the same result).
-				existing.resolve = resolve;
-				existing.reject = reject;
+				existing.resolvers.push({ resolve, reject });
 				return;
 			}
 
 			// Overflow protection — drop lowest priority
-			if (queue.length >= opts.maxQueueSize) {
+			if (queue.length >= mutableOpts.maxQueueSize) {
 				const lowest = queue.reduce((worst, item) =>
 					item.levelPriority < worst.levelPriority ? item : worst,
 				);
 				if (levelPriority(notifyOpts.level) <= lowest.levelPriority) {
 					// Incoming is same or lower priority — drop it.
 					reject(new Error("Queue overflow: notification dropped"));
-					opts.onDropped?.(notifyOpts);
+					mutableOpts.onDropped?.(notifyOpts);
 					return;
 				}
 				// Incoming is higher priority — drop the lowest.
@@ -364,15 +377,16 @@ export function createNotifyQueue(
 				if (idx !== -1) {
 					queue.splice(idx, 1);
 					debounceMap.delete(makeDebounceKey(lowest.opts));
-					lowest.reject(new Error("Queue overflow: notification dropped"));
-					opts.onDropped?.(lowest.opts);
+					for (const { reject: r } of lowest.resolvers) {
+						r(new Error("Queue overflow: notification dropped"));
+					}
+					mutableOpts.onDropped?.(lowest.opts);
 				}
 			}
 
 			const item: QueuedItem = {
 				opts: notifyOpts,
-				resolve,
-				reject,
+				resolvers: [{ resolve, reject }],
 				debounceKey,
 				levelPriority: levelPriority(notifyOpts.level),
 				enqueuedAt: Date.now(),
@@ -387,14 +401,17 @@ export function createNotifyQueue(
 			// not block the drain from firing. The timer variable is shared
 			// between debounce and throttle scheduling, so it must be null
 			// before we attempt to schedule the next drain.
-			if (debounceMs > 0) {
+			if (mutableOpts.debounceMs > 0) {
 				const debounceTimer = setTimeout(() => {
 					timer = null; // clear so scheduleDrain can proceed
 					debounceMap.delete(debounceKey);
 					scheduleDrain();
-				}, debounceMs);
+				}, mutableOpts.debounceMs);
 				timer = debounceTimer;
-				if (typeof debounceTimer === "object" && "unref" in debounceTimer) {
+				if (
+					typeof debounceTimer === "object" &&
+					"unref" in debounceTimer
+				) {
 					(debounceTimer as NodeJS.Timeout).unref();
 				}
 			} else {
@@ -405,8 +422,10 @@ export function createNotifyQueue(
 
 	// ── Shorthands ─────────────────────────────────────────────
 
-	const shortFor = (level: NotifyLevel) => (text: string, opts_?: Partial<NotifyOptions>) =>
-		enqueue({ ...(opts_ ?? {}), level, body: text });
+	const shortFor =
+		(level: NotifyLevel) =>
+		(text: string, opts_?: Partial<NotifyOptions>) =>
+			enqueue({ ...(opts_ ?? {}), level, body: text });
 
 	// ── Public API ─────────────────────────────────────────────
 
@@ -435,7 +454,16 @@ export function createNotifyQueue(
 		// Flush remaining with immediate dispatch (no throttle)
 		const remaining = queue.splice(0);
 		debounceMap.clear();
-		for (const item of remaining) doDispatch(item);
+		for (const item of remaining) {
+			backend(item.opts).then(
+				(result) => {
+					for (const { resolve } of item.resolvers) resolve(result);
+				},
+				(err) => {
+					for (const { reject } of item.resolvers) reject(err);
+				},
+			);
+		}
 	}
 
 	process.once("beforeExit", onExit);
@@ -474,15 +502,21 @@ export function createNotifyQueue(
 			const remaining = queue.splice(0);
 			debounceMap.clear();
 			const err = new QueueDestroyedError();
-			for (const item of remaining) item.reject(err);
+			for (const item of remaining) {
+				for (const { reject: r } of item.resolvers) r(err);
+			}
 		},
 
 		configure(opts_: Partial<NotifyQueueOptions>): void {
-			if (opts_.debounceMs !== undefined) opts.debounceMs = opts_.debounceMs;
-			if (opts_.throttleMs !== undefined) opts.throttleMs = opts_.throttleMs;
-			if (opts_.maxQueueSize !== undefined) opts.maxQueueSize = opts_.maxQueueSize;
-			if (opts_.batchTerminal !== undefined) opts.batchTerminal = opts_.batchTerminal;
-			if (opts_.onDropped !== undefined) opts.onDropped = opts_.onDropped;
+			if (opts_.debounceMs !== undefined) mutableOpts.debounceMs = opts_.debounceMs;
+			if (opts_.throttleMs !== undefined)
+				mutableOpts.throttleMs = opts_.throttleMs;
+			if (opts_.maxQueueSize !== undefined)
+				mutableOpts.maxQueueSize = opts_.maxQueueSize;
+			if (opts_.batchTerminal !== undefined)
+				mutableOpts.batchTerminal = opts_.batchTerminal;
+			if (opts_.onDropped !== undefined)
+				mutableOpts.onDropped = opts_.onDropped;
 		},
 	};
 
