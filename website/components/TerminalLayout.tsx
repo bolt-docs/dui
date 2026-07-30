@@ -30,7 +30,7 @@ export default function TerminalLayout({ children }: LayoutProps) {
 					className="scroll-smooth outline-none"
 					tabIndex={-1}
 				>
-					<DocsLayout.ContentMdx className="terminal-content-mdx max-w-4xl mx-auto pt-8 pb-20 px-6">
+					<DocsLayout.ContentMdx className="terminal-content-mdx max-w-5xl mx-auto pt-8 pb-20 px-4 sm:px-5">
 						<DocsLayout.Header>
 							<div className="flex flex-col gap-3 mb-4 border-b border-strong pb-4">
 								<div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -52,8 +52,6 @@ const TRANSLATIONS = {
 	apiReference: { en: "API Reference →", es: "Referencia API →" },
 	modulesTitle: { en: "modules", es: "módulos" },
 	showcaseTitle: { en: "showcase", es: "demostración" },
-
-
 	installationTitle: { en: "installation", es: "instalación" },
 	installationDesc: {
 		en: "Install the zero-dependency CLI package using your preferred node manager.",
@@ -70,8 +68,6 @@ const TRANSLATIONS = {
 	},
 } as const;
 
-
-
 export function HomePage() {
 	const { currentLocale } = useI18n();
 	const locale = (currentLocale || "en") as BoltdocsLocale;
@@ -82,15 +78,16 @@ export function HomePage() {
 	useIdlePrefetch([loadAnimatedTerminal]);
 
 	return (
-		<div className="min-h-screen bg-main/80 text-paragraph font-mono relative overflow-x-hidden">
+		<div className="min-h-screen bg-main/80 text-paragraph font-sans relative overflow-x-hidden">
 			<TerminalBackground />
 
-			<section className="border-b border-strong px-6 py-20 md:py-28 relative">
+			{/* ── Hero ──────────────────────────────────────────────── */}
+			<section className="border-b border-strong px-6 py-20 md:py-28 relative overflow-hidden">
 				<div className="mx-auto max-w-4xl flex flex-col items-center md:items-start text-center md:text-left">
-					<div className="text-base text-dim mb-4 select-none self-center md:self-start">
-						{"// @bdocs/dui v0.5.0"}
+					<div className="text-xs text-dim mb-4 select-none font-mono self-center md:self-start tracking-wider">
+						{">> @bdocs/dui v0.5.0"}
 					</div>
-					<pre className="font-mono font-bold leading-none select-none text-terminal-green drop-shadow-[0_0_15px_rgba(74,222,128,0.35)] text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
+					<pre className="font-mono font-bold leading-none select-none text-terminal-green drop-shadow-[0_0_20px_rgba(74,222,128,0.3)] text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
 						{
 							"██████╗ ██╗   ██╗██╗\n██╔══██╗██║   ██║██║\n██║  ██║██║   ██║██║\n██║  ██║██║   ██║██║\n██████╔╝╚██████╔╝██║\n╚═════╝  ╚═════╝ ╚═╝"
 						}
@@ -101,14 +98,14 @@ export function HomePage() {
 					<div className="mt-8 flex flex-wrap justify-center md:justify-start gap-3">
 						<Link
 							href="/docs/v0.5.0/overview/getting-started"
-							className="inline-flex items-center px-4 py-2 text-sm border border-strong text-body hover:bg-soft transition-all duration-150"
+							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-terminal-green/60 text-terminal-green bg-terminal-green/5 hover:bg-terminal-green/10 hover:border-terminal-green transition-all duration-150 rounded-lg"
 						>
-							<span className="text-terminal-green mr-2">$</span>{" "}
+							<span className="font-mono text-xs">$</span>
 							{txt("gettingStarted")}
 						</Link>
 						<Link
 							href="/docs/v0.5.0/api"
-							className="inline-flex items-center px-4 py-2 text-sm border border-strong text-muted hover:text-body hover:bg-soft transition-all duration-150"
+							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-strong/70 text-muted hover:text-body hover:border-strong hover:bg-soft/50 transition-all duration-150 rounded-lg"
 						>
 							{txt("apiReference")}
 						</Link>
@@ -118,12 +115,12 @@ export function HomePage() {
 
 			{/* ── Modules section ──────────────────────────────────── */}
 			<section className="border-b border-strong px-6 py-16 relative">
-				<div className="mx-auto max-w-4xl">
-					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-6">
-						<span className="text-terminal-green font-mono">#</span> 01 /{" "}
+				<div className="mx-auto max-w-5xl">
+					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8 font-mono">
+						<span className="text-terminal-green">#</span> 01 /{" "}
 						{txt("modulesTitle")}
 					</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						{features.map((f) => (
 							<Card key={f.href} href={f.href} title={t(f.title, locale)}>
 								{t(f.desc, locale)}
@@ -135,18 +132,30 @@ export function HomePage() {
 
 			{/* ── Demo showcase ──────────────────────────────────── */}
 			<section className="border-b border-strong px-6 py-16 relative">
-				<div className="mx-auto max-w-4xl">
-					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-6">
-						<span className="text-terminal-green font-mono">#</span> 02 /{" "}
-											{txt("showcaseTitle")}
+				<div className="mx-auto max-w-5xl">
+					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8 font-mono">
+						<span className="text-terminal-green">#</span> 02 /{" "}
+						{txt("showcaseTitle")}
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-						<ListsDemo />
-						<ColorsDemo />
-						<GridDemo />
-						<AnimationDemo />
-						<BoxesDemo />
-						<DiffDemo />
+						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
+							<ListsDemo />
+						</div>
+						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
+							<ColorsDemo />
+						</div>
+						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
+							<GridDemo />
+						</div>
+						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
+							<AnimationDemo />
+						</div>
+						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
+							<BoxesDemo />
+						</div>
+						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
+							<DiffDemo />
+						</div>
 					</div>
 				</div>
 			</section>
@@ -154,31 +163,31 @@ export function HomePage() {
 			{/* ── Installation + Interactive demo ───────────────────── */}
 			<LazySection shape="terminal-big" minHeight="400px">
 				<section className="border-b border-strong px-6 py-16 relative">
-					<div className="mx-auto max-w-4xl">
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+					<div className="mx-auto max-w-5xl">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
 							<div className="flex flex-col gap-4">
 								<div>
-									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
-										<span className="text-terminal-green font-mono">#</span>{" "}
-										06 / {txt("installationTitle")}
+									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none font-mono">
+										<span className="text-terminal-green">#</span>{" "}
+										03 / {txt("installationTitle")}
 									</h2>
-									<p className="text-xs text-muted mt-1 leading-relaxed">
+									<p className="text-sm text-muted mt-2 leading-relaxed">
 										{txt("installationDesc")}
 									</p>
 								</div>
 								<PackageManager className="my-0" />
-								<div className="text-xs text-dim leading-relaxed border-l border-strong pl-3 py-1 mt-2">
+								<div className="text-xs text-dim leading-relaxed border-l-2 border-terminal-green/40 pl-4 py-2 mt-2">
 									{txt("importNote")}
 								</div>
 							</div>
 
 							<div className="flex flex-col gap-4">
 								<div>
-									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none">
-										<span className="text-terminal-green font-mono">#</span>{" "}
-										07 / {txt("interactiveDemoTitle")}
+									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none font-mono">
+										<span className="text-terminal-green">#</span>{" "}
+										04 / {txt("interactiveDemoTitle")}
 									</h2>
-									<p className="text-xs text-muted mt-1 leading-relaxed">
+									<p className="text-sm text-muted mt-2 leading-relaxed">
 										{txt("interactiveDemoDesc")}
 									</p>
 								</div>
@@ -190,6 +199,14 @@ export function HomePage() {
 					</div>
 				</section>
 			</LazySection>
+
+			{/* ── Footer ───────────────────────────────────────────── */}
+			<footer className="px-6 py-8 text-center text-xs text-dim font-mono border-t border-strong/50">
+				<p>
+					<span className="text-terminal-green">$</span> dui — build beautiful CLIs{" "}
+					<span className="text-terminal-green">◆</span> MIT
+				</p>
+			</footer>
 		</div>
 	);
 }
@@ -226,14 +243,6 @@ const features: Feature[] = [
 		href: "/docs/api/list",
 	},
 	{
-		title: { en: "Divider", es: "Divisor" },
-		desc: {
-			en: "Horizontal line separators that fit the terminal width automatically.",
-			es: "Separadores de línea horizontales que se ajustan al ancho de la terminal automáticamente.",
-		},
-		href: "/docs/api/divider",
-	},
-	{
 		title: { en: "Colors", es: "Colores" },
 		desc: {
 			en: "Custom color engine with hex, rgb, rgba, oklch, named colors and theme support.",
@@ -242,20 +251,12 @@ const features: Feature[] = [
 		href: "/docs/api/color",
 	},
 	{
-		title: { en: "Utils", es: "Utilidades" },
+		title: { en: "Divider", es: "Divisor" },
 		desc: {
-			en: "ANSI-aware padding, centering, width, and word-wrapping utilities.",
-			es: "Utilidades de padding, centrado, ancho y word-wrapping compatibles con ANSI.",
+			en: "Horizontal line separators that fit the terminal width automatically.",
+			es: "Separadores de línea horizontales que se ajustan al ancho de la terminal automáticamente.",
 		},
-		href: "/docs/api/utils",
-	},
-	{
-		title: { en: "Prompt", es: "Prompt" },
-		desc: {
-			en: "Interactive confirm prompts with default value and SIGINT handling.",
-			es: "Prompts de confirmación interactivos con valor por defecto y manejo de SIGINT.",
-		},
-		href: "/docs/api/prompt",
+		href: "/docs/api/divider",
 	},
 	{
 		title: { en: "Table", es: "Tabla" },
@@ -264,6 +265,14 @@ const features: Feature[] = [
 			es: "Tablas con caracteres de dibujo, alineación y soporte de ajuste de celdas.",
 		},
 		href: "/docs/api/table",
+	},
+	{
+		title: { en: "Prompt", es: "Prompt" },
+		desc: {
+			en: "Interactive confirm prompts with default value and SIGINT handling.",
+			es: "Prompts de confirmación interactivos con valor por defecto y manejo de SIGINT.",
+		},
+		href: "/docs/api/prompt",
 	},
 	{
 		title: { en: "Spinner", es: "Spinner" },
@@ -280,6 +289,14 @@ const features: Feature[] = [
 			es: "Visualización de línea de tiempo de pipeline mostrando el estado de tareas.",
 		},
 		href: "/docs/api/steps",
+	},
+	{
+		title: { en: "Utils", es: "Utilidades" },
+		desc: {
+			en: "ANSI-aware padding, centering, width, and word-wrapping utilities.",
+			es: "Utilidades de padding, centrado, ancho y word-wrapping compatibles con ANSI.",
+		},
+		href: "/docs/api/utils",
 	},
 	{
 		title: { en: "Config", es: "Config" },
