@@ -42,7 +42,7 @@ import { box, type BoxBorderStyle, type BoxOptions } from "./box";
 import { getConfig } from "./config";
 import { resolveColor } from "./theme";
 import type { ColorStyle } from "./theme";
-import { padCenter, visibleLength } from "./utils";
+import { padCenter } from "./utils";
 
 export interface ModalButton {
 	label: string;
@@ -139,6 +139,3 @@ export function modal(opts: ModalOptions): string {
 	});
 }
 
-// Keep `visibleLength` reachable so future refactors don't accidentally
-// drop the dependency without re-verifying the centering math.
-void visibleLength;
