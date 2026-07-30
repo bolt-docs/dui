@@ -280,12 +280,55 @@ function interactiveSelect<T>(
 				buf = buf.slice(-32);
 			}
 
-			// Process every SGR mouse sequence in arrival order so a
-			// single chunk with several wheel ticks (fast scroll)
-			// advances the cursor by the full burst count rather
-			// than just the last tick. This matches the `multiselect`
-			// and `tree` integration so wheel bursts behave identically
-			// across all three interactive prompts.
+			// ── Arrow keys FIRST ──────────────────────────────────────
+			// Check keyboard navigation BEFORE mouse events so arrow keys
+			// are never eaten by mouse-tracking data arriving in the same
+			// chunk. Mouse events are only processed when no arrow key
+			// matched, ensuring keyboard always has priority.
+			if (buf.includes("\x1b[A")) {
+				buf = "";
+				hoveredIndex = null;
+				cursor = clampCursor(cursor - 1);
+				if (cursor < offset) offset = cursor;
+				render();
+				return;
+			}
+			if (buf.includes("\x1b[B")) {
+				buf = "";
+				hoveredIndex = null;
+				cursor = clampCursor(cursor + 1);
+				if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+				render();
+				return;
+			}
+
+			// ── Escape key (debounced) ────────────────────────────────
+			// When `\x1b` arrives alone it might be the start of a CSI
+			// sequence (arrow key, function key) split across chunks.
+			// Instead of cancelling immediately, defer via microtask
+			// so the next poll round sees whether more bytes arrive.
+			if (buf === "\x1b") {
+				Promise.resolve().then(() => {
+					if (done) return;
+					if (buf !== "\x1b") return;
+					buf = "";
+					cleanup();
+					if (linesRendered > 0) {
+						stdout.write(`\x1b[${linesRendered}A`);
+					} else {
+						stdout.write("\x1b[H");
+					}
+					readline.cursorTo(stdout, 0);
+					readline.clearScreenDown(stdout);
+					reject(new Error("Cancelled"));
+				});
+				return;
+			}
+
+			// ── Mouse events ──────────────────────────────────────────
+			// Process SGR mouse sequences only after keyboard has been
+			// checked. Mouse data is consumed from buf here so arrow key
+			// bytes are preserved by the earlier checks.
 			const mouseEvents = parseSGRMouseDataAll(buf);
 			if (mouseEvents.length > 0) {
 				buf = "";
@@ -365,12 +408,6 @@ function interactiveSelect<T>(
 							: null;
 					if (newHovered !== hoveredIndex) {
 						hoveredIndex = newHovered;
-						// Only mark renderNeeded when the hover index
-						// actually changed — gating on `lastMove !== null`
-						// would force a redraw for repeated motion events
-						// landing on the same coordinate (the pre-refactor
-						// legacy contract that the `does not re-render when
-						// hovering same item` test pins).
 						renderNeeded = true;
 					}
 				}
@@ -378,36 +415,6 @@ function interactiveSelect<T>(
 				if (renderNeeded) {
 					render();
 				}
-				return;
-			}
-
-			if (buf.includes("\x1b[A")) {
-				buf = "";
-				hoveredIndex = null;
-				cursor = clampCursor(cursor - 1);
-				if (cursor < offset) offset = cursor;
-				render();
-				return;
-			}
-			if (buf.includes("\x1b[B")) {
-				buf = "";
-				hoveredIndex = null;
-				cursor = clampCursor(cursor + 1);
-				if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
-				render();
-				return;
-			}
-
-			if (buf === "\x1b") {
-				cleanup();
-				if (linesRendered > 0) {
-					stdout.write(`\x1b[${linesRendered}A`);
-				} else {
-					stdout.write("\x1b[H");
-				}
-				readline.cursorTo(stdout, 0);
-				readline.clearScreenDown(stdout);
-				reject(new Error("Cancelled"));
 				return;
 			}
 

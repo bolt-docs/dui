@@ -429,123 +429,11 @@ function interactiveTree<T>(
 				buf = buf.slice(-32);
 			}
 
-			// Process every SGR mouse sequence in arrival order so a
-			// single chunk with several wheel ticks (fast scroll in
-			// a deep tree) advances the cursor by the full burst
-			// count rather than just the last tick. Note that
-			// `parseSGRMouseDataAll` calls internal emitMouseEvent
-			// for each parsed sequence as a side effect, so external
-			// subscribers via onMouseEvent see every tick too.
-			const mouseEvents = parseSGRMouseDataAll(buf);
-			if (mouseEvents.length > 0) {
-				buf = "";
-
-				let wheelUp = 0;
-				let wheelDown = 0;
-				let lastMove: (typeof mouseEvents)[number] | null = null;
-				// Multiple clicks in one chunk toggle each in order;
-				// each click looks up the freshly-rebuilt flat so a
-				// branch-click that opens new items does not point
-				// at a stale index.
-				const clickCoordinates: Array<{ x: number; y: number }> = [];
-
-				for (const mouseEvent of mouseEvents) {
-					if (mouseEvent.type === "click") {
-						clickCoordinates.push({ x: mouseEvent.x, y: mouseEvent.y });
-					} else if (mouseEvent.type === "move") {
-						lastMove = mouseEvent;
-					} else if (mouseEvent.type === "wheel") {
-						// Tree cursor is bounded [0, flat.length-1] (no
-						// wrap). Each wheel tick still advances one
-						// row, so a fast scroll cascades with no upper
-						// bound on the burst size other than the array
-						// end.
-						if (mouseEvent.wheel === "up") wheelUp++;
-						else if (mouseEvent.wheel === "down") wheelDown++;
-					}
-				}
-
-				// Track whether anything visible actually changed so a
-				// chunk of repeated motion events landing on the same
-				// coordinate does NOT re-render (matches the legacy
-				// `does not re-render when hovering same item` contract
-				// that select and multiselect pin in their tests).
-				let renderNeeded = false;
-
-				if (lastMove) {
-					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
-					const newHovered =
-						hoveredArea && hoveredArea.data
-							? (hoveredArea.data.flatIndex as number)
-							: null;
-					if (newHovered !== hoveredIndex) {
-						hoveredIndex = newHovered;
-						renderNeeded = true;
-					}
-				}
-
-				const wheelNet = wheelDown - wheelUp;
-				if (wheelNet !== 0) {
-					hoveredIndex = null;
-					// Tree has no wrap-around — cursor is bounded at
-					// [0, flat.length - 1]. With sensitivity=N, one
-					// tick advances (or retreats) N rows unless the
-					// boundary is hit, in which case the remaining
-					// steps are no-ops (clamped by `cursor > 0` /
-					// `cursor < flat.length - 1`).
-					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
-					const dir = wheelNet < 0 ? -1 : 1;
-					for (let i = 0; i < magnitude; i++) {
-						if (dir < 0) {
-							if (cursor <= 0) break;
-							cursor--;
-							if (cursor < offset) offset = cursor;
-						} else {
-							if (cursor >= flat.length - 1) break;
-							cursor++;
-							if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
-						}
-					}
-					renderNeeded = true;
-				}
-
-				// Apply clicks in arrival order. Each click looks up
-				// the current clickable area at that coordinate, so a
-				// branch expansion triggered by the first click makes
-				// newly-visible items reachable by subsequent clicks
-				// in the same chunk. Branch-click handlers call
-				// render() inline because rebuildFlat mutates the
-				// visible list immediately.
-				let lastLeafClicked = -1;
-				for (const { x, y } of clickCoordinates) {
-					const clickedArea = getClickedItem(x, y);
-					if (!clickedArea || clickedArea.type !== "tree" || !clickedArea.data)
-						continue;
-					const flatIndex = clickedArea.data.flatIndex as number;
-					if (flatIndex < 0 || flatIndex >= flat.length) continue;
-					const item = flat[flatIndex];
-					if (item.disabled) continue;
-					cursor = flatIndex;
-					if (item.isBranch) {
-						if (item.expanded) expanded.delete(item.node);
-						else expanded.add(item.node);
-						rebuildFlat();
-						render();
-					} else {
-						lastLeafClicked = flatIndex;
-					}
-				}
-				if (lastLeafClicked >= 0) {
-					finalize();
-					return;
-				}
-
-				if (renderNeeded) {
-					render();
-				}
-				return;
-			}
-
+			// ── Arrow keys FIRST ──────────────────────────────────────
+			// Check keyboard navigation BEFORE mouse events so arrow keys
+			// are never eaten by mouse-tracking data. The tree has 4
+			// keyboard directions (↑↓ for cursor, ←→ for collapse/expand)
+			// so check all four before falling through to mouse parsing.
 			if (buf.includes("\x1b[A")) {
 				buf = "";
 				hoveredIndex = null;
@@ -605,16 +493,113 @@ function interactiveTree<T>(
 				return;
 			}
 
+			// ── Escape key (debounced) ────────────────────────────────
+			// Defer cancel via microtask so a partially-arrived CSI
+			// sequence has time to complete before committing to cancel.
 			if (buf === "\x1b") {
-				cleanup();
-				if (linesRendered > 0) {
-					stdout.write(`\x1b[${linesRendered}A`);
-				} else {
-					stdout.write("\x1b[H");
+				Promise.resolve().then(() => {
+					if (done) return;
+					if (buf !== "\x1b") return;
+					buf = "";
+					cleanup();
+					if (linesRendered > 0) {
+						stdout.write(`\x1b[${linesRendered}A`);
+					} else {
+						stdout.write("\x1b[H");
+					}
+					readline.cursorTo(stdout, 0);
+					readline.clearScreenDown(stdout);
+					reject(new Error("Cancelled"));
+				});
+				return;
+			}
+
+			// ── Mouse events ──────────────────────────────────────────
+			// Process SGR mouse sequences only after keyboard has been
+			// checked. This includes wheel events for fast scrolling,
+			// click detection, and hover tracking.
+			const mouseEvents = parseSGRMouseDataAll(buf);
+			if (mouseEvents.length > 0) {
+				buf = "";
+
+				let wheelUp = 0;
+				let wheelDown = 0;
+				let lastMove: (typeof mouseEvents)[number] | null = null;
+				const clickCoordinates: Array<{ x: number; y: number }> = [];
+
+				for (const mouseEvent of mouseEvents) {
+					if (mouseEvent.type === "click") {
+						clickCoordinates.push({ x: mouseEvent.x, y: mouseEvent.y });
+					} else if (mouseEvent.type === "move") {
+						lastMove = mouseEvent;
+					} else if (mouseEvent.type === "wheel") {
+						if (mouseEvent.wheel === "up") wheelUp++;
+						else if (mouseEvent.wheel === "down") wheelDown++;
+					}
 				}
-				readline.cursorTo(stdout, 0);
-				readline.clearScreenDown(stdout);
-				reject(new Error("Cancelled"));
+
+				let renderNeeded = false;
+
+				if (lastMove) {
+					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
+					const newHovered =
+						hoveredArea && hoveredArea.data
+							? (hoveredArea.data.flatIndex as number)
+							: null;
+					if (newHovered !== hoveredIndex) {
+						hoveredIndex = newHovered;
+						renderNeeded = true;
+					}
+				}
+
+				const wheelNet = wheelDown - wheelUp;
+				if (wheelNet !== 0) {
+					hoveredIndex = null;
+					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
+					const dir = wheelNet < 0 ? -1 : 1;
+					for (let i = 0; i < magnitude; i++) {
+						if (dir < 0) {
+							if (cursor <= 0) break;
+							cursor--;
+							if (cursor < offset) offset = cursor;
+						} else {
+							if (cursor >= flat.length - 1) break;
+							cursor++;
+							if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+						}
+					}
+					renderNeeded = true;
+				}
+
+				// Apply clicks in arrival order. Each click looks up
+				// the current clickable area at that coordinate.
+				let lastLeafClicked = -1;
+				for (const { x, y } of clickCoordinates) {
+					const clickedArea = getClickedItem(x, y);
+					if (!clickedArea || clickedArea.type !== "tree" || !clickedArea.data)
+						continue;
+					const flatIndex = clickedArea.data.flatIndex as number;
+					if (flatIndex < 0 || flatIndex >= flat.length) continue;
+					const item = flat[flatIndex];
+					if (item.disabled) continue;
+					cursor = flatIndex;
+					if (item.isBranch) {
+						if (item.expanded) expanded.delete(item.node);
+						else expanded.add(item.node);
+						rebuildFlat();
+						render();
+					} else {
+						lastLeafClicked = flatIndex;
+					}
+				}
+				if (lastLeafClicked >= 0) {
+					finalize();
+					return;
+				}
+
+				if (renderNeeded) {
+					render();
+				}
 				return;
 			}
 
