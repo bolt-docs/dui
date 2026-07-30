@@ -61,13 +61,21 @@ async function dispatch(
 		case "os":
 			try {
 				return osNotify(opts);
-			} catch {
+			} catch (cause) {
+				process.emitWarning(
+					`OS notify failed, falling back to bell: ${String(cause)}`,
+					"DUINotifyBackendFallback",
+				);
 				return bellNotify(opts);
 			}
 		case "osc":
 			try {
 				return oscNotify(opts);
-			} catch {
+			} catch (cause) {
+				process.emitWarning(
+					`OSC notify failed, falling back to bell: ${String(cause)}`,
+					"DUINotifyBackendFallback",
+				);
 				return bellNotify(opts);
 			}
 		case "terminal":
@@ -96,13 +104,20 @@ async function notify(opts: NotifyOptions): Promise<NotifyResult> {
 	// keypress) or `undefined` (TTL, OS, OSC, bell). All four
 	// backends return `result.action` uniformly so no fallback is
 	// needed here.
-	result.dismissed.then(async () => {
-		const actionId = await result.action;
-		const evt = new CustomEvent<NotifyEvent>("dismiss", {
-			detail: { id: result.id, backend: result.backend, action: actionId },
+	result.dismissed
+		.then(async () => {
+			const actionId = await result.action;
+			const evt = new CustomEvent<NotifyEvent>("dismiss", {
+				detail: { id: result.id, backend: result.backend, action: actionId },
+			});
+			hub.dispatchEvent(evt);
+		})
+		.catch(() => {
+			// Swallow any errors from the subscriber chain — if the
+			// `action` promise rejects or the handler throws, it must
+			// not break the notification flow. Errors in subscribers
+			// are logged separately by the subscriber itself.
 		});
-		hub.dispatchEvent(evt);
-	});
 	return result;
 }
 

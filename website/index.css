@@ -11,6 +11,18 @@ body {
 	max-width: 100vw;
 }
 
+/* System font stack — no external font loading */
+html {
+	--font-display: "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-sans: "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-mono:
+		"ui-monospace", "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono",
+		Menlo, Monaco, Consolas, "liberation mono", "courier new", monospace;
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
 /* Terminal-style cursor on interactive elements */
 a,
 button,
@@ -67,7 +79,44 @@ button,
 	}
 }
 
-/* ── Code block copy button positioning ────────────────────── */
+/* ── Code block / terminal window ─────────────────────────── */
 pre {
 	position: relative;
+}
+
+/* Shiki syntax highlighting overrides for terminal code blocks */
+pre .line {
+	min-height: 1.5em;
+}
+
+/* Make sure Shiki inline code spans inherit the terminal bg */
+pre code[class*="language-"],
+pre code {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+	font-size: inherit !important;
+	color: inherit !important;
+}
+
+/* Terminal code block scrollbar */
+pre::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+pre::-webkit-scrollbar-track {
+	background: transparent;
+}
+pre::-webkit-scrollbar-thumb {
+	background: rgba(0, 0, 0, 0.15);
+	border-radius: 3px;
+}
+pre::-webkit-scrollbar-thumb:hover {
+	background: rgba(0, 0, 0, 0.25);
+}
+.dark pre::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+}
+.dark pre::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.2);
 }

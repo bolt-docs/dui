@@ -368,18 +368,27 @@ export function createNotifyQueue(
 				);
 				if (levelPriority(notifyOpts.level) <= lowest.levelPriority) {
 					// Incoming is same or lower priority — drop it.
-					reject(new Error("Queue overflow: notification dropped"));
+					const err = new Error(
+						`Queue overflow (${queue.length} items): notification dropped`,
+					);
+					reject(err);
+					process.emitWarning(err.message, "DUINotifyQueueOverflow");
 					mutableOpts.onDropped?.(notifyOpts);
 					return;
 				}
 				// Incoming is higher priority — drop the lowest.
 				const idx = queue.indexOf(lowest);
 				if (idx !== -1) {
+					const currentSize = queue.length;
 					queue.splice(idx, 1);
 					debounceMap.delete(makeDebounceKey(lowest.opts));
+					const err = new Error(
+						`Queue overflow (${currentSize} items): dropped lowest-priority notification`,
+					);
 					for (const { reject: r } of lowest.resolvers) {
-						r(new Error("Queue overflow: notification dropped"));
+						r(err);
 					}
+					process.emitWarning(err.message, "DUINotifyQueueOverflow");
 					mutableOpts.onDropped?.(lowest.opts);
 				}
 			}
@@ -446,6 +455,8 @@ export function createNotifyQueue(
 
 	// ── Process exit cleanup ───────────────────────────────────
 
+	let exitHandler: (() => void) | null = null;
+
 	function onExit(): void {
 		if (destroyed) return;
 		destroyed = true;
@@ -464,8 +475,14 @@ export function createNotifyQueue(
 				},
 			);
 		}
+		// Deregister after running to avoid re-entrance
+		if (exitHandler) {
+			process.off("beforeExit", exitHandler);
+			exitHandler = null;
+		}
 	}
 
+	exitHandler = onExit;
 	process.once("beforeExit", onExit);
 
 	const handle: NotifyQueueHandle = {
@@ -498,7 +515,10 @@ export function createNotifyQueue(
 			destroyed = true;
 			if (timer !== null) clearTimeout(timer);
 			timer = null;
-			process.off("beforeExit", onExit);
+			if (exitHandler) {
+				process.off("beforeExit", exitHandler);
+				exitHandler = null;
+			}
 			const remaining = queue.splice(0);
 			debounceMap.clear();
 			const err = new QueueDestroyedError();

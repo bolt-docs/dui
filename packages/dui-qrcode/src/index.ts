@@ -33,19 +33,45 @@ type CreateOptions = Parameters<typeof QRCode.create>[1] & {
 	margin?: number;
 };
 
+/** Maximum reasonable input length before we warn. QR v40 (177×177)
+ * stores ~4296 alphanumeric chars at EC level L. We warn at 4000. */
+const MAX_SAFE_INPUT_LENGTH = 4000;
+
+/**
+ * Validate input text before passing it to the QR encoder.
+ * Returns a user-friendly error message or `null` if valid.
+ */
+function validateQrInput(text: unknown): string | null {
+	if (typeof text !== "string") {
+		return "QR input must be a string";
+	}
+	if (text.length === 0) {
+		return "No input text provided for QR code generation";
+	}
+	if (text.trim().length === 0) {
+		return "QR input text is all whitespace — provide meaningful content";
+	}
+	if (text.length > MAX_SAFE_INPUT_LENGTH) {
+		return `QR input too long (${text.length} chars). Maximum safe length is ~${MAX_SAFE_INPUT_LENGTH} characters. Consider using errorCorrection: 'L' for more capacity.`;
+	}
+	return null;
+}
+
 /**
  * Generate a QR code as an ANSI string for terminal display.
  *
  * @param text - Text or URL to encode (must be non-empty)
  * @param options - Rendering options
  * @returns ANSI-escaped string ready for `console.log` or composition
+ * @throws {Error} When `text` is empty, whitespace-only, or encoding fails
  */
 export async function qrcode(
 	text: string,
 	options: QRCodeRenderOptions = {},
 ): Promise<string> {
-	if (typeof text !== "string" || text.length === 0) {
-		throw new Error("No input text provided for QR code generation");
+	const validationError = validateQrInput(text);
+	if (validationError) {
+		throw new Error(validationError);
 	}
 
 	const {
@@ -63,7 +89,22 @@ export async function qrcode(
 		margin,
 	} satisfies CreateOptions;
 
-	const matrix = await QRCode.create(text, createOpts);
+	// Wrap QRCode.create in try-catch for better error messages
+	let matrix: ReturnType<typeof QRCode.create>;
+	try {
+		matrix = await QRCode.create(text, createOpts);
+	} catch (cause: unknown) {
+		const message =
+			cause instanceof Error
+				? cause.message
+				: "Unknown QR encoding error";
+		throw new Error(
+			`QR encoding failed: ${message}. ` +
+				`Input length: ${text.length}, EC level: ${errorCorrection}`,
+			{ cause },
+		);
+	}
+
 	const modules = matrix.modules;
 	const moduleCount = modules.size;
 

@@ -73,7 +73,7 @@ const Li = (props: React.HTMLAttributes<HTMLLIElement>) => (
 	<li className="leading-7" {...props} />
 );
 
-/* ── Code block with copy button ───────────────────────────── */
+/* ── Code block — terminal window ───────────────────────────── */
 
 function CopyButton({ text }: { text: string }) {
 	const [copied, setCopied] = useState(false);
@@ -84,7 +84,6 @@ function CopyButton({ text }: { text: string }) {
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1500);
 		} catch {
-			// Fallback for older browsers
 			const ta = document.createElement("textarea");
 			ta.value = text;
 			document.body.appendChild(ta);
@@ -100,19 +99,19 @@ function CopyButton({ text }: { text: string }) {
 		<button
 			type="button"
 			onClick={handleCopy}
-			className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono rounded-md border border-strong/50 bg-main/80 text-muted hover:text-body hover:border-strong hover:bg-soft/80 backdrop-blur-sm transition-all duration-150 cursor-pointer opacity-0 group-hover/code:opacity-100 focus:opacity-100"
+			className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded-md border border-black/[0.1] dark:border-white/[0.15] text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:border-black/[0.2] dark:hover:border-white/[0.3] hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-150 cursor-pointer"
 			aria-label={copied ? "Copied" : "Copy code"}
 		>
 			{copied ? (
 				<>
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+					<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
 						<polyline points="20 6 9 17 4 12" />
 					</svg>
-					Copied
+					<span className="text-neutral-600 dark:text-neutral-400">Copied</span>
 				</>
 			) : (
 				<>
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 						<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
 						<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
 					</svg>
@@ -127,29 +126,59 @@ const Pre = (props: React.HTMLAttributes<HTMLPreElement>) => {
 	const preRef = useRef<HTMLPreElement>(null);
 	const [text, setText] = useState("");
 
-	// Read the pre content after mount — ref is null during initial render.
 	useEffect(() => {
 		setText(preRef.current?.textContent ?? "");
 	}, []);
 
+	// Extract a filename hint from the first code line if available.
+	// Skip shebangs (#!/usr/bin/node) — those aren't filenames.
+	const firstLine = text.split("\n")[0] ?? "";
+	const fileNameHint =
+		(firstLine.startsWith("#") && !firstLine.startsWith("#!")) ||
+		firstLine.startsWith("//")
+			? firstLine.replace(/^[#/]+\s*/, "").trim()
+			: "";
+
 	return (
-		<div className="group/code relative my-8">
+		<div className="group/code my-8 overflow-hidden rounded-xl border border-strong/60 shadow-lg shadow-black/[0.06] dark:shadow-black/[0.3]">
+			{/* Terminal window title bar */}
+			<div className="flex items-center justify-between px-4 py-2.5 bg-[#e8e7e5] dark:bg-[#1e1e1e] border-b border-black/[0.06] dark:border-white/[0.06] select-none">
+				<div className="flex items-center gap-2" aria-hidden="true">
+					<span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57] shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)]" />
+					<span className="w-2.5 h-2.5 rounded-full bg-[#febc2e] shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)]" />
+					<span className="w-2.5 h-2.5 rounded-full bg-[#28c840] shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)]" />
+				</div>
+				{fileNameHint && (
+					<div className="text-[11px] text-[#888888] dark:text-[#666666] font-medium font-sans tracking-wide truncate max-w-[50%]">
+						{fileNameHint}
+					</div>
+				)}
+				<CopyButton text={text} />
+			</div>
+
+			{/* Code content — bg uses CSS var with terminal-dark fallback */}
 			<pre
 				ref={preRef}
-				className="overflow-x-auto rounded-xl border border-strong/70 bg-code-bg p-5 text-sm leading-relaxed font-mono shadow-sm"
+				className="overflow-x-auto bg-[var(--color-code-bg,#f5f4f2)] dark:bg-[var(--color-code-bg,#0d0d0d)] px-5 py-4 text-sm leading-relaxed font-mono text-[#1a1a1a] dark:text-[#e0e0e0]"
 				{...props}
 			/>
-			<CopyButton text={text} />
 		</div>
 	);
 };
 
-const Code = (props: React.HTMLAttributes<HTMLElement>) => (
-	<code
-		className="rounded-md px-1.5 py-0.5 bg-code-bg text-code-text text-[0.8125em] font-mono border border-strong/60"
-		{...props}
-	/>
-);
+const Code = (props: React.HTMLAttributes<HTMLElement>) => {
+	const isInline = typeof props.children === "string" && !props.children?.includes?.("\n");
+	return (
+		<code
+			className={`font-mono ${
+				isInline
+					? "rounded-md px-1.5 py-0.5 bg-[var(--color-code-bg,#f0efee)] dark:bg-[var(--color-code-bg,#111111)] text-[var(--color-code-text,#1a1918)] dark:text-[var(--color-code-text,#e0e0e0)] text-[0.8125em] border border-strong/50"
+					: ""
+			}`}
+			{...props}
+		/>
+	);
+};
 
 export const typographics = {
 	a: Anchor,

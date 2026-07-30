@@ -1,40 +1,53 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useTerminalWriter } from "../hooks/useTerminalWriter";
 
-/* ── Theme bridge: read CSS vars to keep xterm in sync with
- *   light/dark mode without requiring a re-mount.
- * ──────────────────────────────────────────────────────────── */
+/* ── Theme bridge ─────────────────────────────────────────── */
 
 function getTermTheme(): import("@xterm/xterm").ITheme {
 	const style = getComputedStyle(document.documentElement);
 	return {
-		background: style.getPropertyValue("--color-main").trim() || "#ffffff",
-		foreground: style.getPropertyValue("--color-body").trim() || "#171717",
-		cursor: style.getPropertyValue("--color-terminal-green").trim() || "#3fc972",
+		background:
+			style.getPropertyValue("--term-bg").trim() || "#0d0d0d",
+		foreground:
+			style.getPropertyValue("--term-fg").trim() || "#e8e8e8",
+		cursor:
+			style.getPropertyValue("--color-terminal-green").trim() ||
+			"#3fc972",
 		cursorAccent: "#000000",
 		selectionBackground: "oklch(0.72 0.18 150 / 0.35)",
 		selectionForeground: "inherit",
-		black: style.getPropertyValue("--color-terminal-black").trim() || "#171717",
-		red: style.getPropertyValue("--color-terminal-red").trim() || "#ce4949",
+		black:
+			style.getPropertyValue("--color-terminal-black").trim() ||
+			"#171717",
+		red:
+			style.getPropertyValue("--color-terminal-red").trim() || "#ce4949",
 		green:
-			style.getPropertyValue("--color-terminal-green").trim() || "#3fc972",
+			style.getPropertyValue("--color-terminal-green").trim() ||
+			"#3fc972",
 		yellow:
-			style.getPropertyValue("--color-terminal-yellow").trim() || "#e7b901",
+			style.getPropertyValue("--color-terminal-yellow").trim() ||
+			"#e7b901",
 		blue:
-			style.getPropertyValue("--color-terminal-blue").trim() || "#367ed5",
+			style.getPropertyValue("--color-terminal-blue").trim() ||
+			"#367ed5",
 		magenta:
-			style.getPropertyValue("--color-terminal-magenta").trim() || "#f472b6",
+			style.getPropertyValue("--color-terminal-magenta").trim() ||
+			"#f472b6",
 		cyan:
-			style.getPropertyValue("--color-terminal-cyan").trim() || "#0e7490",
+			style.getPropertyValue("--color-terminal-cyan").trim() ||
+			"#0e7490",
 		white:
-			style.getPropertyValue("--color-terminal-white").trim() || "#f3f4f6",
+			style.getPropertyValue("--color-terminal-white").trim() ||
+			"#f3f4f6",
 		brightBlack:
-			style.getPropertyValue("--color-terminal-gray").trim() || "#9ca3af",
+			style.getPropertyValue("--color-terminal-gray").trim() ||
+			"#9ca3af",
 		brightRed:
-			style.getPropertyValue("--color-terminal-bright-red").trim() || "#ef4444",
+			style.getPropertyValue("--color-terminal-bright-red").trim() ||
+			"#ef4444",
 		brightGreen:
 			style.getPropertyValue("--color-terminal-bright-green").trim() ||
 			"#22c55e",
@@ -85,6 +98,7 @@ const XtermDemo = memo(function XtermDemo({
 	const terminalRef = useRef<Terminal | null>(null);
 	const fitRef = useRef<FitAddon | null>(null);
 	const observerRef = useRef<MutationObserver | null>(null);
+	const wrapperRef = useRef<HTMLDivElement>(null);
 	const [ready, setReady] = useState(false);
 	const { write, stop } = useTerminalWriter();
 
@@ -100,11 +114,14 @@ const XtermDemo = memo(function XtermDemo({
 			cursorBlink: typewriterMs > 0,
 			cursorStyle: "bar",
 			fontFamily:
-				'"JetBrains Mono", "IBM Plex Mono", "ui-monospace", monospace',
-			fontSize: 12,
-			lineHeight: 1.35,
+				'"ui-monospace", "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono", "Cascadia Code", Menlo, Monaco, monospace',
+			fontSize: 13,
+			lineHeight: 1.4,
+			fontWeight: "400",
+			letterSpacing: 0,
 			theme: getTermTheme(),
 			disableStdin: true,
+			allowTransparency: true,
 		});
 
 		const fit = new FitAddon();
@@ -123,8 +140,7 @@ const XtermDemo = memo(function XtermDemo({
 			// Fallback to canvas renderer
 		}
 
-		// Double requestAnimationFrame for reliable first-fit — the
-		// container needs two paint cycles to have layout computed.
+		// Double requestAnimationFrame for reliable first-fit
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => {
 				try {
@@ -148,7 +164,7 @@ const XtermDemo = memo(function XtermDemo({
 
 	// ── Resize observer ────────────────────────────────────
 	useEffect(() => {
-		const el = containerRef.current;
+		const el = wrapperRef.current;
 		if (!el) return;
 
 		let rafId: number;
@@ -192,39 +208,40 @@ const XtermDemo = memo(function XtermDemo({
 
 	return (
 		<div
-			className={`overflow-hidden rounded-xl border border-strong bg-main shadow-sm ${className}`}
+			ref={wrapperRef}
+			className={`overflow-hidden rounded-2xl border border-strong/80 bg-main shadow-lg shadow-black/[0.04] dark:shadow-black/[0.25] ${className}`}
 			style={{
 				contentVisibility: "auto",
-				containIntrinsicSize: `${rows * 18 + 48}px auto`,
+				containIntrinsicSize: `${rows * 20 + 56}px auto`,
 			}}
 		>
 			{/* Terminal Top Bar */}
-			<div className="flex items-center border-b border-strong bg-soft/80 dark:bg-neutral-900/80 text-neutral-600 dark:text-neutral-400 px-3 py-1.5 select-none gap-2">
-				<div className="flex items-center gap-1" aria-hidden="true">
-					<span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-					<span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-					<span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+			<div className="flex items-center justify-between border-b border-strong/60 bg-[var(--term-bar-bg,#f4f4f4)] dark:bg-[var(--term-bar-bg-dark,#1a1a1a)] px-4 py-2.5 select-none">
+				<div className="flex items-center gap-2" aria-hidden="true">
+					<span className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-[inset_0_1px_1px_rgba(0,0,0,0.15)]" />
+					<span className="w-3 h-3 rounded-full bg-[#febc2e] shadow-[inset_0_1px_1px_rgba(0,0,0,0.15)]" />
+					<span className="w-3 h-3 rounded-full bg-[#28c840] shadow-[inset_0_1px_1px_rgba(0,0,0,0.15)]" />
 				</div>
-				<div className="text-[10px] text-neutral-500 dark:text-neutral-500 font-medium font-sans tracking-tight">
+				<div className="absolute left-1/2 -translate-x-1/2 text-[11px] text-[var(--term-bar-fg,#888888)] dark:text-[var(--term-bar-fg-dark,#777777)] font-medium font-sans tracking-wide select-none">
 					{title}
 				</div>
+				<div className="w-16" aria-hidden="true" />
 			</div>
 
 			{/* Command prompt */}
 			{command && (
-				<div className="px-3 pt-2 pb-0.5 text-neutral-500 dark:text-neutral-400 select-none text-[10px] font-mono">
-					<span className="text-terminal-green font-bold">$ </span>
+				<div className="px-4 pt-3 pb-1 text-[12px] text-[var(--term-prompt-fg,#999999)] dark:text-[var(--term-prompt-fg-dark,#888888)] select-none font-mono leading-relaxed">
+					<span className="text-terminal-green font-semibold select-none">$ </span>
 					{command}
 				</div>
 			)}
 
-			{/* Terminal container */}
+			{/* Terminal xterm.js container */}
 			<div
 				ref={containerRef}
-				className="px-2 pb-2 pt-0.5 overflow-hidden"
+				className="px-3 pb-3 pt-1 overflow-hidden"
 				style={{
-					height: `${rows * 18 + 2}px`,
-					minHeight: "50px",
+					minHeight: "48px",
 				}}
 			/>
 		</div>

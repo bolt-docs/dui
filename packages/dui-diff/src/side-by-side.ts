@@ -44,7 +44,11 @@ export function diffSideBySide(
 	const sepLen = visibleLength(separator);
 	const pad = 2;
 	const usable = Math.max(20, maxCols - sepLen - pad);
-	const colWidth = Math.max(8, Math.floor(usable / 2));
+	// Distribute columns: left gets the extra column when usable is odd
+	// (ceil), right gets the remainder (floor). This prevents overflow
+	// AND avoids wasting the extra column.
+	const colRight = Math.max(8, Math.floor(usable / 2));
+	const colLeft = Math.max(8, Math.ceil(usable / 2));
 
 	const patch = structuredPatch("old", "new", oldStr, newStr, "", "", {
 		context,
@@ -71,36 +75,38 @@ export function diffSideBySide(
 		out.push(palette.fileHeader(`  ${label} (side-by-side)`));
 		out.push(
 			palette.stat(
-				`  ${colWidth}-column view · ${rows.length} row${rows.length === 1 ? "" : "s"}`,
+				`  ${colLeft}/${colRight}-column view · ${rows.length} row${rows.length === 1 ? "" : "s"}`,
 			),
 		);
 		out.push("");
 	}
 
+	// Header row
 	out.push(
 		"  " +
-			palette.gutter(padVisible("old", colWidth)) +
+			palette.gutter(padVisible("old", colLeft)) +
 			palette.gutter(separator) +
-			palette.gutter(padVisible("new", colWidth)),
+			palette.gutter(padVisible("new", colRight)),
 	);
 	out.push(
 		"  " +
-			palette.gutter("─".repeat(colWidth)) +
+			palette.gutter("\u2500".repeat(colLeft)) +
 			palette.gutter(separator) +
-			palette.gutter("─".repeat(colWidth)),
+			palette.gutter("\u2500".repeat(colRight)),
 	);
 
 	for (const row of rows) {
 		if (row.kind === "context") {
-			out.push(renderContextRow(row, colWidth, palette, separator));
+			out.push(renderContextRow(row, colLeft, colRight, palette, separator));
 		} else if (row.kind === "removed") {
-			out.push(renderRemovedRow(row, colWidth, palette, separator));
+			out.push(renderRemovedRow(row, colLeft, colRight, palette, separator));
 		} else if (row.kind === "added") {
-			out.push(renderAddedRow(row, colWidth, palette, separator));
+			out.push(renderAddedRow(row, colLeft, colRight, palette, separator));
 		} else if (row.kind === "modified") {
 			for (const line of renderModifiedPair(
 				row,
-				colWidth,
+				colLeft,
+				colRight,
 				palette,
 				separator,
 				wordHighlight,
@@ -147,9 +153,6 @@ function buildRows(hunks: Hunk[]): Row[] {
 	const rows: Row[] = [];
 
 	for (const hunk of hunks) {
-		// Strip leading " "/"+"/"-" markers, walk the line list, and
-		// pair removed+added runs into "modified" rows so columns stay
-		// aligned.
 		const removedBuffer: string[] = [];
 		const addedBuffer: string[] = [];
 		const removedNos: number[] = [];
@@ -224,59 +227,63 @@ function buildRows(hunks: Hunk[]): Row[] {
 
 function renderContextRow(
 	row: Extract<Row, { kind: "context" }>,
-	colWidth: number,
+	colLeft: number,
+	colRight: number,
 	palette: ReturnType<typeof getPalette>,
 	separator: string,
 ): string {
 	const leftLine =
-		formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colWidth - 7);
+		formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colLeft - 7);
 	const rightLine =
-		formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colWidth - 7);
+		formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colRight - 7);
 	return (
 		"  " +
-		palette.context(padVisible(leftLine, colWidth)) +
+		palette.context(padVisible(leftLine, colLeft)) +
 		palette.gutter(separator) +
-		palette.context(padVisible(rightLine, colWidth))
+		palette.context(padVisible(rightLine, colRight))
 	);
 }
 
 function renderRemovedRow(
 	row: Extract<Row, { kind: "removed" }>,
-	colWidth: number,
+	colLeft: number,
+	colRight: number,
 	palette: ReturnType<typeof getPalette>,
 	separator: string,
 ): string {
 	const leftLine =
-		formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colWidth - 7);
+		formatLineNo(row.oldNo, 4) + " │ " + truncateTo(row.left, colLeft - 7);
 	const empty = formatLineNo(null, 4) + " │ ";
 	return (
 		"  " +
-		palette.del(padVisible(leftLine, colWidth)) +
+		palette.del(padVisible(leftLine, colLeft)) +
 		palette.gutter(separator) +
-		palette.context(padVisible(empty, colWidth))
+		palette.context(padVisible(empty, colRight))
 	);
 }
 
 function renderAddedRow(
 	row: Extract<Row, { kind: "added" }>,
-	colWidth: number,
+	colLeft: number,
+	colRight: number,
 	palette: ReturnType<typeof getPalette>,
 	separator: string,
 ): string {
 	const empty = formatLineNo(null, 4) + " │ ";
 	const rightLine =
-		formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colWidth - 7);
+		formatLineNo(row.newNo, 4) + " │ " + truncateTo(row.right, colRight - 7);
 	return (
 		"  " +
-		palette.context(padVisible(empty, colWidth)) +
+		palette.context(padVisible(empty, colLeft)) +
 		palette.gutter(separator) +
-		palette.add(padVisible(rightLine, colWidth))
+		palette.add(padVisible(rightLine, colRight))
 	);
 }
 
 function renderModifiedPair(
 	row: Extract<Row, { kind: "modified" }>,
-	colWidth: number,
+	colLeft: number,
+	colRight: number,
 	palette: ReturnType<typeof getPalette>,
 	separator: string,
 	wordHighlight: boolean,
@@ -312,15 +319,15 @@ function renderModifiedPair(
 		}
 
 		const leftFull =
-			formatLineNo(oldNo, 4) + " │ " + truncateTo(leftRendered, colWidth - 7);
+			formatLineNo(oldNo, 4) + " │ " + truncateTo(leftRendered, colLeft - 7);
 		const rightFull =
-			formatLineNo(newNo, 4) + " │ " + truncateTo(rightRendered, colWidth - 7);
+			formatLineNo(newNo, 4) + " │ " + truncateTo(rightRendered, colRight - 7);
 
 		out.push(
 			"  " +
-				palette.del(padVisible(leftFull, colWidth)) +
+				palette.del(padVisible(leftFull, colLeft)) +
 				palette.gutter(separator) +
-				palette.add(padVisible(rightFull, colWidth)),
+				palette.add(padVisible(rightFull, colRight)),
 		);
 	}
 	return out;

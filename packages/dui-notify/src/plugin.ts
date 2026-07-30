@@ -5,11 +5,9 @@
  *
  *   1. Register 25 theme slots: `notify.<level>.{border, bg, fg, icon}` for each level.
  *   2. Register a `notify` renderer so `renderWith("notify", payload)` returns the toast.
- *   3. Register a render-time hook on the `notify` channel that other
- *      plugins can chain into via `registerRenderHook("notify", …)`.
- *   4. Surface the chosen backend list in `api.shared` so dashboards can display "Sent via os / osc / terminal" status.
+ *   3. Surface the chosen backend list in `api.shared` so dashboards can display "Sent via os / osc / terminal" status.
  */
-import type { DuiPlugin, RenderContext } from "@bdocs/dui";
+import type { DuiPlugin } from "@bdocs/dui";
 import { notifyApi } from "./notify.js";
 import type { NotifyOptions } from "./types.js";
 
@@ -59,29 +57,20 @@ export const notifyPlugin: DuiPlugin = {
 		// Built-in renderer — the host can call
 		// `await renderWith("notify", JSON.stringify(opts))` to fire a
 		// toast without directly importing the package.
+		// NOTE: registerRenderer already handles the notify dispatch.
+		// A separate registerRenderHook was removed to prevent
+		// double-firing when renderWith("notify", ...) is called.
 		api.registerRenderer("notify", async (input, options) => {
 			let opts: NotifyOptions;
 			try {
 				opts = JSON.parse(input) as NotifyOptions;
 			} catch {
-				opts = { body: input, ...(options as Partial<NotifyOptions> ?? {}) };
+				opts = { body: input, ...((options as Partial<NotifyOptions>) ?? {}) };
 			}
-			opts = { ...opts, ...(options as Partial<NotifyOptions> ?? {}) };
+			opts = { ...opts, ...((options as Partial<NotifyOptions>) ?? {}) };
 			const result = await notifyApi(opts);
 			return JSON.stringify(result);
 		});
-
-		// Render-time hook so other plugins can mutate / decorate the
-		// payload before it reaches the backends. Priority "first"
-		// makes plugin-derived toasts run before any UI composite.
-		api.registerRenderHook(
-			"notify",
-			async (input: string, _ctx: RenderContext) => {
-				const result = await notifyApi(JSON.parse(input) as NotifyOptions);
-				return JSON.stringify(result);
-			},
-			{ priority: "first" },
-		);
 
 		api.shared.set("renderer", "notify");
 		api.shared.set("backends", [

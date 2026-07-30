@@ -20,6 +20,9 @@
  * supported for the common case of keeping the default fg but
  * overriding the chip's background.
  *
+ * Unknown status values gracefully fall back to `"neutral"` so JS
+ * consumers don't crash at runtime with a cryptic TypeError.
+ *
  * @example
  * badge({ label: "PASS", status: "success" });    // [green] PASS[/green]
  * badge({ label: "ERR", status: "error" });      // white on red
@@ -44,7 +47,7 @@ export interface BadgeOptions {
 	};
 }
 
-const BADGE_DEFAULTS: Record<BadgeStatus, { fg: ColorInput; bg: ColorInput }> = {
+const BADGE_DEFAULTS: Record<string, { fg: ColorInput; bg: ColorInput }> = {
 	info: { fg: "white", bg: "blue" },
 	success: { fg: "white", bg: "green" },
 	warning: { fg: "black", bg: "yellow" },
@@ -52,27 +55,37 @@ const BADGE_DEFAULTS: Record<BadgeStatus, { fg: ColorInput; bg: ColorInput }> = 
 	neutral: { fg: "white", bg: "gray" },
 };
 
+/**
+ * Resolve the fg/bg colors for a badge, honoring:
+ *   1. Per-call `opts.colors.text` / `opts.colors.bg` (highest priority)
+ *   2. Global theme override via `configure({ theme: { badge: { ... } } })`
+ *   3. Hardcoded `BADGE_DEFAULTS` (fallback)
+ *
+ * Unknown statuses gracefully fall back to `"neutral"`.
+ */
 function resolveBadgeColor(
 	optsStatus: BadgeStatus | undefined,
 	optsText: ColorStyle | undefined,
 	optsBg: ColorStyle | undefined,
 	theme: ReturnType<typeof getConfig>["theme"],
 ): { fg: ColorInput; bg: ColorInput } {
-	const status: BadgeStatus = optsStatus ?? "neutral";
+	// Normalize unknown status to "neutral" so BADGE_DEFAULTS lookup never
+	// returns undefined, preventing a runtime TypeError in JS consumers.
+	const rawStatus: string = optsStatus ?? "neutral";
+	const status: BadgeStatus = BADGE_DEFAULTS[rawStatus] !== undefined
+		? (rawStatus as BadgeStatus)
+		: "neutral";
+
 	const themeEntry = theme?.badge?.[status];
 
 	let fg: ColorInput | undefined;
 	let bg: ColorInput | undefined;
 
-	// Theme override layer (slots map on theme).
-	if (typeof themeEntry === "string") {
-		fg = themeEntry;
-	} else if (themeEntry && typeof themeEntry === "object") {
-		fg = themeEntry.fg;
-		bg = themeEntry.bg;
-	}
+	// 1. Per-call opts.colors overrides (highest priority — evaluated last
+	//    so they overwrite theme and defaults).
+	// 2. We process opts first, then fall through theme → defaults.
 
-	// opts.colors.text overrides fg (and optionally bg).
+	// Check per-call opts.colors.text first (priority #1).
 	if (optsText !== undefined) {
 		if (typeof optsText === "string") {
 			fg = optsText;
@@ -82,7 +95,7 @@ function resolveBadgeColor(
 		}
 	}
 
-	// opts.colors.bg overrides bg only.
+	// Check per-call opts.colors.bg (priority #1, bg-only).
 	if (optsBg !== undefined) {
 		if (typeof optsBg === "string") {
 			bg = optsBg;
@@ -91,7 +104,16 @@ function resolveBadgeColor(
 		}
 	}
 
-	// Fall back to defaults so every (fg, bg) pair is defined.
+	// 2. Theme override layer (priority #2) — only applies when per-call
+	//    overrides DIDN'T set the value.
+	if (typeof themeEntry === "string") {
+		fg ??= themeEntry;
+	} else if (themeEntry && typeof themeEntry === "object") {
+		fg ??= themeEntry.fg;
+		bg ??= themeEntry.bg;
+	}
+
+	// 3. Hardcoded defaults (priority #3) — final fallback.
 	const defaults = BADGE_DEFAULTS[status];
 	return {
 		fg: (fg ?? defaults.fg) as ColorInput,
@@ -99,12 +121,21 @@ function resolveBadgeColor(
 	};
 }
 
+/** Strip ANSI escape sequences from a string. */
+function stripAnsi(s: string): string {
+	return s.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
 export function badge(opts: BadgeOptions): string {
+	// Strip ANSI from label to prevent malformed compound SGR output
+	// when the label itself contains escape sequences.
+	const cleanLabel = stripAnsi(opts.label);
+
 	// Plain-mode fallback — strip colour, emit `[ <label> ]` with
 	// the status as a preceding prefix. No SGR.
 	const cfg = getConfig();
 	if (isPlainMode(undefined, cfg)) {
-		return formatBadgePlain(opts.label, opts.status);
+		return formatBadgePlain(cleanLabel, opts.status);
 	}
 	const theme = cfg.theme;
 	const { fg, bg } = resolveBadgeColor(
@@ -113,5 +144,5 @@ export function badge(opts: BadgeOptions): string {
 		opts.colors?.bg,
 		theme,
 	);
-	return applyStyle(` ${opts.label} `, fg, bg);
+	return applyStyle(` ${cleanLabel} `, fg, bg);
 }
