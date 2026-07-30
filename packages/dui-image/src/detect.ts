@@ -1,6 +1,21 @@
 /**
  * Terminal capability detection for image rendering.
+ *
+ * Delegates to `getCapabilities()` from `@bdocs/dui` core so the
+ * image plugin and the rest of DUI share one source of truth for
+ * Kitty/Sixel/iTerm2 detection.
+ *
+ * Maintaining a separate file in dui-image preserves the public API
+ * surface (`detectTerminal()`, `resetTerminalDetection()`,
+ * `setTerminalCaps()`) that consumers already import.
  */
+
+import {
+	getCapabilities as getDuiCaps,
+	hasKitty,
+	refreshCapabilities,
+	setCapabilities,
+} from "@bdocs/dui";
 
 export interface TerminalCapabilities {
 	/** Whether truecolor (24-bit) is supported */
@@ -19,27 +34,21 @@ export interface TerminalCapabilities {
 	bestFormat: "sixel" | "kitty" | "iterm2" | "ansi";
 }
 
-let cachedCaps: TerminalCapabilities | null = null;
-
-function hasEnvFlag(name: string): boolean {
-	return (
-		typeof process !== "undefined" &&
-		typeof process.env !== "undefined" &&
-		process.env[name] !== undefined &&
-		process.env[name] !== ""
-	);
-}
-
-function getTermProgram(): string {
-	if (typeof process === "undefined" || typeof process.env === "undefined") {
-		return "";
-	}
-	return (
-		process.env.TERM_PROGRAM ||
-		process.env.TERM ||
-		process.env.COLORTERM ||
-		""
-	).toLowerCase();
+function fromDui(): TerminalCapabilities {
+	const core = getDuiCaps();
+	let bestFormat: TerminalCapabilities["bestFormat"] = "ansi";
+	if (core.kitty) bestFormat = "kitty";
+	else if (core.sixel) bestFormat = "sixel";
+	else if (core.iterm2) bestFormat = "iterm2";
+	return {
+		truecolor: core.truecolor,
+		sixel: core.sixel,
+		kitty: core.kitty,
+		iterm2: core.iterm2,
+		columns: core.columns,
+		rows: core.rows,
+		bestFormat,
+	};
 }
 
 /**
@@ -47,40 +56,19 @@ function getTermProgram(): string {
  * Caches the result after first call.
  */
 export function detectTerminal(): TerminalCapabilities {
-	if (cachedCaps) return cachedCaps;
-
-	const term = getTermProgram();
-	const columns =
-		(typeof process !== "undefined" && process.stdout?.columns) || 80;
-	const rows = (typeof process !== "undefined" && process.stdout?.rows) || 24;
-
-	const colorterm = process.env.COLORTERM?.toLowerCase() ?? "";
-	const truecolor = colorterm === "truecolor" || colorterm === "24bit";
-
-	// Sixel detection: WezTerm sets TERM_PROGRAM=WezTerm + TERM_PROGRAM_VERSION
-	const sixel = hasEnvFlag("TERM_PROGRAM_VERSION") && term.includes("wezterm");
-	const kitty = term.includes("kitty");
-	const iterm2 = term.includes("iterm");
-
-	let bestFormat: TerminalCapabilities["bestFormat"] = "ansi";
-	if (kitty) bestFormat = "kitty";
-	else if (sixel) bestFormat = "sixel";
-	else if (iterm2) bestFormat = "iterm2";
-
-	cachedCaps = { truecolor, sixel, kitty, iterm2, columns, rows, bestFormat };
-	return cachedCaps;
+	return fromDui();
 }
 
 /**
  * Reset the cached terminal capabilities (useful for testing).
  */
 export function resetTerminalDetection(): void {
-	cachedCaps = null;
+	refreshCapabilities();
 }
 
 /**
  * Override terminal capabilities (useful for testing).
  */
 export function setTerminalCaps(caps: Partial<TerminalCapabilities>): void {
-	cachedCaps = { ...detectTerminal(), ...caps };
+	setCapabilities(caps);
 }

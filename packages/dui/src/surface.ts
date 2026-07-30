@@ -124,8 +124,23 @@ const SGR_DEFAULT: SgrState = {
 function sgrSequence(delta: Partial<SgrState>, current: SgrState): string {
 	const parts: number[] = [];
 
-	if (delta.bold !== undefined) parts.push(delta.bold ? 1 : 22);
-	if (delta.dim !== undefined) parts.push(delta.dim ? 2 : 22);
+	// SGR 22 turns off BOTH bold and dim simultaneously. When both
+	// toggle off together, emit only one 22 instead of 22;22.
+	if (delta.bold !== undefined && delta.dim === true) {
+		// dim coming on while bold going off — they cancel on 22;
+		// the subsequent `2` re-enables dim. Emit both for clarity.
+		parts.push(delta.bold ? 1 : 22);
+		// dim is handled below
+	} else if (delta.bold !== undefined) {
+		parts.push(delta.bold ? 1 : 22);
+	}
+	if (delta.dim !== undefined) {
+		// Only emit when bold wasn't already emitting 22 (which resets both)
+		const boldClosing = delta.bold === false;
+		if (!boldClosing) {
+			parts.push(delta.dim ? 2 : 22);
+		}
+	}
 	if (delta.italic !== undefined) parts.push(delta.italic ? 3 : 23);
 	if (delta.underline !== undefined) parts.push(delta.underline ? 4 : 24);
 	if (delta.inverse !== undefined) parts.push(delta.inverse ? 7 : 27);
@@ -228,12 +243,14 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 		const row = this.grid[y];
 		if (!row) return;
 
+		// Fast-path: ASCII chars are always 1 cell wide, avoid the
+		// expensive visibleLength() call for every character.
 		for (let i = 0; i < clean.length; i++) {
 			const cx = x + i;
 			if (cx < 0 || cx >= this.opts.width) continue;
 			const ch = clean[i];
 			// Skip wide/surrogate characters for simplicity
-			if (visibleLength(ch) !== 1 && ch !== " ") continue;
+			if (ch > "\x7f" && visibleLength(ch) !== 1 && ch !== " ") continue;
 
 			const cell = row[cx];
 			if (style) {

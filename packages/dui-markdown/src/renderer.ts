@@ -221,20 +221,59 @@ async function renderParagraph(
 	const label = renderInline(token.inline);
 	const width = terminalWidth();
 	if (visibleLength(label) > width) {
-		return label
-			.split("")
-			.reduce((acc, c) => {
-				const last = acc[acc.length - 1];
-				if (last && visibleLength(last) < width) {
-					acc[acc.length - 1] += c;
-				} else {
-					acc.push(c);
-				}
-				return acc;
-			}, [] as string[])
-			.join("\n");
+		return wrapTextByVisualWidth(label, width);
 	}
 	return label;
+}
+
+/**
+ * Word-wrap a string so each line fits within `maxWidth` visual columns.
+ * Respects CJK double-width characters by using `visibleLength()`.
+ * Breaks at word boundaries (spaces) when possible; falls back to
+ * character-level break when a single word exceeds the width.
+ */
+function wrapTextByVisualWidth(text: string, maxWidth: number): string {
+	const lines: string[] = [];
+	const words = text.split(" ");
+	let currentLine = "";
+
+	for (const word of words) {
+		const wordWidth = visibleLength(stripAnsi(word));
+		const currentWidth = visibleLength(stripAnsi(currentLine));
+		const spacerWidth = currentLine.length > 0 ? 1 : 0;
+
+		if (currentWidth + spacerWidth + wordWidth <= maxWidth) {
+			currentLine += (currentLine ? " " : "") + word;
+		} else {
+			// Flush current line
+			lines.push(currentLine);
+			// If the word itself is wider than maxWidth, split it
+			if (wordWidth > maxWidth) {
+				// Character-level split for a single overlong word
+				let remaining = word;
+				while (remaining.length > 0) {
+					let chunk = "";
+					let chunkWidth = 0;
+					for (const ch of remaining) {
+						const chWidth = ch > "\x7f" ? visibleLength(ch) : 1;
+						if (chunkWidth + chWidth > maxWidth && chunk.length > 0) break;
+						chunk += ch;
+						chunkWidth += chWidth;
+					}
+					lines.push(chunk);
+					remaining = remaining.slice(chunk.length);
+				}
+			} else {
+				currentLine = word;
+			}
+		}
+	}
+
+	if (currentLine) {
+		lines.push(currentLine);
+	}
+
+	return lines.join("\n");
 }
 
 type BlockRenderer = (token: BlockToken) => Promise<string>;

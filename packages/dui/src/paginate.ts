@@ -275,10 +275,15 @@ export async function paginateInteractive(
 			return;
 		}
 
-		// Escape = quit
-		if (buf.includes("\u001b")) {
-			buf = "";
-			cleanup();
+		// Escape = quit (deferred microtask to avoid catching partial CSI
+		// sequences like \x1b[A arriving across chunks)
+		if (buf === "\u001b") {
+			Promise.resolve().then(() => {
+				if (done) return;
+				if (buf !== "\u001b") return;
+				buf = "";
+				cleanup();
+			});
 			return;
 		}
 
