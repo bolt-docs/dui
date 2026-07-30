@@ -5,7 +5,37 @@ badge: New
 description: Segmented control / nav bar primitive with three visual styles.
 ---
 
+import LiveDemo from '../../../components/LiveDemo'
+
 # `tabs(opts)` — segmented control
+
+## Live demo
+
+<LiveDemo
+  title="tabs"
+  command="node tabs-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui tabs --style=underline\x1b[0m",
+    "",
+    "  \x1b[38;2;255;200;100mHome\x1b[0m  \x1b[38;2;100;200;255mDocs\x1b[0m  \x1b[4m\x1b[38;2;100;200;255mBlog\x1b[0m  \x1b[38;2;100;200;255mAPI\x1b[0m  \x1b[38;2;100;200;255mAbout\x1b[0m",
+    "  \x1b[90m────────────────────────────────\x1b[0m",
+    "  \x1b[3m\"Active tab: Blog (underline style)\"\x1b[0m",
+    "",
+    "  \x1b[1m$ dui tabs --style=pill\x1b[0m",
+    "",
+    "  \x1b[90m[\x1b[0m \x1b[38;2;100;200;255mHome\x1b[0m \x1b[90m]\x1b[0m  \x1b[90m[\x1b[0m \x1b[38;2;100;200;255mDocs\x1b[0m \x1b[90m]\x1b[0m  \x1b[90m[\x1b[0m \x1b[38;2;255;200;100m\x1b[1mBlog\x1b[0m \x1b[90m]\x1b[0m  \x1b[90m[\x1b[0m \x1b[38;2;100;200;255mAPI\x1b[0m \x1b[90m]\x1b[0m",
+    "  \x1b[3m\"Active tab: Blog (pill style)\"\x1b[0m",
+    "",
+    "  \x1b[1m$ dui tabs --style=boxed\x1b[0m",
+    "",
+    "  \x1b[90m╭─\x1b[0m \x1b[90mHome\x1b[0m  \x1b[90m─╮\x1b[0m  \x1b[90m╭─\x1b[0m \x1b[90mDocs\x1b[0m  \x1b[90m─╮\x1b[0m  \x1b[38;2;255;200;100m╭─\x1b[0m \x1b[1m\x1b[38;2;255;200;100mBlog\x1b[0m \x1b[38;2;255;200;100m─╮\x1b[0m  \x1b[90m╭─\x1b[0m \x1b[90mAPI\x1b[0m   \x1b[90m─╮\x1b[0m",
+    "  \x1b[3m\"Active tab: Blog (boxed style)\"\x1b[0m",
+  ]}
+  columns={54}
+  rows={12}
+  typewriterMs={5}
+  autoRun
+/>
 
 Renders an array of tab labels with one marked active. Three visual styles are supported:
 

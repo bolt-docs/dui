@@ -9,9 +9,11 @@
 # silently produces inconsistent DUI guidance per-tool.
 #
 # Behavior:
-#   - If both files exist and are byte-identical → exit 0, print "in sync".
-#   - If they differ → copy .opencode → .agents, print "synced", exit 0.
-#   - If either file is missing → exit 1 with a clear error.
+#   - (no flag) — If both files exist and are byte-identical → exit 0.
+#     If they differ → copy .opencode → .agents, exit 0.
+#     If destination is missing → create dir + copy, exit 0.
+#   - `--check` — exit 0 when files are equal, exit 1 when they drift.
+#     Fails fast if either file is missing.
 #
 # Use as a release-time hook (`pnpm sync-skills`); a CI step can run it
 # with `--check` to enforce parity without writing.
@@ -36,23 +38,50 @@ elif [[ "$#" -gt 0 ]]; then
 	exit 2
 fi
 
+# ─── Both files must exist in check mode ───
+if [[ "$CHECK_ONLY" == "true" ]]; then
+	if [[ ! -f "$SRC" ]]; then
+		echo "Source skill missing: $SRC" >&2
+		exit 1
+	fi
+	if [[ ! -f "$DST" ]]; then
+		echo "Destination skill missing: $DST" >&2
+		exit 1
+	fi
+
+	# cmp -s is POSIX and works on GNU/Linux, macOS, BusyBox, and BSD.
+	# cmp --silent is a GNU extension that fails on macOS.
+	if cmp -s "$SRC" "$DST"; then
+		echo "in sync: $SRC ≡ $DST"
+		exit 0
+	else
+		echo "drift: $SRC ≠ $DST" >&2
+		exit 1
+	fi
+fi
+
+# ─── Copy mode (default) ───
+
+# Source is mandatory even in copy mode — we have nothing to sync from.
 if [[ ! -f "$SRC" ]]; then
 	echo "Source skill missing: $SRC" >&2
 	exit 1
 fi
-if [[ ! -f "$DST" ]]; then
-	echo "Destination skill missing: $DST" >&2
-	exit 1
-fi
 
-if diff -q "$SRC" "$DST" >/dev/null 2>&1; then
-	echo "in sync: $SRC ≡ $DST"
+# Destination may be missing on first run — create the directory silently.
+mkdir -p "$(dirname "$DST")"
+
+if [[ ! -f "$DST" ]]; then
+	# First-time setup: destination doesn't exist yet → just copy.
+	cp "$SRC" "$DST"
+	echo "created: $SRC → $DST"
 	exit 0
 fi
 
-if [[ "$CHECK_ONLY" == "true" ]]; then
-	echo "drift: $SRC ≠ $DST" >&2
-	exit 1
+# Both exist — copy only when they differ (spares unnecessary inode writes).
+if cmp -s "$SRC" "$DST"; then
+	echo "in sync: $SRC ≡ $DST"
+	exit 0
 fi
 
 cp "$SRC" "$DST"

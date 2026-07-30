@@ -5,6 +5,7 @@ description: Pipeline timeline display for multi-step processes.
 ---
 
 import TerminalPreview from '../../../components/TerminalPreview'
+import LiveDemo from '../../../components/LiveDemo'
 
 ```ts
 import { steps } from '@bdocs/dui'
@@ -12,7 +13,33 @@ import { steps } from '@bdocs/dui'
 
 ## Live demo
 
-<StepsDemo />
+<LiveDemo
+  title="steps"
+  command="node steps-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui pipeline run --env=production\x1b[0m",
+    "",
+    "  \x1b[32m✔\x1b[0m  \x1b[1mValidate\x1b[0m  \x1b[90mConfig & lint check\x1b[0m",
+    "  \x1b[90m│\x1b[0m",
+    "  \x1b[36m●\x1b[0m  \x1b[1mBuild\x1b[0m    \x1b[90mCompiling assets…\x1b[0m",
+    "  \x1b[90m│\x1b[0m",
+    "  \x1b[2m○\x1b[0m  \x1b[2mTest\x1b[0m     \x1b[2mWaiting…\x1b[0m",
+    "  \x1b[90m│\x1b[0m",
+    "  \x1b[2m○\x1b[0m  \x1b[2mDeploy\x1b[0m   \x1b[2mWaiting…\x1b[0m",
+    "",
+    "  \x1b[1m━━━ Previous run (success) ─────────────────\x1b[0m",
+    "",
+    "  \x1b[32m✔\x1b[0m  \x1b[1mTest\x1b[0m    \x1b[90m147 passed, 0 failed\x1b[0m",
+    "  \x1b[90m│\x1b[0m",
+    "  \x1b[32m✔\x1b[0m  \x1b[1mBuild\x1b[0m   \x1b[90m24 modules compiled\x1b[0m",
+    "  \x1b[90m│\x1b[0m",
+    "  \x1b[32m✔\x1b[0m  \x1b[1mDeploy\x1b[0m  \x1b[90m→ production (v2.3.1)\x1b[0m",
+  ]}
+  columns={54}
+  rows={17}
+  typewriterMs={5}
+  autoRun
+/>
 
 ---
 

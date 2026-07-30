@@ -5,6 +5,7 @@ description: Bullet points, numbered lists, and task checklists.
 ---
 
 import TerminalPreview from '../../../components/TerminalPreview'
+import LiveDemo from '../../../components/LiveDemo'
 
 ```ts
 import { bullet, ordered, tasks } from '@bdocs/dui'
@@ -12,7 +13,38 @@ import { bullet, ordered, tasks } from '@bdocs/dui'
 
 ## Live demo
 
-<ListsDemo />
+<LiveDemo
+  title="list"
+  command="node list-demo.mjs"
+  lines={[
+    "  \x1b[1m\x1b[36m$ dui list\x1b[0m  \x1b[90m# unordered, ordered & task lists\x1b[0m",
+    "",
+    "  \x1b[1m── Bullet list ────────────────────────────\x1b[0m",
+    "",
+    "  \x1b[36m•\x1b[0m  Install dependencies",
+    "  \x1b[36m•\x1b[0m  Configure environment",
+    "  \x1b[36m•\x1b[0m  Run test suite",
+    "  \x1b[36m•\x1b[0m  Deploy to production",
+    "",
+    "  \x1b[1m── Ordered list ───────────────────────────\x1b[0m",
+    "",
+    "  \x1b[33m1.\x1b[0m  Project setup",
+    "  \x1b[33m2.\x1b[0m  Feature implementation",
+    "  \x1b[33m3.\x1b[0m  Code review",
+    "  \x1b[33m4.\x1b[0m  QA verification",
+    "",
+    "  \x1b[1m── Task list ──────────────────────────────\x1b[0m",
+    "",
+    "  \x1b[32m✔\x1b[0m  \x1b[9mInstall dependencies\x1b[0m  \x1b[90m← 2d ago\x1b[0m",
+    "  \x1b[32m✔\x1b[0m  \x1b[9mConfigure environment\x1b[0m  \x1b[90m← 1d ago\x1b[0m",
+    "  \x1b[31m✘\x1b[0m  Run test suite           \x1b[90m← pending\x1b[0m",
+    "  \x1b[31m✘\x1b[0m  Deploy to production      \x1b[90m← blocked\x1b[0m",
+  ]}
+  columns={54}
+  rows={21}
+  typewriterMs={5}
+  autoRun
+/>
 
 ---
 

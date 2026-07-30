@@ -8,9 +8,35 @@ description: info, warn, error, success, debug — consistent [prefix]-prefixed 
 import { info, warn, error, success, debug } from '@bdocs/dui'
 ```
 
+import LiveDemo from '../../../components/LiveDemo'
+
 ## Live demo
 
-<LoggerDemo />
+<LiveDemo
+  title="logger"
+  command="node logger-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui build\x1b[0m",
+    "",
+    "  \x1b[1m[\x1b[0m\x1b[36mdui\x1b[0m\x1b[1m]\x1b[0m Starting build pipeline…",
+    "  \x1b[1m[\x1b[0m\x1b[36mdui\x1b[0m\x1b[1m]\x1b[0m Compiling TypeScript modules",
+    "  \x1b[1m[\x1b[0m\x1b[32mdui\x1b[0m\x1b[1m]\x1b[0m Build completed!  \x1b[90m(2.4s)\x1b[0m",
+    "  \x1b[1m[\x1b[0m\x1b[33mdui\x1b[0m\x1b[1m]\x1b[0m Deprecated API: `oldMethod()` used in src/utils.ts",
+    "  \x1b[1m[\x1b[0m\x1b[31mdui\x1b[0m\x1b[1m]\x1b[0m Failed to connect to registry  \x1b[90m— retrying…\x1b[0m",
+    "  \x1b[90m[dui]\x1b[0m  \x1b[90m→\x1b[0m  \x1b[2mVerbose: cache miss for @scope/pkg\x1b[0m",
+    "  \x1b[1m[\x1b[0m\x1b[32mdui\x1b[0m\x1b[1m]\x1b[0m \x1b[32mEverything up-to-date\x1b[0m",
+    "",
+    "  \x1b[1m━━━ Custom prefix logger ───────────────────\x1b[0m",
+    "",
+    "  \x1b[1m[\x1b[0m\x1b[35mmyapp\x1b[0m\x1b[1m]\x1b[0m Running installer…",
+    "  \x1b[1m[\x1b[0m\x1b[35mmyapp\x1b[0m\x1b[1m]\x1b[0m Writing configuration",
+    "  \x1b[1m[\x1b[0m\x1b[32m\x1b[1mmyapp\x1b[0m\x1b[1m]\x1b[0m \x1b[32mInstallation complete!\x1b[0m",
+  ]}
+  columns={56}
+  rows={15}
+  typewriterMs={5}
+  autoRun
+/>
 
 ---
 

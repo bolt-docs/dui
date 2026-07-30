@@ -5,6 +5,7 @@ description: Progress bars with discrete and smooth-fill animated modes, themed 
 ---
 
 import TerminalPreview from '../../../components/TerminalPreview'
+import LiveDemo from '../../../components/LiveDemo'
 
 ```ts
 import { createProgressBar, createAnimatedProgressBar, createMultiProgressBar } from '@bdocs/dui'
@@ -12,7 +13,27 @@ import { createProgressBar, createAnimatedProgressBar, createMultiProgressBar } 
 
 ## Live demo
 
-<ProgressBarDemo />
+<LiveDemo
+  title="progress"
+  command="node progress-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui progress --parallel\x1b[0m",
+    "",
+    "  \x1b[36mdownload\x1b[0m  \x1b[38;2;34;211;238m█████████████████\x1b[0m\x1b[90m░░░░░░░░░░░\x1b[0m  \x1b[1m62%\x1b[0m  \x1b[90m| fetching…\x1b[0m",
+    "  \x1b[33mverify\x1b[0m    \x1b[38;2;250;204;21m████████████\x1b[0m\x1b[90m░░░░░░░░░░░░░░░░░\x1b[0m  \x1b[1m42%\x1b[0m  \x1b[90m| checksum\x1b[0m",
+    "  \x1b[32minstall\x1b[0m   \x1b[38;2;34;197;94m███████\x1b[0m\x1b[90m░░░░░░░░░░░░░░░░░░░░░\x1b[0m  \x1b[1m28%\x1b[0m  \x1b[90m| extracting\x1b[0m",
+    "",
+    "  \x1b[1m━━━ Single bar ────────────────────────────────\x1b[0m",
+    "",
+    "  \x1b[90mbuild\x1b[0m     \x1b[38;2;155;93;229m████████████████████████\x1b[0m\x1b[90m░░░\x1b[0m  \x1b[1m89%\x1b[0m  \x1b[90m| linking modules\x1b[0m",
+    "",
+    "  \x1b[32m✔\x1b[0m  \x1b[1mAll tasks complete\x1b[0m  \x1b[90m(in 3.2s)\x1b[0m",
+  ]}
+  columns={54}
+  rows={10}
+  typewriterMs={5}
+  autoRun
+/>
 
 ---
 

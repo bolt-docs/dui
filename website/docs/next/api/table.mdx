@@ -5,6 +5,7 @@ description: Box-drawing character tables.
 ---
 
 import TerminalPreview from '../../../components/TerminalPreview'
+import LiveDemo from '../../../components/LiveDemo'
 
 ```ts
 import { table } from '@bdocs/dui'
@@ -12,7 +13,34 @@ import { table } from '@bdocs/dui'
 
 ## Live demo
 
-<TableDemo />
+<LiveDemo
+  title="table"
+  command="node table-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui table --packages\x1b[0m",
+    "  ┌────────────┬─────────┬────────┬──────────┐",
+    "  │ \x1b[1mPackage\x1b[0m      │ \x1b[1mVersion\x1b[0m │ \x1b[1mStatus\x1b[0m │ \x1b[1mAuthor\x1b[0m     │",
+    "  ├────────────┼─────────┼────────┼──────────┤",
+    "  │ \x1b[36m@bdocs/dui\x1b[0m  │ \x1b[33m0.7.0\x1b[0m   │ \x1b[32m✓\x1b[0m      │ \x1b[90mJesús\x1b[0m      │",
+    "  │ \x1b[36m@boltdocs\x1b[0m    │ \x1b[33m2.8.0\x1b[0m   │ \x1b[32m✓\x1b[0m      │ \x1b[90mJesús\x1b[0m      │",
+    "  │ \x1b[36mpreact\x1b[0m       │ \x1b[33m10.26.0\x1b[0m │ \x1b[33m⚠\x1b[0m      │ \x1b[90mdevelopit\x1b[0m  │",
+    "  │ \x1b[36mxterm.js\x1b[0m     │ \x1b[33m6.0.0\x1b[0m   │ \x1b[32m✓\x1b[0m      │ \x1b[90mxtermjs\x1b[0m    │",
+    "  └────────────┴─────────┴────────┴──────────┘",
+    "",
+    "  \x1b[1m$ dui table --colored\x1b[0m",
+    "  \x1b[90m┌───────┬───────┬──────────┐\x1b[0m",
+    "  \x1b[90m│\x1b[0m \x1b[1mCity\x1b[0m    \x1b[90m│\x1b[0m \x1b[1mTemp\x1b[0m  \x1b[90m│\x1b[0m \x1b[1mForecast\x1b[0m  \x1b[90m│\x1b[0m",
+    "  \x1b[90m├───────┼───────┼──────────┤\x1b[0m",
+    "  \x1b[90m│\x1b[0m Berlin \x1b[90m│\x1b[0m \x1b[91m-2°C\x1b[0m  \x1b[90m│\x1b[0m \x1b[36m☁️\x1b[0m Cloudy   \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m Tokyo   \x1b[90m│\x1b[0m \x1b[93m14°C\x1b[0m  \x1b[90m│\x1b[0m \x1b[33m🌤️\x1b[0m Partly   \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m Sydney  \x1b[90m│\x1b[0m \x1b[92m28°C\x1b[0m  \x1b[90m│\x1b[0m \x1b[33m☀️\x1b[0m Sunny    \x1b[90m│\x1b[0m",
+    "  \x1b[90m└───────┴───────┴──────────┘\x1b[0m",
+  ]}
+  columns={52}
+  rows={15}
+  typewriterMs={5}
+  autoRun
+/>
 
 ---
 

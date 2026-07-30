@@ -5,7 +5,42 @@ badge: New
 description: Overlay dialog primitive with title, content, and optional button footer.
 ---
 
+import LiveDemo from '../../../components/LiveDemo'
+
 # `modal(opts)` — overlay dialog
+
+## Live demo
+
+<LiveDemo
+  title="modal"
+  command="node modal-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui modal --confirm-delete\x1b[0m",
+    "",
+    "  \x1b[38;2;100;200;255m╭─\x1b[0m \x1b[1mConfirm Deletion\x1b[0m \x1b[38;2;100;200;255m────────────────────╮\x1b[0m",
+    "  \x1b[38;2;100;200;255m│\x1b[0m                                            \x1b[38;2;100;200;255m│\x1b[0m",
+    "  \x1b[38;2;100;200;255m│\x1b[0m  Are you sure you want to delete the           \x1b[38;2;100;200;255m│\x1b[0m",
+    "  \x1b[38;2;100;200;255m│\x1b[0m  file \x1b[33msrc/secret-config.json\x1b[0m? This action       \x1b[38;2;100;200;255m│\x1b[0m",
+    "  \x1b[38;2;100;200;255m│\x1b[0m  cannot be undone.                              \x1b[38;2;100;200;255m│\x1b[0m",
+    "  \x1b[38;2;100;200;255m│\x1b[0m                                            \x1b[38;2;100;200;255m│\x1b[0m",
+    "  \x1b[38;2;100;200;255m│\x1b[0m           \x1b[90m[\x1b[0m \x1b[90mCancel\x1b[0m \x1b[90m]\x1b[0m    \x1b[48;2;0;255;200m\x1b[38;2;0;0;0m Delete \x1b[0m           \x1b[38;2;100;200;255m│\x1b[0m",
+    "  \x1b[38;2;100;200;255m╰────────────────────────────────────────────╯\x1b[0m",
+    "",
+    "  \x1b[1m$ dui modal --info\x1b[0m",
+    "",
+    "  \x1b[38;2;255;200;100m╭─\x1b[0m \x1b[1mUpdate Available\x1b[0m \x1b[38;2;255;200;100m──────────────────╮\x1b[0m",
+    "  \x1b[38;2;255;200;100m│\x1b[0m                                            \x1b[38;2;255;200;100m│\x1b[0m",
+    "  \x1b[38;2;255;200;100m│\x1b[0m  A new version of \x1b[36mdui\x1b[0m is available.          \x1b[38;2;255;200;100m│\x1b[0m",
+    "  \x1b[38;2;255;200;100m│\x1b[0m  Current: \x1b[33m0.6.0\x1b[0m → Latest: \x1b[32m0.7.0\x1b[0m         \x1b[38;2;255;200;100m│\x1b[0m",
+    "  \x1b[38;2;255;200;100m│\x1b[0m                                            \x1b[38;2;255;200;100m│\x1b[0m",
+    "  \x1b[38;2;255;200;100m│\x1b[0m           \x1b[90m[\x1b[0m \x1b[90mDismiss\x1b[0m \x1b[90m]\x1b[0m    \x1b[48;2;0;170;255m\x1b[38;2;255;255;255m Update \x1b[0m         \x1b[38;2;255;200;100m│\x1b[0m",
+    "  \x1b[38;2;255;200;100m╰────────────────────────────────────────────╯\x1b[0m",
+  ]}
+  columns={54}
+  rows={18}
+  typewriterMs={5}
+  autoRun
+/>
 
 Wraps `box()` with two conveniences for confirm-style dialogs:
 

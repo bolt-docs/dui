@@ -6,6 +6,8 @@ import Field from "../components/mdx/Field";
 import { table } from "../components/mdx/Table";
 import { typographics } from "../components/mdx/Typographics";
 import DuiShowcase from "../components/DuiShowcase";
+import InteractiveNotifyDemo from "../components/InteractiveNotifyDemo";
+import LiveDemo from "../components/LiveDemo";
 import PackageManager from "../components/PackageManager";
 import ShowMeButton from "../components/ShowMeButton";
 import {
@@ -36,7 +38,9 @@ export default {
 	ConfirmPromptDemo,
 	DuiShowcase,
 	GridDemo,
+	InteractiveNotifyDemo,
 	ListsDemo,
+	LiveDemo,
 	LoggerDemo,
 	ProgressBarDemo,
 	SpinnerDemo,

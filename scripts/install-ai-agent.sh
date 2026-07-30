@@ -38,16 +38,31 @@ warn()  { echo -e "${YELLOW}⚠${NC} $1"; }
 err()   { echo -e "${RED}✖${NC} $1" >&2; }
 header(){ echo -e "\n${BOLD}━━━ $1 ━━━${NC}\n"; }
 
+# ─── Check if we have a controlling terminal ───
+has_tty() {
+	# Returns 0 (true) when /dev/tty exists AND is readable.
+	# In CI, piped installs (curl … | bash), or cron — no TTY.
+	{ true < /dev/tty; } 2>/dev/null
+}
+
+# ─── Read one line from the user ───
+# Requires a TTY — callers MUST guard with has_tty() first.
+# When /dev/tty is unavailable the function is never reached.
+read_from_user() {
+	local prompt="$1" var="$2"
+	echo -n "$prompt" >&2
+	read -r "$var" < /dev/tty
+}
+
 # ─── Get skill content ───
 fetch_skill() {
+	# Local file — when the user already cloned the repo
 	if [[ -f "$SKILL_LOCAL" ]]; then
 		cat "$SKILL_LOCAL"
 		return 0
 	fi
 
-	# Prefer curl, but fall through to wget even if curl IS installed but the
-	# network request itself failed. Using `if curl ... then return 0; fi`
-	# (instead of `&&`) keeps the chain alive on request failure.
+	# Remote fetch — prefer curl, fall through to wget
 	if command -v curl &>/dev/null; then
 		if curl -fsSL "$SKILL_SOURCE_URL" 2>/dev/null; then
 			return 0
@@ -72,22 +87,28 @@ install_skill() {
 
 	if [[ -f "$dest" ]]; then
 		if [[ "$FORCE_YES" != "true" ]]; then
-			echo -n "  ${dest} already exists. Overwrite? [y/N] "
-			# Read from the controlling terminal so the script works
-			# correctly when piped via `curl ... | bash` (where stdin
-			# is the script body itself, not user input).
-			read -r answer < /dev/tty
-			if [[ ! "$answer" =~ ^[Yy]$ ]]; then
-				warn "Skipped: ${dest}"
+			if has_tty; then
+				local answer
+				read_from_user "  ${dest} already exists. Overwrite? [y/N] " answer
+				if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+					warn "Skipped: ${dest}"
+					return
+				fi
+			else
+				# No TTY — can't prompt, skip with a warning
+				warn "Skipped: ${dest} (no TTY — use --yes to force)"
 				return
 			fi
 		fi
 	fi
 
 	mkdir -p "$(dirname "$dest")"
-	# `printf` preserves backslashes / special bytes that `echo -e`
-	# would otherwise interpret.
-	printf "%s\n" "$SKILL_CONTENT" > "$dest"
+
+	# Use printf "%s" (no trailing \n) so the file content is an
+	# exact byte-for-byte copy of what was fetched.  If $SKILL_CONTENT
+	# already ends with a newline — which is typical for skill files —
+	# adding a second \n via "%s\n" would corrupt the file.
+	printf "%s" "$SKILL_CONTENT" > "$dest"
 	ok "Installed for ${label}: ${dest}"
 }
 
@@ -118,6 +139,12 @@ echo ""
 
 # ─── Interactive prompt ───
 if [[ -z "$SELECTED_AGENT" ]]; then
+	if ! has_tty; then
+		err "No TTY available. Use --agent <name> or --yes to install non-interactively."
+		echo "  Example: bash scripts/install-ai-agent.sh --agent cursor --yes" >&2
+		exit 1
+	fi
+
 	echo "${BOLD}For which AI agent do you want to install the skill?${NC}"
 	echo "  1) claude-code   → CLAUDE.md (project instructions)"
 	echo "  2) claude-skill  → .claude/skills/dui/SKILL.md (modular skill)"
@@ -126,9 +153,7 @@ if [[ -z "$SELECTED_AGENT" ]]; then
 	echo "  5) .agents       → .agents/skills/dui/SKILL.md & .agents/skill/dui/SKILL.md (universal)"
 	echo "  6) all           → all of the above"
 	echo ""
-	echo -n "Select an option [1-6]: "
-	# See comment in install_skill() above re: /dev/tty.
-	read -r opt < /dev/tty
+	read_from_user "Select an option [1-6]: " opt
 	echo ""
 
 	case "$opt" in

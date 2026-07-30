@@ -5,10 +5,40 @@ description: Horizontal line separators.
 ---
 
 import TerminalPreview from '../../../components/TerminalPreview'
+import LiveDemo from '../../../components/LiveDemo'
 
 ```ts
 import { divider, dividerLog } from '@bdocs/dui'
 ```
+
+## Live demo
+
+<LiveDemo
+  title="divider"
+  command="node divider-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui divider --styles\x1b[0m",
+    "",
+    "  \x1b[1m── Solid ────────────────────────────────────\x1b[0m",
+    "  \x1b[90m────────────────────────────────────────────\x1b[0m",
+    "",
+    "  \x1b[1m── Double ───────────────────────────────────\x1b[0m",
+    "  \x1b[90m════════════════════════════════════════════\x1b[0m",
+    "",
+    "  \x1b[1m── Dashed ───────────────────────────────────\x1b[0m",
+    "  \x1b[90m--------------------------------------------\x1b[0m",
+    "",
+    "  \x1b[1m── Dotted ───────────────────────────────────\x1b[0m",
+    "  \x1b[90m············································\x1b[0m",
+    "",
+    "  \x1b[1m── Colored divider ──────────────────────────\x1b[0m",
+    "  \x1b[38;2;255;107;107m════════════════════════════════════════════\x1b[0m",
+  ]}
+  columns={54}
+  rows={15}
+  typewriterMs={4}
+  autoRun
+/>
 
 ## divider
 
