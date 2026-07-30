@@ -6,14 +6,107 @@ import PackageManager from "../../components/PackageManager";
 import { TerminalBackground } from "../../components/TerminalBackground";
 import LazySection from "../../components/LazySection";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
-import {
-	AnimationDemo,
-	BoxesDemo,
-	ColorsDemo,
-	DiffDemo,
-	GridDemo,
-	ListsDemo,
-} from "../../components/ShowcasePreviews";
+const XtermDemo = lazy(() => import("../../components/XtermDemo"));
+
+// Demo ANSI content helpers
+const dim = "\u001b[90m";
+const reset = "\u001b[0m";
+const bold = "\u001b[1m";
+const green = "\u001b[38;2;74;222;128m";
+const red = "\u001b[38;2;248;113;113m";
+const cyan = "\u001b[38;2;34;211;238m";
+const yellow = "\u001b[38;2;254;202;87m";
+const magenta = "\u001b[38;2;244;114;182m";
+const blue = "\u001b[38;2;96;165;250m";
+const white = "\u001b[38;2;229;231;235m";
+const bgGreen = "\u001b[48;2;74;222;128;38;2;10;10;10m";
+const bgRed = "\u001b[48;2;248;113;113;38;2;10;10;10m";
+const bgDim = "\u001b[48;2;60;60;60;38;2;200;200;200m";
+
+const demoData = {
+	lists: [
+		`${dim}  dui lists — bullet, ordered, tasks${reset}`,
+		"",
+		`  ${cyan}•${reset} Install DUI with pnpm`,
+		`  ${cyan}•${reset} Import the components`,
+		`  ${cyan}•${reset} Build beautiful CLIs`,
+		`  ${cyan}•${reset} Share with community`,
+		"",
+		`  ${dim}1.${reset} Clone repository`,
+		`  ${dim}2.${reset} ${bold}Install dependencies${reset}`,
+		`  ${dim}3.${reset} Build project`,
+		`  ${dim}4.${reset} Run tests`,
+		"",
+		`  ${green}✔${reset} Write documentation`,
+		`  ${green}✔${reset} Add unit tests`,
+		`  ${dim}○${reset} Review pull request`,
+		`  ${dim}○${reset} Deploy to production`,
+	],
+	colors: [
+		`${dim}  dui colors — 24-bit true color engine${reset}`,
+		"",
+		`  ${red}color  ${green}gradient  ${cyan}engine  ${yellow}HEX  ${magenta}RGB  ${blue}OKLCH${reset}`,
+		"",
+		`  ${red}██${green}██${yellow}██${cyan}██${magenta}██${blue}██${reset}  True Color interpolation`,
+		`  ${dim}  12 built-in named colors • 16M RGB palette${reset}`,
+	],
+	grid: [
+		`${dim}  dui — grid & layout — system dashboard${reset}`,
+		"",
+		`  ${green}╭${dim}──${reset} ${bold}System Dashboard${reset} ${green}───────────────────────╮${reset}`,
+		`  ${green}│${reset}                                                  ${green}│${reset}`,
+		`  ${green}│${reset}  ${bold}CPU${reset}  ${cyan}██████████░░░░░${reset}  ${white}65%${reset}    ${bold}MEM${reset}  ${yellow}████░░░░░░░░${reset}  ${white}3.2/8 GB${reset}  ${green}│${reset}`,
+		`  ${green}│${reset}  ${bold}DSK${reset}  ${magenta}██████░░░░░░░░░${reset}  ${white}42%${reset}    ${bold}NET${reset}  ${blue}████████░░░░${reset}  ${white}1.5 MB/s${reset}  ${green}│${reset}`,
+		`  ${green}│${reset}                                                  ${green}│${reset}`,
+		`  ${green}│${reset}   ${bgGreen} API ${reset}  ${green}● api-gateway${reset}    ${dim}uptime: 12d 4h${reset}       ${green}│${reset}`,
+		`  ${green}│${reset}   ${bgRed} DB  ${reset}  ${red}● postgres-main${reset}   ${dim}uptime: 2h 18m${reset} ${red}!${reset}    ${green}│${reset}`,
+		`  ${green}│${reset}   ${bgDim} CACHE ${reset} ${dim}● redis-cluster${reset}   ${dim}uptime: 12d 4h${reset}     ${green}│${reset}`,
+		`  ${green}│${reset}                                                  ${green}│${reset}`,
+		`  ${green}│${reset}  ${red}✖${reset} Disk use /dev/sda1 87%              ${green}│${reset}`,
+		`  ${green}│${reset}  ${yellow}⚠${reset} SSL cert expires in 14 days          ${green}│${reset}`,
+		`  ${green}╰${dim}──${reset} ${dim}Section • Grid • Divider • Badge${reset}${green} ─────────────╯${reset}`,
+	],
+	animation: [
+		`${dim}  dui animation — easing curves${reset}`,
+		"",
+		`  ${bold}Easing Curves (60 fps)${reset}`,
+		`  ${dim}  linear     ${reset}████████████████████████████████`,
+		`  ${dim}  ease-out   ${reset}██████████████████████████████░░`,
+		`  ${dim}  ease-in-out${reset}████████████████████████████████`,
+		"",
+		`  ${dim}25+ easing functions • spring physics • timelines${reset}`,
+	],
+	boxes: [
+		`${dim}  dui boxes — border styles${reset}`,
+		"",
+		`  ${dim}╔${dim}══════════════════════${dim}╗${reset}`,
+		`  ${dim}║${reset}  ${bold}DUI Terminal UI${reset}      ${dim}║${reset}`,
+		`  ${dim}║${reset}  Boxes & Borders       ${dim}║${reset}`,
+		`  ${dim}║${reset}  ${green}•${reset} double border     ${dim}║${reset}`,
+		`  ${dim}║${reset}  ${cyan}•${reset} single border     ${dim}║${reset}`,
+		`  ${dim}║${reset}  ${yellow}•${reset} round corners     ${dim}║${reset}`,
+		`  ${dim}╚${dim}══════════════════════${dim}╝${reset}`,
+		"",
+		`  ${dim}→ bordered output for structured CLIs${reset}`,
+	],
+	diff: [
+		`${dim}  dui diff — unified diff view${reset}`,
+		"",
+		`  ${dim}src/greet.ts${reset}`,
+		"",
+		`  ${red}-export function greet(name: string): string {${reset}`,
+		`  ${green}+export function greet(name: string, polite = false): string {${reset}`,
+		`   const prefix = polite ? "Hello, " : "Hi ";`,
+		`  ${red}-  console.log("Hello", name);${reset}`,
+		`  ${green}+  console.log(prefix + name);${reset}`,
+		"",
+		`  ${red}-export const VERSION = "1.0.0";${reset}`,
+		`  ${green}+export const VERSION = "1.1.0";${reset}`,
+		`  ${green}+export const AUTHOR = "Bolt Docs";${reset}`,
+		"",
+		`  ${dim}${bold} 1 file changed, 5 insertions, 2 deletions${reset}`,
+	],
+};
 
 // Code-split only the AnimatedTerminal — demos are light enough to import directly
 const loadAnimatedTerminal = () =>
@@ -138,24 +231,66 @@ export function HomePage() {
 						{txt("showcaseTitle")}
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
-							<ListsDemo />
-						</div>
-						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
-							<ColorsDemo />
-						</div>
-						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
-							<GridDemo />
-						</div>
-						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
-							<AnimationDemo />
-						</div>
-						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
-							<BoxesDemo />
-						</div>
-						<div className="rounded-xl border border-strong/60 bg-surface/50 p-4 sm:p-5 overflow-auto max-h-[320px]">
-							<DiffDemo />
-						</div>
+								<Suspense fallback={<TerminalFallback />}>
+						<XtermDemo
+							title="dui — lists"
+							command="node lists.js"
+							lines={demoData.lists}
+							columns={46}
+							rows={16}
+							typewriterMs={8}
+						/>
+					</Suspense>
+						<Suspense fallback={<TerminalFallback />}>
+						<XtermDemo
+							title="dui — true color"
+							command="node colorize.js"
+							lines={demoData.colors}
+							columns={46}
+							rows={8}
+							typewriterMs={10}
+						/>
+					</Suspense>
+						<Suspense fallback={<TerminalFallback />}>
+						<XtermDemo
+							title="dui — grid & layout"
+							command="node dashboard.js"
+							lines={demoData.grid}
+							columns={50}
+							rows={14}
+							typewriterMs={6}
+						/>
+					</Suspense>
+						<Suspense fallback={<TerminalFallback />}>
+						<XtermDemo
+							title="dui — animation"
+							command="node animate.js"
+							lines={demoData.animation}
+							columns={46}
+							rows={9}
+							typewriterMs={12}
+						/>
+					</Suspense>
+						<Suspense fallback={<TerminalFallback />}>
+						<XtermDemo
+							title="dui — boxes"
+							command="node boxes.js"
+							lines={demoData.boxes}
+							columns={46}
+							rows={11}
+							typewriterMs={8}
+						/>
+					</Suspense>
+						<Suspense fallback={<TerminalFallback />}>
+						<XtermDemo
+							title="dui — diff"
+							command="node diff.js"
+							lines={demoData.diff}
+							columns={46}
+							rows={16}
+							typewriterMs={10}
+						/>
+					</Suspense>
 					</div>
 				</div>
 			</section>

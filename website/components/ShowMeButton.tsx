@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import TerminalPreview from "./TerminalPreview/TerminalPreview";
 
 /* ── Demo output registry ─────────────────────────────────── */

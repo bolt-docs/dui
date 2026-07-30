@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "boltdocs/theme/reset.css";
 @import "./terminal-theme.css";
+@import "@xterm/xterm/css/xterm.css";
 
 @source "./node_modules/boltdocs/dist";
 
