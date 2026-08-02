@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { refreshAccessibility, resetConfig, section, stripAnsi, visibleLength } from "../src/index";
 
 // Env vars are read LIVE from process.env by the accessibility
@@ -100,6 +100,68 @@ describe("section", () => {
 			const out = section({ title: "T", width: 1 });
 			const stripped = stripAnsi(out);
 			expect(stripped).toBe("\u2500");
+		});
+
+		it("strips ANSI escapes from the title before layout", () => {
+			const out = section({ title: "\u001b[31mSettings\u001b[0m", width: 30 });
+			const stripped = stripAnsi(out);
+			expect(stripped).toContain("Settings");
+			// Width math ran on the CLEAN title — divider stays exactly 30.
+			expect(visibleLength(out)).toBe(30);
+		});
+
+		it("strips OSC window-title escapes from the title", () => {
+			const out = section({ title: "\u001b]0;evil\u0007Config", width: 30 });
+			expect(stripAnsi(out)).toContain("Config");
+			expect(out).not.toContain("\u001b]");
+		});
+
+		it("collapses newlines so the divider stays single-line", () => {
+			const out = section({ title: "A\nB", width: 20 });
+			expect(out.split("\n").length).toBe(1);
+			expect(stripAnsi(out)).toContain("A B");
+		});
+
+		it("treats an ANSI-only title as empty and falls back to pure dash", () => {
+			const out = section({ title: "\u001b[31m\u001b[0m", width: 10 });
+			expect(stripAnsi(out)).toBe("\u2500".repeat(10));
+		});
+
+		it("coerces non-string titles for JS consumers", () => {
+			// @ts-expect-error JS consumers can pass non-strings
+			const out = section({ title: 42, width: 10 });
+			expect(stripAnsi(out)).toContain("42");
+		});
+
+		it("degrades gracefully (unstyled + warning) on invalid title color", () => {
+			const warn = vi.spyOn(process, "emitWarning").mockImplementation(() => {});
+			try {
+				const out = section({
+					title: "X",
+					width: 10,
+					colors: { title: "not-a-color" },
+				});
+				// Renders unstyled, keeps geometry, and warns once per slot.
+				expect(stripAnsi(out)).toBe("\u2500\u2500 X \u2500\u2500\u2500\u2500\u2500");
+				expect(warn).toHaveBeenCalled();
+			} finally {
+				warn.mockRestore();
+			}
+		});
+
+		it("degrades gracefully (unstyled + warning) on invalid line color", () => {
+			const warn = vi.spyOn(process, "emitWarning").mockImplementation(() => {});
+			try {
+				const out = section({
+					title: "X",
+					width: 10,
+					colors: { line: "not-a-color" },
+				});
+				expect(visibleLength(out)).toBe(10);
+				expect(warn).toHaveBeenCalled();
+			} finally {
+				warn.mockRestore();
+			}
 		});
 	});
 });

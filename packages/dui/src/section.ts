@@ -34,7 +34,7 @@ import { getConfig } from "./config";
 import { formatSectionPlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { terminalWidth, truncateByCells, visibleLength } from "./utils";
+import { stripAnsi, terminalWidth, truncateByCells, visibleLength } from "./utils";
 
 export type SectionAlign = "left" | "center";
 
@@ -49,15 +49,52 @@ export interface SectionOptions {
 	};
 }
 
+/**
+ * Sanitize the title before layout:
+ *  - coerce non-strings (JS consumers) via `String(...)`.
+ *  - strip ALL ANSI escapes (SGR + OSC + CSI) so injected escape
+ *    sequences can't corrupt the divider's own SGR output.
+ *  - collapse newlines / tabs so the title stays a single line.
+ *  - trim (a whitespace-only title already falls back to a pure dash
+ *    line, matching the existing empty-title contract).
+ */
+function sanitizeTitle(raw: string): string {
+	return stripAnsi(String(raw ?? ""))
+		.replace(/[\r\n\t]+/g, " ")
+		.trim();
+}
+
+/**
+ * Paint a styled segment. Never lets a bad color string crash the
+ * caller — an invalid color renders the segment unstyled and surfaces
+ * a warning.
+ */
+function paintSegment(
+	text: string,
+	style: (s: string) => string,
+): string {
+	try {
+		return style(text);
+	} catch (err) {
+		process.emitWarning(
+			`[dui] section: invalid color (${(err as Error).message}) — rendering unstyled`,
+		);
+		return text;
+	}
+}
 
 export function section(opts: SectionOptions): string {
+	// Sanitize the title up-front so both render paths (plain + color)
+	// agree on the same cleaned input.
+	const title = sanitizeTitle(opts.title);
+
 	// Plain-mode fallback — emit a single-line `section: -- <title>
 	// --` annotation with no SGR. Skip width / alignment math
 	// entirely; the format is width-stable in scrollback regardless
 	// of terminal width.
 	const cfg = getConfig();
 	if (isPlainMode(undefined, cfg)) {
-		return formatSectionPlain(opts.title ?? "");
+		return formatSectionPlain(title);
 	}
 	const theme = cfg.theme;
 	const { apply: titleStyle } = resolveColor(
@@ -81,19 +118,20 @@ export function section(opts: SectionOptions): string {
 
 	// Below the 5-cell minimum (`<dash> <title> <dash>` with a 1-cell
 	// title), the divider can't fit a title at all. Same fallback
-	// applies when the title is empty *after trim* — a headingless
-	// divider is still expected to read as a horizontal rule, so emit
-	// a pure dashed line of exactly `width` cells so callers' vertical
-	// geometry (a single row) holds. `opts.title?.trim() === ""`
-	// catches both empty strings AND whitespace-only titles.
-	if (width < 5 || opts.title?.trim() === "") {
-		return lineStyle("─".repeat(width));
+	// applies when the title is empty *after sanitize/trim* — a
+	// headingless divider is still expected to read as a horizontal
+	// rule, so emit a pure dashed line of exactly `width` cells so
+	// callers' vertical geometry (a single row) holds. `title === ""`
+	// catches empty strings, whitespace-only titles, and titles that
+	// were only ANSI escapes.
+	if (width < 5 || title === "") {
+		return paintSegment("─".repeat(width), lineStyle);
 	}
 
 	// 4 = the 2 leading dashes + 2 separator spaces (one around title).
 	const maxTitleLen = Math.max(0, width - 4);
-	const title = truncateByCells(opts.title, maxTitleLen);
-	const titleLen = visibleLength(title);
+	const displayTitle = truncateByCells(title, maxTitleLen);
+	const titleLen = visibleLength(displayTitle);
 
 	if (align === "center") {
 		// Center: dash splits symmetrically around title + 2 spaces.
@@ -101,11 +139,11 @@ export function section(opts: SectionOptions): string {
 		const left = Math.floor(allDashes / 2);
 		const right = allDashes - left;
 		return (
-			lineStyle("─".repeat(left)) +
+			paintSegment("─".repeat(left), lineStyle) +
 			" " +
-			titleStyle(title) +
+			paintSegment(displayTitle, titleStyle) +
 			" " +
-			lineStyle("─".repeat(right))
+			paintSegment("─".repeat(right), lineStyle)
 		);
 	}
 
@@ -114,10 +152,10 @@ export function section(opts: SectionOptions): string {
 	// adjusts for the leading "── " prefix of width 4).
 	const trailing = Math.max(0, width - titleLen - 4);
 	return (
-		lineStyle("─".repeat(2)) +
+		paintSegment("─".repeat(2), lineStyle) +
 		" " +
-		titleStyle(title) +
+		paintSegment(displayTitle, titleStyle) +
 		" " +
-		lineStyle("─".repeat(trailing))
+		paintSegment("─".repeat(trailing), lineStyle)
 	);
 }
