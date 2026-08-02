@@ -111,10 +111,17 @@ function spawnQuick(
 
 function probeScreenReader(): boolean {
 	if (process.platform === "linux") {
-		// `pgrep -f brltty` returns 0 when a brltty process is alive.
-		// Avoid `which brltty` because the binary may be present but
-		// not running, which doesn't help a screen-reader user.
-		return spawnQuick("pgrep", ["-f", "brltty"]).present;
+		// `pgrep -x brltty` returns 0 when a process literally named
+		// `brltty` is alive. We use `-x` (exact process-name match)
+		// instead of `-f` (full command-line substring match): `-f`
+		// false-positives on ANY process whose argv merely mentions
+		// "brltty" — including the shell that spawned the probe itself
+		// (a classic `pgrep -f` self-match), or a debugger / test
+		// runner that happens to reference the name. `-x` only fires
+		// for the real daemon. Avoid `which brltty` because the binary
+		// may be present but not running, which doesn't help a
+		// screen-reader user.
+		return spawnQuick("pgrep", ["-x", "brltty"]).present;
 	}
 	if (process.platform === "darwin") {
 		// `defaults read` returns "1" when VoiceOver is on, otherwise

@@ -20,18 +20,23 @@
  * supported for the common case of keeping the default fg but
  * overriding the chip's background.
  *
- * Unknown status values gracefully fall back to `"neutral"` so JS
- * consumers don't crash at runtime with a cryptic TypeError.
+ * Unknown or mis-cased status values normalize case-insensitively to
+ * the nearest known status and fall back to `"neutral"`, so JS
+ * consumers never crash at runtime with a cryptic TypeError. Invalid
+ * color strings degrade gracefully: the chip renders unstyled and a
+ * `process.emitWarning` surfaces the problem instead of throwing.
  *
  * @example
  * badge({ label: "PASS", status: "success" });    // [green] PASS[/green]
  * badge({ label: "ERR", status: "error" });      // white on red
  * badge({ label: "draft", status: "neutral", colors: { bg: "#222" } });
+ * badge({ label: "abcdef", maxWidth: 5 });       // "abcd…" (cell-aware)
  */
 import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
 import { applyStyle, type ColorInput } from "./color";
 import { formatBadgePlain } from "./plain";
+import { stripAnsi, truncateByCells } from "./utils";
 import type { ColorStyle } from "./theme";
 
 export type BadgeStatus = "info" | "success" | "warning" | "error" | "neutral";
@@ -45,6 +50,12 @@ export interface BadgeOptions {
 		/** Override bg only (string, or compound). */
 		bg?: ColorStyle;
 	};
+	/**
+	 * Cap the chip's visible width in terminal cells (CJK-aware).
+	 * Labels longer than `maxWidth` are truncated with a trailing `…`.
+	 * Applies to both color and plain-mode output.
+	 */
+	maxWidth?: number;
 }
 
 const BADGE_DEFAULTS: Record<string, { fg: ColorInput; bg: ColorInput }> = {
@@ -54,6 +65,53 @@ const BADGE_DEFAULTS: Record<string, { fg: ColorInput; bg: ColorInput }> = {
 	error: { fg: "white", bg: "red" },
 	neutral: { fg: "white", bg: "gray" },
 };
+
+/**
+ * Normalize a caller-provided status to a known key:
+ *  - `undefined` stays `undefined` (plain mode falls back to the
+ *    literal `badge:` prefix, matching `formatBadgePlain`).
+ *  - known keys pass through as-is.
+ *  - unknown / mis-cased keys collapse to `"neutral"` so both render
+ *    paths (color + plain) agree on the same status.
+ */
+function normalizeStatus(
+	raw: BadgeStatus | undefined,
+): BadgeStatus | undefined {
+	if (raw === undefined) return undefined;
+	const key = String(raw).toLowerCase();
+	return Object.prototype.hasOwnProperty.call(BADGE_DEFAULTS, key)
+		? (key as BadgeStatus)
+		: "neutral";
+}
+
+/**
+ * Sanitize the label for chip rendering:
+ *  - coerce non-strings (JS consumers) via `String(...)`.
+ *  - strip ALL ANSI escapes (SGR + OSC + CSI) so injected escape
+ *    sequences can't corrupt the chip's own SGR output.
+ *  - collapse newlines / tabs so the chip stays a single line.
+ *  - trim so the ` label ` padding stays exactly one space per side.
+ */
+function sanitizeLabel(raw: string): string {
+	return stripAnsi(String(raw ?? ""))
+		.replace(/[\r\n\t]+/g, " ")
+		.trim();
+}
+
+/**
+ * Paint the chip. Never lets a bad color string crash the caller —
+ * an invalid color renders the label unstyled and surfaces a warning.
+ */
+function paint(text: string, fg: ColorInput, bg: ColorInput): string {
+	try {
+		return applyStyle(` ${text} `, fg, bg);
+	} catch (err) {
+		process.emitWarning(
+			`[dui] badge: invalid color (${(err as Error).message}) — rendering unstyled`,
+		);
+		return ` ${text} `;
+	}
+}
 
 /**
  * Resolve the fg/bg colors for a badge, honoring:
@@ -69,10 +127,15 @@ function resolveBadgeColor(
 	optsBg: ColorStyle | undefined,
 	theme: ReturnType<typeof getConfig>["theme"],
 ): { fg: ColorInput; bg: ColorInput } {
-	// Normalize unknown status to "neutral" so BADGE_DEFAULTS lookup never
-	// returns undefined, preventing a runtime TypeError in JS consumers.
+	// Normalize unknown status to "neutral" so the BADGE_DEFAULTS lookup
+	// never returns undefined, preventing a runtime TypeError in JS
+	// consumers. `hasOwnProperty` guards against prototype pollution
+	// (e.g. a JS caller passing status: "constructor").
 	const rawStatus: string = optsStatus ?? "neutral";
-	const status: BadgeStatus = BADGE_DEFAULTS[rawStatus] !== undefined
+	const status: BadgeStatus = Object.prototype.hasOwnProperty.call(
+		BADGE_DEFAULTS,
+		rawStatus,
+	)
 		? (rawStatus as BadgeStatus)
 		: "neutral";
 
@@ -81,31 +144,27 @@ function resolveBadgeColor(
 	let fg: ColorInput | undefined;
 	let bg: ColorInput | undefined;
 
-	// 1. Per-call opts.colors overrides (highest priority — evaluated last
-	//    so they overwrite theme and defaults).
-	// 2. We process opts first, then fall through theme → defaults.
-
-	// Check per-call opts.colors.text first (priority #1).
+	// 1. Per-call opts.colors.text — fg string, or compound `{ fg, bg }`.
 	if (optsText !== undefined) {
 		if (typeof optsText === "string") {
 			fg = optsText;
-		} else if (typeof optsText === "object") {
+		} else {
 			fg = optsText.fg ?? fg;
 			bg = optsText.bg ?? bg;
 		}
 	}
 
-	// Check per-call opts.colors.bg (priority #1, bg-only).
+	// 1b. Per-call opts.colors.bg — bg-only override (keeps the default
+	//     fg when only the background is overridden).
 	if (optsBg !== undefined) {
 		if (typeof optsBg === "string") {
 			bg = optsBg;
-		} else if (typeof optsBg === "object") {
+		} else {
 			bg = optsBg.bg ?? bg;
 		}
 	}
 
-	// 2. Theme override layer (priority #2) — only applies when per-call
-	//    overrides DIDN'T set the value.
+	// 2. Theme override layer — only fills gaps the per-call opts left.
 	if (typeof themeEntry === "string") {
 		fg ??= themeEntry;
 	} else if (themeEntry && typeof themeEntry === "object") {
@@ -113,7 +172,7 @@ function resolveBadgeColor(
 		bg ??= themeEntry.bg;
 	}
 
-	// 3. Hardcoded defaults (priority #3) — final fallback.
+	// 3. Hardcoded defaults — final fallback.
 	const defaults = BADGE_DEFAULTS[status];
 	return {
 		fg: (fg ?? defaults.fg) as ColorInput,
@@ -121,28 +180,32 @@ function resolveBadgeColor(
 	};
 }
 
-/** Strip ANSI escape sequences from a string. */
-function stripAnsi(s: string): string {
-	return s.replace(/\x1b\[[0-9;]*m/g, "");
-}
-
 export function badge(opts: BadgeOptions): string {
-	// Strip ANSI from label to prevent malformed compound SGR output
-	// when the label itself contains escape sequences.
-	const cleanLabel = stripAnsi(opts.label);
+	const label = sanitizeLabel(opts.label);
+	if (!label) return "";
+
+	// Normalize once so color mode and plain mode agree on the status.
+	const status = normalizeStatus(opts.status);
+
+	const cfg = getConfig();
+
+	// Optional cell-aware truncation — applies to both render paths.
+	const display =
+		opts.maxWidth !== undefined
+			? truncateByCells(label, opts.maxWidth)
+			: label;
 
 	// Plain-mode fallback — strip colour, emit `[ <label> ]` with
 	// the status as a preceding prefix. No SGR.
-	const cfg = getConfig();
 	if (isPlainMode(undefined, cfg)) {
-		return formatBadgePlain(cleanLabel, opts.status);
+		return formatBadgePlain(display, status);
 	}
-	const theme = cfg.theme;
+
 	const { fg, bg } = resolveBadgeColor(
-		opts.status,
+		status,
 		opts.colors?.text,
 		opts.colors?.bg,
-		theme,
+		cfg.theme,
 	);
-	return applyStyle(` ${cleanLabel} `, fg, bg);
+	return paint(display, fg, bg);
 }
