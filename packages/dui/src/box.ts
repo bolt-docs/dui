@@ -142,7 +142,11 @@ export function box(lines: string[], opts?: BoxOptions): string {
 	const maxInnerWidth = opts?.width
 		? Math.min(opts.width, termWidth)
 		: termWidth;
-	const maxContentWidth = Math.max(4, maxInnerWidth - padding * 2);
+	// Wrap to the actual content budget. The old `Math.max(4, …)` floor
+	// forced a 4-cell wrap even when the requested width left less room
+	// (e.g. width 5 + padding 2 → budget 1), so wrapped lines exceeded
+	// the box and the side borders misaligned with the top/bottom.
+	const maxContentWidth = Math.max(1, maxInnerWidth - padding * 2);
 
 	const wrappedLines: string[] = [];
 	for (const line of lines) {

@@ -237,7 +237,7 @@ export function table(
 		for (let i = 0; i < rowLineCount; i++) {
 			const lineCells: string[] = [];
 			for (let c = 0; c < colCount; c++) {
-				const cellText = wrappedCells[c][i] ?? "";
+				const cellText = wrappedCells[c]?.[i] ?? "";
 				const align = opts?.columns?.[c]?.align ?? "left";
 				const innerW = Math.max(1, colWidths[c] - padding * 2);
 				const padded = padCell(cellText, innerW, align);

@@ -131,5 +131,33 @@ describe("grid", () => {
 				expect(visibleLength(line)).toBeLessThanOrEqual(4);
 			}
 		});
+
+		it("narrow columns floor to the widest char so CJK rows stay aligned", () => {
+			// Each flex column would get 1 cell, but 中文 needs 2 cells —
+			// the column must floor up to 2 so every row shares one width
+			// instead of overflowing the layout.
+			const out = grid({
+				width: 4,
+				columns: [
+					{ content: "中文", width: "1fr" },
+					{ content: "b", width: "1fr" },
+				],
+			});
+			const widths = new Set(
+				out.split("\n").map((l) => visibleLength(l)),
+			);
+			expect(widths.size).toBe(1);
+		});
+
+		it("2-cell emoji content in a 1-cell auto column keeps rows aligned", () => {
+			const out = grid({
+				width: 3,
+				columns: [{ content: "✅x", width: "1fr" }],
+			});
+			const widths = new Set(
+				out.split("\n").map((l) => visibleLength(l)),
+			);
+			expect(widths.size).toBe(1);
+		});
 	});
 });

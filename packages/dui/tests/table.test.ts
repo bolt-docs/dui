@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { table } from "../src/index";
+import { table, visibleLength } from "../src/index";
 
 describe("table", () => {
 	it("renders table with default single style", () => {
@@ -72,5 +72,31 @@ describe("table", () => {
 		expect(defaultPad).toContain(" 1 ");
 		expect(doublePad).toContain("  1  ");
 		expect(zeroPad).toContain("┃1┃");
+	});
+
+	// Alignment regression: sparse rows (fewer cells than the header)
+	// must not crash, and every rendered line must share one width.
+	// Previously `wrappedCells[c][i]` threw a TypeError on undefined
+	// cells, and rows could render wider than the borders.
+	it("sparse rows never crash and keep all borders aligned", () => {
+		const out = table(
+			["A", "B", "C"],
+			[
+				["1"],
+				["1", "2"],
+				["1", "2", "3"],
+			],
+		);
+		expect(out).toContain("1");
+		expect(out).toContain("2");
+		expect(out).toContain("3");
+		const widths = new Set(out.split("\n").map((l) => visibleLength(l)));
+		expect(widths.size).toBe(1);
+	});
+
+	it("rows longer than the header keep borders aligned", () => {
+		const out = table(["A"], [["1", "2", "3"]]);
+		const widths = new Set(out.split("\n").map((l) => visibleLength(l)));
+		expect(widths.size).toBe(1);
 	});
 });

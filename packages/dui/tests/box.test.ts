@@ -149,5 +149,32 @@ describe("box", () => {
 			});
 			expect(visibleLength(out.split("\n")[0])).toBeLessThanOrEqual(16);
 		});
+
+		// Alignment regression: an explicit width smaller than
+		// content + padding used to overflow the box (wrapped lines
+		// were forced to 4 cells by a floor while the borders stayed
+		// at the requested narrow width), breaking the side borders.
+		it("explicit width smaller than content+padding keeps borders aligned", () => {
+			for (const [w, p] of [
+				[5, 2],
+				[6, 2],
+				[8, 3],
+				[3, 0],
+			] as Array<[number, number]>) {
+				const out = box(["abcdefghij"], { width: w, padding: p });
+				const widths = new Set(
+					out.split("\n").map((l) => visibleLength(l)),
+				);
+				expect(widths.size).toBe(1);
+			}
+		});
+
+		it("title + narrow explicit width keeps every row aligned", () => {
+			const out = box(["abcdefgh"], { width: 4, title: "T" });
+			const widths = new Set(
+				out.split("\n").map((l) => visibleLength(l)),
+			);
+			expect(widths.size).toBe(1);
+		});
 	});
 });

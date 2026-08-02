@@ -80,6 +80,22 @@ function parseFr(width: string | undefined): number | null {
 	return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/**
+ * Width (in cells) of the widest single character in `text`. Used to
+ * floor flex/auto column allocations so a 1-cell column can never be
+ * asked to hold a 2-cell CJK ideograph — which would push the row wider
+ * than the requested layout and break column alignment.
+ */
+function widestCharWidth(text: string | string[]): number {
+	const joined = Array.isArray(text) ? text.join("\n") : (text ?? "");
+	let max = 1;
+	for (const ch of Array.from(joined)) {
+		const w = visibleLength(ch);
+		if (w > max) max = w;
+	}
+	return max;
+}
+
 export function grid(opts: GridOptions): string {
 	const totalW = opts.width ?? Math.min(terminalWidth(), 80);
 	const gap = opts.gap ?? 2;
@@ -134,14 +150,21 @@ export function grid(opts: GridOptions): string {
 	const floorWidths: number[] = cols.map((c) => {
 		if (typeof c.width === "number") return c.width;
 		const fr = parseFr(c.width);
+		// A column must be at least as wide as its widest character, or
+		// a 2-cell glyph would overflow the row. `minCell` stays the
+		// user-facing floor; `widestCharWidth` is the hard lower bound.
+		const contentFloor = Math.max(minCell, widestCharWidth(c.content));
 		if (flexTotal > 0) {
 			if (fr !== null) {
-				return Math.max(minCell, Math.floor((fr / flexTotal) * remaining));
+				return Math.max(
+					contentFloor,
+					Math.floor((fr / flexTotal) * remaining),
+				);
 			}
 			// undefined → share equally with sibling auto columns.
-			return Math.max(minCell, Math.floor(remaining / autoCount));
+			return Math.max(contentFloor, Math.floor(remaining / autoCount));
 		}
-		return Math.max(minCell, Math.floor(remaining / autoCount));
+		return Math.max(contentFloor, Math.floor(remaining / autoCount));
 	});
 
 	// Round-robin give the "lost 1 cell per `Math.floor`" pixels back
