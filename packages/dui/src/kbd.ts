@@ -23,7 +23,9 @@
  * kbd({ keys: ["Esc"], colors: { text: "red" } });  // red "Esc"
  * kbd({ keys: ["Ctrl", "Shift", "P"], maxWidth: 8 }); // "Ctrl S…"
  */
+import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
+import { formatKbdPlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { stripAnsi, truncateByCells } from "./utils";
@@ -167,6 +169,7 @@ function paintToken(text: string, style: (s: string) => string): string {
 }
 
 export function kbd(opts: KbdOptions): string {
+	const cfg = getConfig();
 	const platform = resolvePlatform(opts.platform);
 	const map = PLATFORM_KEY_MAP[platform];
 
@@ -174,22 +177,35 @@ export function kbd(opts: KbdOptions): string {
 	const separator = opts.separator ?? " ";
 	const maxWidth = opts.maxWidth;
 
-	const theme = getConfig().theme;
+	// Sanitize each token once. Empty tokens (blank keys, or keys that
+	// were only ANSI / whitespace) are dropped so they can't leave stray
+	// separator gaps in the hint.
+	const cleanTokens = keys
+		.map(sanitizeToken)
+		.filter((token) => token !== "");
+
+	// Plain-mode fallback — `kbd: <keys>` with the RAW key names (no
+	// glyph substitution) so screen readers / dumb terminals announce
+	// "Ctrl C" instead of "⌃ C". Honors the same maxWidth truncation
+	// as the styled path so both render paths agree on visible width.
+	if (isPlainMode(undefined, cfg)) {
+		const joined = cleanTokens.join(separator);
+		const display =
+			maxWidth !== undefined
+				? truncateByCells(joined, maxWidth)
+				: joined;
+		return display === "" ? "" : formatKbdPlain([display]);
+	}
+
+	// Map the sanitized tokens through the platform table.
+	const tokens = cleanTokens.map((clean) => map[clean] ?? clean);
+
+	const theme = cfg.theme;
 	const { apply: textStyle } = resolveColor(
 		"kbd.text",
 		theme,
 		opts.colors?.text,
 	);
-
-	// Sanitize each token once, then map it through the platform table.
-	// Empty tokens (blank keys, or keys that were only ANSI / whitespace)
-	// are dropped so they can't leave stray separator gaps in the hint.
-	const tokens = keys
-		.map((token) => {
-			const clean = sanitizeToken(token);
-			return clean ? (map[clean] ?? clean) : "";
-		})
-		.filter((token) => token !== "");
 
 	// Cell-aware truncation of the *joined* hint so maxWidth caps the
 	// total visible width (CJK-safe) rather than per-token width.

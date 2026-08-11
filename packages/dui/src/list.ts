@@ -1,4 +1,6 @@
+import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
+import { formatBulletPlain, formatOrderedPlain, formatTasksPlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { terminalWidth, wrapAnsiWord } from "./utils";
@@ -7,9 +9,12 @@ export function bullet(
 	items: string[],
 	opts?: { colors?: { bullet?: ColorStyle } },
 ): string {
+	const cfg = getConfig();
+	if (isPlainMode(undefined, cfg)) return formatBulletPlain(items);
+
 	const termW = terminalWidth();
 	const indent = "    ";
-	const theme = getConfig().theme;
+	const theme = cfg.theme;
 	const { apply: bulletStyle } = resolveColor(
 		"list.bullet",
 		theme,
@@ -34,8 +39,11 @@ export function ordered(
 	items: string[],
 	opts?: { colors?: { number?: ColorStyle } },
 ): string {
+	const cfg = getConfig();
+	if (isPlainMode(undefined, cfg)) return formatOrderedPlain(items);
+
 	const termW = terminalWidth();
-	const theme = getConfig().theme;
+	const theme = cfg.theme;
 	const { apply: numberStyle } = resolveColor(
 		"list.number",
 		theme,
@@ -69,10 +77,13 @@ export function tasks(
 	items: TaskItem[],
 	opts?: { colors?: { check?: ColorStyle; cross?: ColorStyle } },
 ): string {
+	const cfg = getConfig();
+	if (isPlainMode(undefined, cfg)) return formatTasksPlain(items);
+
 	const termW = terminalWidth();
 	const indent = "    ";
 	const contentWidth = Math.max(10, termW - 4);
-	const theme = getConfig().theme;
+	const theme = cfg.theme;
 	const { apply: checkStyle } = resolveColor(
 		"list.check",
 		theme,

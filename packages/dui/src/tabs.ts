@@ -19,9 +19,12 @@
  * @example
  * tabs({ items: ["Home", "Docs", "Blog"], active: 1, style: "underline" });
  */
+import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
+import { formatTabsPlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
+import { stripAnsi } from "./utils";
 
 export type TabsStyle = "underline" | "pill" | "boxed";
 
@@ -52,8 +55,27 @@ function paintBoxed(
 	return `${border("\u256D\u2500")}${paint(label)}${border("\u2500\u256E")}`;
 }
 
+function sanitizeLabel(raw: string): string {
+	return stripAnsi(String(raw ?? ""))
+		.replace(/[\r\n\t]+/g, " ")
+		.trim();
+}
+
 export function tabs(opts: TabsOptions): string {
-	const theme = getConfig().theme;
+	const cfg = getConfig();
+
+	// Plain-mode fallback — one `[*]`/`[ ]` entry per tab, no SGR, no
+	// box-drawing strokes.
+	if (isPlainMode(undefined, cfg)) {
+		return formatTabsPlain(
+			opts.items.map((label, i) => ({
+				label: sanitizeLabel(label),
+				active: i === opts.active,
+			})),
+		);
+	}
+
+	const theme = cfg.theme;
 
 	const { apply: activePaint } = resolveColor(
 		"tabs.active",
@@ -76,10 +98,11 @@ export function tabs(opts: TabsOptions): string {
 
 	return opts.items
 		.map((label, i) => {
+			const clean = sanitizeLabel(label);
 			const paint = i === opts.active ? activePaint : inactivePaint;
-			if (style === "underline") return paintUnderline(paint, label);
-			if (style === "pill") return `[ ${paint(label)} ]`;
-			return paintBoxed(paint, borderPaint, label);
+			if (style === "underline") return paintUnderline(paint, clean);
+			if (style === "pill") return `[ ${paint(clean)} ]`;
+			return paintBoxed(paint, borderPaint, clean);
 		})
 		.join(joiner);
 }

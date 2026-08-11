@@ -281,6 +281,40 @@ function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
 }
 
+/* ── CSS Color 4 helpers ─────────────────────────────────────── */
+
+/**
+ * True when a channel token is the CSS Color 4 `none` keyword
+ * (case-insensitive) — i.e. a *missing* component.
+ */
+function isNone(raw: string | undefined): boolean {
+	return raw !== undefined && raw.toLowerCase() === "none";
+}
+
+/**
+ * Convert a channel token to a number. `none` (missing component)
+ * behaves as 0 per CSS Color 4 §12; `undefined` (group absent) stays
+ * undefined so callers can distinguish "not provided" from "zero".
+ */
+function channelValue(raw: string | undefined): number | undefined {
+	if (raw === undefined) return undefined;
+	if (isNone(raw)) return 0;
+	return Number(raw);
+}
+
+/**
+ * Resolve a hue token to degrees. Accepts `deg` (default), `turn`
+ * (×360), and `rad` (×180/π); negative values wrap into 0..360;
+ * `none` (missing hue) behaves as 0°.
+ */
+function hueToDegrees(raw: string | undefined, unit: string | undefined): number {
+	if (raw === undefined || isNone(raw)) return 0;
+	let h = Number(raw);
+	if (unit === "turn") h *= 360;
+	else if (unit === "rad") h *= 180 / Math.PI;
+	return ((h % 360) + 360) % 360;
+}
+
 function hexToRgb(hex: string): ParsedColor {
 	let h = hex.replace(/^#/, "");
 	if (!/^[0-9a-fA-F]+$/.test(h)) {
@@ -310,23 +344,50 @@ function hexToRgb(hex: string): ParsedColor {
 }
 
 function parseRgbString(input: string): ParsedColor | null {
-	const rgbMatch = input.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);
+	// Accepts both comma syntax (`rgb(100, 200, 50)`) and the modern
+	// CSS Color 4 space syntax (`rgb(100 200 50)`, with optional
+	// slash alpha `rgb(100 200 50 / 0.5)`). The comma form is the
+	// legacy / most-portable spelling; the space form is what editors
+	// and AI tools emit today, so accepting both keeps `colorize()`
+	// non-surprising for pasted CSS. Any channel (including alpha)
+	// may be the `none` keyword (missing component → 0, alpha → 1).
+	const rgbMatch = input.match(
+		/^rgb\(\s*(none|\d+)\s*(?:,\s*(none|\d+)\s*,\s*(none|\d+)|\s+(none|\d+)\s+(none|\d+))\s*(?:\/\s*(none|[\d.]+)(%?)\s*)?\)$/i,
+	);
 	if (rgbMatch) {
-		return {
-			r: clamp(Number(rgbMatch[1]), 0, 255),
-			g: clamp(Number(rgbMatch[2]), 0, 255),
-			b: clamp(Number(rgbMatch[3]), 0, 255),
+		const result: ParsedColor = {
+			r: clamp(channelValue(rgbMatch[1]) ?? 0, 0, 255),
+			g: clamp(channelValue(rgbMatch[2] ?? rgbMatch[4]) ?? 0, 0, 255),
+			b: clamp(channelValue(rgbMatch[3] ?? rgbMatch[5]) ?? 0, 0, 255),
 		};
+		if (rgbMatch[6] !== undefined) {
+			// Alpha accepts `0..1` or `%` (divide by 100), like hsl/oklch.
+			result.a = isNone(rgbMatch[6])
+				? 1
+				: clamp(Number(rgbMatch[6]) / (rgbMatch[7] === "%" ? 100 : 1), 0, 1);
+		}
+		return result;
 	}
 	const rgbaMatch = input.match(
-		/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/,
+		/^rgba\(\s*(none|\d+)\s*(?:,\s*(none|\d+)\s*,\s*(none|\d+)\s*,\s*(none|[\d.]+)(%?)|\s+(none|\d+)\s+(none|\d+)\s*(?:\/\s*(none|[\d.]+)(%?))?)\s*\)$/i,
 	);
 	if (rgbaMatch) {
+		const r = channelValue(rgbaMatch[1]) ?? 0;
+		const g = channelValue(rgbaMatch[2] ?? rgbaMatch[6]) ?? 0;
+		const b = channelValue(rgbaMatch[3] ?? rgbaMatch[7]) ?? 0;
+		// `rgba(255 0 0)` (space form, no alpha) is opaque — only the
+		// comma form requires the 4th arg, so default missing alpha to 1
+		// instead of NaN. `none` alpha (missing) is also opaque.
+		const aRaw = rgbaMatch[4] ?? rgbaMatch[8];
+		const aIsPct = (rgbaMatch[5] ?? rgbaMatch[9]) === "%";
+		const a = isNone(aRaw)
+			? 1
+			: clamp(Number(aRaw ?? 1) / (aIsPct ? 100 : 1), 0, 1);
 		return {
-			r: clamp(Number(rgbaMatch[1]), 0, 255),
-			g: clamp(Number(rgbaMatch[2]), 0, 255),
-			b: clamp(Number(rgbaMatch[3]), 0, 255),
-			a: clamp(Number(rgbaMatch[4]), 0, 1),
+			r: clamp(r, 0, 255),
+			g: clamp(g, 0, 255),
+			b: clamp(b, 0, 255),
+			a: clamp(a, 0, 1),
 		};
 	}
 	return null;
@@ -361,15 +422,36 @@ function oklabToLinearSrgb(
 }
 
 function parseHslString(input: string): ParsedColor | null {
+	// CSS Color 4 hsl()/hsla() accepts BOTH legacy comma syntax
+	// (`hsl(120, 50%, 50%)`, `hsla(120, 50%, 50%, 0.5)`) and the modern
+	// space syntax (`hsl(120 50% 50% / 0.5)`). Hue supports units:
+	// `deg` (default), `turn`, `rad`, and negative values. Saturation
+	// and lightness carry `%`; alpha may be a unitless 0..1 or a `%`.
+	// Any channel (including hue) may be the `none` keyword (missing
+	// component → 0, alpha → 1).
 	const match = input.match(
-		/^hsla?\(\s*([\d.]+)\s*[,\s]+([\d.]+)%?\s*[,\s]+([\d.]+)%?\s*(?:[,\/]\s*([\d.]+))?\s*\)$/i,
+		/^hsla?\(\s*(none|-?[\d.]+)(deg|turn|rad)?\s*(?:,\s*(none|[\d.]+)%?\s*,\s*(none|[\d.]+)%?\s*(?:,\s*(none|[\d.]+)(%?))?|\s+(none|[\d.]+)%?\s+(none|[\d.]+)%?\s*(?:\/\s*(none|[\d.]+)(%?))?)\s*\)$/i,
 	);
 	if (!match) return null;
-	let h = Number(match[1]) % 360;
-	if (h < 0) h += 360;
-	const s = clamp(Number(match[2]), 0, 100) / 100;
-	const l = clamp(Number(match[3]), 0, 100) / 100;
-	const a = match[4] !== undefined ? clamp(Number(match[4]), 0, 1) : undefined;
+
+	const h = hueToDegrees(match[1], match[2]);
+
+	// Comma form → groups 3,4,5,6; space form → groups 7,8,9,10.
+	// The `%?` capture next to alpha lets us distinguish `0.5` (0..1)
+	// from `50%` (divide by 100) — a bare `%` consumed by the literal
+	// would clamp `50%` to 1 instead of 0.5.
+	const sRaw = match[3] ?? match[7];
+	const lRaw = match[4] ?? match[8];
+	const aRaw = match[5] ?? match[9];
+	const aIsPct = (match[6] ?? match[10]) === "%";
+	const s = clamp(channelValue(sRaw) ?? 0, 0, 100) / 100;
+	const l = clamp(channelValue(lRaw) ?? 0, 0, 100) / 100;
+	const a = isNone(aRaw)
+		? 1
+		: aRaw !== undefined
+			? clamp(Number(aRaw) / (aIsPct ? 100 : 1), 0, 1)
+			: undefined;
+
 	// Convert HSL → RGB
 	const c = (1 - Math.abs(2 * l - 1)) * s;
 	const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
@@ -391,16 +473,31 @@ function parseHslString(input: string): ParsedColor | null {
 }
 
 function parseOklchString(input: string): ParsedColor | null {
+	// Accepts the CSS Color 4 space form (`oklch(60% 0.15 250)`,
+	// optional `/ alpha`) AND the legacy comma form
+	// (`oklch(60%, 0.15, 250, 0.8)`) so pasted values from either
+	// era resolve. Lightness accepts `%` (0..100) or unitless (0..1);
+	// chroma is unitless; hue supports `deg` (default) / `turn` / `rad`
+	// units and negative values; alpha is 0..1 or `%`. Any channel
+	// may be the `none` keyword (missing component → 0, alpha → 1).
 	const match = input.match(
-		/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+))?\s*\)$/,
+		/^oklch\(\s*(?<L>none|-?[\d.]+)(?<Lpct>%?)\s*(?:,\s*(?<C1>none|-?[\d.]+)\s*,\s*(?<H1>none|-?[\d.]+)(?<H1u>deg|turn|rad)?\s*(?:,\s*(?<A1>none|[\d.]+)(?<A1pct>%?))?|\s+(?<C2>none|-?[\d.]+)\s+(?<H2>none|-?[\d.]+)(?<H2u>deg|turn|rad)?\s*(?:\/\s*(?<A2>none|[\d.]+)(?<A2pct>%?))?)\s*\)$/i,
 	);
-	if (!match) return null;
+	if (!match || !match.groups) return null;
+	const g = match.groups;
 
-	let L = Number(match[1]);
-	if (match[2] === "%") L = L / 100;
-	const C = Number(match[3]);
-	const H = Number(match[4]);
-	const a = match[5] !== undefined ? clamp(Number(match[5]), 0, 1) : undefined;
+	let L = channelValue(g.L) ?? 0;
+	if (g.Lpct === "%") L = L / 100;
+	// Comma form → C1/H1/A1; space form → C2/H2/A2.
+	const C = channelValue(g.C1 ?? g.C2) ?? 0;
+	const H = hueToDegrees(g.H1 ?? g.H2, g.H1u ?? g.H2u);
+	const aRaw = g.A1 ?? g.A2;
+	const aIsPct = (g.A1pct ?? g.A2pct) === "%";
+	const a = isNone(aRaw)
+		? 1
+		: aRaw !== undefined
+			? clamp(Number(aRaw) / (aIsPct ? 100 : 1), 0, 1)
+			: undefined;
 
 	const hRad = (H * Math.PI) / 180;
 	const labA = C * Math.cos(hRad);
@@ -430,13 +527,17 @@ export function parseColor(input: ColorInput): ParsedColor {
 
 	let result: ParsedColor | null = null;
 
-	if (trimmed.startsWith("#")) {
+	// Format dispatch is case-insensitive (`RGB(...)` / `Hsl(...)`)
+	// because the per-format regexes below are all `/i` — keeping the
+	// router lowercase-only would reject perfectly valid pasted CSS.
+	const lower = trimmed.toLowerCase();
+	if (lower.startsWith("#")) {
 		result = hexToRgb(trimmed);
-	} else if (trimmed.startsWith("oklch")) {
+	} else if (lower.startsWith("oklch")) {
 		result = parseOklchString(trimmed);
-	} else if (trimmed.startsWith("hsl")) {
+	} else if (lower.startsWith("hsl")) {
 		result = parseHslString(trimmed);
-	} else if (trimmed.startsWith("rgb")) {
+	} else if (lower.startsWith("rgb")) {
 		result = parseRgbString(trimmed);
 	}
 

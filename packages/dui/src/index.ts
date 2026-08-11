@@ -25,15 +25,23 @@ export {
 	isReducedMotion,
 	refreshAccessibility,
 } from "./accessibility";
+export type { ActionInput, BoxLikeOpts } from "./plain";
 export {
 	formatActionToken,
 	formatActionTokens,
+	formatActionsPlain,
+	formatBadgePlain,
 	formatBoxPlain,
+	formatBulletPlain,
 	formatDividerPlain,
 	formatKbdPlain,
 	formatModalPlain,
+	formatOrderedPlain,
 	formatSectionPlain,
+	formatStepsPlain,
+	formatTablePlain,
 	formatTabsPlain,
+	formatTasksPlain,
 } from "./plain";
 export type { BadgeOptions, BadgeStatus } from "./badge";
 export { badge } from "./badge";

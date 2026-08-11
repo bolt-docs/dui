@@ -320,21 +320,48 @@ export function createEasing(
 export interface Keyframe {
 	/** Position along the timeline, from 0 (start) to 1 (end) — CSS-style. */
 	offset: number;
-	/** Text content to display at this keyframe. */
+	/**
+	 * Text content to display at this keyframe. Content *snaps* to the
+	 * nearest keyframe (no interpolation), but supports `{name}`
+	 * templates that are filled from the resolved `numbers` channel,
+	 * e.g. `content: "Loading {progress}%"`.
+	 */
 	content?: string;
 	/** Foreground color. */
 	fg?: ColorInput;
 	/** Background color. */
 	bg?: ColorInput;
+	/**
+	 * Arbitrary numeric channels interpolated (with easing) between
+	 * consecutive keyframes — progress counters, degrees, widths, …
+	 * Keys present on only one side of a segment carry through.
+	 */
+	numbers?: Record<string, number>;
 }
 
 export interface ResolvedFrame {
 	content: string;
 	fg?: string;
 	bg?: string;
+	/** Interpolated numeric channels; present only when keyframes define them. */
+	numbers?: Record<string, number>;
 }
 
 // ── Animation config ────────────────────────────────────────────
+
+/**
+ * Playback direction, mirroring CSS `animation-direction`:
+ *
+ * - `normal` — forward every iteration (default).
+ * - `reverse` — backward every iteration.
+ * - `alternate` — forward, then backward, alternating (ping-pong).
+ * - `alternate-reverse` — backward, then forward, alternating.
+ */
+export type AnimationDirection =
+	| "normal"
+	| "reverse"
+	| "alternate"
+	| "alternate-reverse";
 
 export interface AnimationConfig {
 	/** Ordered list of keyframes with offsets between 0 and 1. */
@@ -343,6 +370,13 @@ export interface AnimationConfig {
 	duration: number;
 	/** Whether to loop forever. Default false. */
 	loop?: boolean;
+	/**
+	 * Finite repeat count — a superset of `loop` (`loop: true` is
+	 * `iterations: Infinity`). Default 1.
+	 */
+	iterations?: number;
+	/** Playback direction. Default "normal". */
+	direction?: AnimationDirection;
 	/** Easing function or preset name. Default "linear". */
 	easing?: Easing;
 	/** Target frame rate. Default 60. */
@@ -424,6 +458,13 @@ function resolveFrame(
 		content = et < 0.5 ? (a.content ?? firstContent) : b.content;
 	}
 
+	// Numeric channels interpolate with the eased progress; keys on one
+	// side of the segment only carry through unchanged.
+	const numbers = resolveNumbers(a, b, et);
+	if (numbers && content.includes("{")) {
+		content = fillTemplate(content, numbers);
+	}
+
 	const fg =
 		a.fg && b.fg && a.fg !== b.fg
 			? interpolateColor(a.fg, b.fg, et)
@@ -434,7 +475,65 @@ function resolveFrame(
 			? interpolateColor(a.bg, b.bg, et)
 			: (a.bg ?? b.bg);
 
-	return { content, fg, bg };
+	return {
+		content,
+		fg,
+		bg,
+		...(numbers ? { numbers } : {}),
+	};
+}
+
+/** Interpolate the union of numeric channels across a segment. */
+function resolveNumbers(
+	a: Keyframe,
+	b: Keyframe,
+	et: number,
+): Record<string, number> | undefined {
+	const an = a.numbers;
+	const bn = b.numbers;
+	if (!an && !bn) return undefined;
+
+	const keys = new Set([...Object.keys(an ?? {}), ...Object.keys(bn ?? {})]);
+	const out: Record<string, number> = {};
+	for (const key of keys) {
+		const va = an?.[key];
+		const vb = bn?.[key];
+		out[key] =
+			va !== undefined && vb !== undefined ? lerp(va, vb, et) : (va ?? vb ?? 0);
+	}
+	return out;
+}
+
+/**
+ * Replace `{name}` placeholders with the resolved numbers. Unknown keys
+ * are left untouched so a template can mix numbers and static text.
+ */
+function fillTemplate(content: string, numbers: Record<string, number>): string {
+	return content.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key: string) => {
+		const value = numbers[key];
+		if (value === undefined) return match;
+		// Integers stay integers; floats trim to 2 decimals.
+		return Number.isInteger(value)
+			? String(value)
+			: String(Math.round(value * 100) / 100);
+	});
+}
+
+/**
+ * Apply CSS-style playback direction to a position within one iteration.
+ * `iteration` is 0-based; odd iterations flip for `alternate`/
+ * `alternate-reverse`.
+ */
+function applyDirection(
+	t: number,
+	direction: AnimationDirection,
+	iteration: number,
+): number {
+	const backward =
+		direction === "reverse" ||
+		(direction === "alternate" && iteration % 2 === 1) ||
+		(direction === "alternate-reverse" && iteration % 2 === 0);
+	return backward ? 1 - t : t;
 }
 
 // ── Normalize keyframes (auto-fill 0/1 if missing) ──────────────
@@ -450,6 +549,7 @@ function normalizeKeyframes(keyframes: Keyframe[]): Keyframe[] {
 			content: sorted[0].content,
 			fg: sorted[0].fg,
 			bg: sorted[0].bg,
+			numbers: sorted[0].numbers,
 		});
 	}
 	if (sorted[sorted.length - 1].offset !== 1) {
@@ -458,6 +558,7 @@ function normalizeKeyframes(keyframes: Keyframe[]): Keyframe[] {
 			content: sorted[sorted.length - 1].content,
 			fg: sorted[sorted.length - 1].fg,
 			bg: sorted[sorted.length - 1].bg,
+			numbers: sorted[sorted.length - 1].numbers,
 		});
 	}
 
@@ -492,7 +593,15 @@ export function animate(
 		onFrame: (frame: ResolvedFrame) => void;
 	},
 ): AnimationHandle {
-	const { keyframes, duration, loop = false, fps = 60, onFrame } = config;
+	const {
+		keyframes,
+		duration,
+		loop = false,
+		fps = 60,
+		onFrame,
+	} = config;
+	const iterations = config.iterations ?? (loop ? Infinity : 1);
+	const direction = config.direction ?? "normal";
 	const easingFn = resolveEasing(config.easing ?? "linear");
 	const frameInterval = 1000 / fps;
 	let timer: ReturnType<typeof setTimeout> | null = null;
@@ -531,11 +640,20 @@ export function animate(
 		},
 		seek: (progress: number) => {
 			const t = Math.max(0, Math.min(1, progress));
-			const frame = resolveFrame(sorted, t, easingFn);
+			// Overall progress maps to a raw timeline position (t × total
+			// iterations); infinite loops resolve within iteration 0.
+			const rawT = Number.isFinite(iterations) ? t * iterations : t;
+			const iteration = Math.floor(rawT);
+			const dirT = applyDirection(
+				Math.min(rawT - iteration, 1),
+				direction,
+				iteration,
+			);
+			const frame = resolveFrame(sorted, dirT, easingFn);
 			onFrame(frame);
 			lastT = t;
 			// Adjust start time so the next tick continues from here.
-			startTime = performance.now() - (duration * t + pauseElapsed);
+			startTime = performance.now() - (duration * rawT + pauseElapsed);
 		},
 		get progress(): number {
 			return lastT;
@@ -562,13 +680,27 @@ export function animate(
 
 		const elapsed = performance.now() - startTime - pauseElapsed;
 		const rawT = elapsed / duration;
-		const t = loop ? rawT % 1 : Math.min(rawT, 1);
+
+		// Overall progress: 0→1 across the whole run for finite iterations,
+		// cycling 0→1 per iteration when looping forever.
+		const t = Number.isFinite(iterations)
+			? Math.min(rawT / iterations, 1)
+			: rawT % 1;
 		lastT = t;
 
-		const frame = resolveFrame(sorted, t, easingFn);
+		// Per-iteration position with CSS-style direction applied.
+		const iteration = Math.floor(rawT);
+		const done = Number.isFinite(iterations) && rawT >= iterations;
+		const dirT = applyDirection(
+			done ? 1 : rawT - iteration,
+			direction,
+			iteration,
+		);
+
+		const frame = resolveFrame(sorted, dirT, easingFn);
 		onFrame(frame);
 
-		if (!loop && rawT >= 1) {
+		if (done) {
 			for (const cb of doneCallbacks) cb();
 			return;
 		}
@@ -588,6 +720,10 @@ export interface AnimateProgressConfig {
 	duration?: number;
 	/** Whether to loop forever. Default false. */
 	loop?: boolean;
+	/** Finite repeat count — a superset of `loop`. Default 1. */
+	iterations?: number;
+	/** Playback direction. Default "normal". */
+	direction?: AnimationDirection;
 	/** Easing function or preset name. Default "ease-out". */
 	easing?: Easing;
 	/** Target frame rate. Default 60. */
@@ -619,6 +755,8 @@ export function animateProgress(
 	config: AnimateProgressConfig,
 ): AnimateProgressHandle {
 	const { duration = 1000, loop = false, fps = 60, onFrame } = config;
+	const iterations = config.iterations ?? (loop ? Infinity : 1);
+	const direction = config.direction ?? "normal";
 	const easingFn = resolveEasing(config.easing ?? "ease-out");
 	const startTime = performance.now();
 	const frameInterval = 1000 / fps;
@@ -630,12 +768,16 @@ export function animateProgress(
 
 		const elapsed = performance.now() - startTime;
 		const rawT = elapsed / duration;
-		const t = loop ? rawT % 1 : Math.min(rawT, 1);
-		const eased = easingFn(t);
+
+		const iteration = Math.floor(rawT);
+		const done = Number.isFinite(iterations) && rawT >= iterations;
+		const pos = done ? 1 : rawT - iteration;
+		const dirT = applyDirection(pos, direction, iteration);
+		const eased = easingFn(dirT);
 
 		onFrame(eased);
 
-		if (!loop && rawT >= 1) return;
+		if (done) return;
 
 		timer = setTimeout(tick, frameInterval);
 	}

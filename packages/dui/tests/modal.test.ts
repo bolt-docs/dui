@@ -133,5 +133,22 @@ describe("modal", () => {
 			const bgCount = (out.match(/\u001b\[46m/g) ?? []).length;
 			expect(bgCount).toBeGreaterThanOrEqual(1);
 		});
+
+		it("grows the box so wide button rows never wrap mid-token", () => {
+			const out = modal({
+				title: "X",
+				content: "y",
+				width: 10,
+				buttons: [
+					{ label: "Cancel" },
+					{ label: "Delete", primary: true },
+				],
+			});
+			const plain = stripAnsi(out);
+			// Both tokens must land on the SAME line — no mid-token wrap.
+			const lines = plain.split("\n");
+			const footer = lines.find((l) => l.includes("Cancel") && l.includes("Delete"));
+			expect(footer).toBeDefined();
+		});
 	});
 });

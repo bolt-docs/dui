@@ -28,7 +28,9 @@
  *   ],
  * });
  */
-import { terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
+import { isPlainMode } from "./accessibility";
+import { getConfig } from "./config";
+import { stripAnsi, terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
 
 export interface GridColumn {
 	content: string | string[];
@@ -97,6 +99,29 @@ function widestCharWidth(text: string | string[]): number {
 }
 
 export function grid(opts: GridOptions): string {
+	// Plain-mode fallback — grid emits no SGR of its own, so the only
+	// plain concern is cell content that carries escapes from nested
+	// widgets (`box()`, `badge()`, …). Strip them up-front so the
+	// column layout itself is unchanged but the output is text-only.
+	if (isPlainMode(undefined, getConfig())) {
+		const columns = Array.isArray(opts.columns)
+			? opts.columns.map((c) =>
+					typeof c === "string"
+						? { content: stripAnsi(c) }
+						: {
+								...c,
+								content: Array.isArray(c.content)
+									? c.content.map(stripAnsi)
+									: stripAnsi(c.content ?? ""),
+							},
+				)
+			: opts.columns;
+		return renderGrid({ ...opts, columns });
+	}
+	return renderGrid(opts);
+}
+
+function renderGrid(opts: GridOptions): string {
 	const totalW = opts.width ?? Math.min(terminalWidth(), 80);
 	const gap = opts.gap ?? 2;
 	const minCell = opts.minCellWidth ?? 1;

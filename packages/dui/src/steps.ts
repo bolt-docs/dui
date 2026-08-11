@@ -1,4 +1,6 @@
+import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
+import { formatStepsPlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 
@@ -20,8 +22,11 @@ export interface StepsOptions {
 }
 
 export function steps(items: StepItem[], opts?: StepsOptions): string {
+	const cfg = getConfig();
+	if (isPlainMode(undefined, cfg)) return formatStepsPlain(items);
+
 	const result: string[] = [];
-	const theme = getConfig().theme;
+	const theme = cfg.theme;
 	const { apply: successStyle } = resolveColor(
 		"steps.success",
 		theme,
@@ -77,7 +82,9 @@ export function steps(items: StepItem[], opts?: StepsOptions): string {
 		result.push(`  ${icon}  ${item.label}`);
 
 		if (item.details) {
-			result.push(`  ${connectorStyle("│")}  └─ ${detailStyle(item.details)}`);
+			result.push(
+				`  ${connectorStyle("│")}  ${connectorStyle("└─")} ${detailStyle(item.details)}`,
+			);
 		}
 
 		if (!isLast) {

@@ -49,11 +49,33 @@ export function formatBoxPlain(
 	if (title) out.push(`box: ${title}`);
 	if (actionsLength(opts.actions) > 0 && out.length > 0) out.push("");
 	for (const line of lines) out.push(`  ${line}`);
-	if (actionsLength(opts.actions) > 0) {
+	const actionsBlock = formatActionsPlain(opts.actions);
+	if (actionsBlock) {
 		out.push("");
-		out.push("actions:");
-		for (const a of opts.actions!) out.push(`  [${a.id}] ${a.label}`);
+		out.push(actionsBlock);
 	}
+	return out.join("\n");
+}
+
+/**
+ * The `actions:` block used by every plain-mode renderer that
+ * surfaces keyboard shortcuts. Single source of truth — `box()`,
+ * `notify()`'s `plainEmit`, and any future widget all emit the same
+ * grammar so log scrapers / screen readers see a consistent shape:
+ *
+ *     actions:
+ *       [<id>] <label>
+ *       [<id2>] <label2>
+ *
+ * Returns `""` when `actions` is empty/undefined so callers can
+ * conditionally append without a length check.
+ */
+export function formatActionsPlain(
+	actions: readonly ActionInput[] | undefined,
+): string {
+	if (!actions || actions.length === 0) return "";
+	const out: string[] = ["actions:"];
+	for (const a of actions) out.push(`  [${a.id}] ${a.label}`);
 	return out.join("\n");
 }
 
@@ -84,14 +106,21 @@ export function formatDividerPlain(length = 20): string {
 	return `divider: ${"-".repeat(len)}`;
 }
 
-/** `modal: <title>` for the modal widget. */
+/**
+ * `modal: <title>` for the modal widget. Body content lines are
+ * indented under the header (matching `formatBoxPlain`), then a
+ * `buttons:` block lists each footer action with `[*]` (primary) /
+ * `[ ]` (secondary) markers.
+ */
 export function formatModalPlain(
 	title: string | undefined,
+	content: readonly string[] = [],
 	buttons: readonly { label: string; primary?: boolean }[] = [],
 ): string {
 	const out: string[] = [];
 	const trimmed = title?.trim() ?? "";
 	if (trimmed) out.push(`modal: ${trimmed}`);
+	for (const line of content) out.push(`  ${line}`);
 	if (buttons.length > 0) {
 		if (out.length > 0) out.push("");
 		out.push("buttons:");
@@ -118,6 +147,82 @@ export function formatTabsPlain(
 /** `kbd: <keys joined by platform separator>` — no glyph substitution. */
 export function formatKbdPlain(keys: readonly string[]): string {
 	return `kbd: ${keys.join(" ")}`;
+}
+
+/**
+ * `bullet: - <item>` — ASCII dash markers instead of `•` glyphs.
+ * Multi-line items keep their internal newlines; each top-level item
+ * gets exactly one dash-prefixed line.
+ */
+export function formatBulletPlain(items: readonly string[]): string {
+	const out: string[] = ["bullet:"];
+	for (const item of items) out.push(`  - ${item}`);
+	return out.join("\n");
+}
+
+/** `ordered: 1. <item>` — numbering preserved, no color. */
+export function formatOrderedPlain(items: readonly string[]): string {
+	const out: string[] = ["ordered:"];
+	for (let i = 0; i < items.length; i++) out.push(`  ${i + 1}. ${items[i]}`);
+	return out.join("\n");
+}
+
+/**
+ * `tasks: [x] / [ ] <label>` — ASCII check markers replace `✔`/`✘`
+ * so screen readers announce the state as text.
+ */
+export function formatTasksPlain(
+	items: readonly { label: string; done: boolean }[],
+): string {
+	const out: string[] = ["tasks:"];
+	for (const item of items) {
+		out.push(`  ${item.done ? "[x]" : "[ ]"} ${item.label}`);
+	}
+	return out.join("\n");
+}
+
+/**
+ * `steps: [x] / [>] / [ ] / [!] <label>` — status markers replace the
+ * `✔`/`●`/`○`/`✖` glyphs and the `│`/`└─` connectors (no box-drawing
+ * in plain mode). Details indent under their step's label.
+ */
+export function formatStepsPlain(
+	items: readonly {
+		label: string;
+		status: string;
+		details?: string;
+	}[],
+): string {
+	const out: string[] = ["steps:"];
+	for (const item of items) {
+		const marker =
+			item.status === "success"
+				? "[x]"
+				: item.status === "error"
+					? "[!]"
+					: item.status === "running"
+						? "[>]"
+						: "[ ]";
+		out.push(`  ${marker} ${item.label}`);
+		if (item.details) out.push(`      ${item.details}`);
+	}
+	return out.join("\n");
+}
+
+/**
+ * `table: <header cells>` + indented rows — cells joined with two
+ * spaces, borders dropped. Deliberately minimal (no column alignment):
+ * consumers needing fixed-width plain tables emit their own format.
+ */
+export function formatTablePlain(
+	headers: readonly string[],
+	rows: readonly (readonly string[])[],
+): string {
+	const out: string[] = [];
+	const header = headers.join("  ");
+	if (header.trim()) out.push(`table: ${header}`);
+	for (const row of rows) out.push(`  ${row.join("  ")}`);
+	return out.join("\n");
 }
 
 /**

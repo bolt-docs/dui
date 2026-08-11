@@ -336,6 +336,236 @@ describe("animate", () => {
 		// At most ~5 frames in 500ms at 10fps
 		expect(onFrame.mock.calls.length).toBeLessThanOrEqual(6);
 	});
+
+	// ── numbers channel ───────────────────────────────────────
+
+	it("interpolates numeric channels with easing", () => {
+		vi.useFakeTimers();
+		const values: number[] = [];
+		// fps 20 → 50ms interval: ticks land at exact 0 / 50 / 100ms.
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, numbers: { progress: 0 } },
+				{ offset: 1, numbers: { progress: 100 } },
+			],
+			duration: 100,
+			fps: 20,
+			easing: "linear",
+			onFrame: (f) => values.push(f.numbers?.progress ?? -1),
+		});
+
+		vi.advanceTimersByTime(100);
+		anim.stop();
+
+		expect(values[0]).toBeCloseTo(0, 5);
+		expect(values[1]).toBeCloseTo(50, 5);
+		expect(values[2]).toBeCloseTo(100, 5);
+		// Monotonic increase
+		for (let i = 1; i < values.length; i++) {
+			expect(values[i]).toBeGreaterThanOrEqual(values[i - 1]);
+		}
+	});
+
+	it("numbers respect the easing curve", () => {
+		vi.useFakeTimers();
+		const values: number[] = [];
+		// ease-in (t²): at rawT 0.5 the eased progress is 0.25 → value 25
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, numbers: { v: 0 } },
+				{ offset: 1, numbers: { v: 100 } },
+			],
+			duration: 100,
+			fps: 20,
+			easing: "ease-in",
+			onFrame: (f) => values.push(f.numbers?.v ?? -1),
+		});
+
+		vi.advanceTimersByTime(100);
+		anim.stop();
+
+		// Linear would be 50; eased (t² at t=0.5) is 25.
+		expect(values[1]).toBeCloseTo(25, 5);
+	});
+
+	it("carries keys defined on only one side of a segment", () => {
+		vi.useFakeTimers();
+		const values: Array<Record<string, number> | undefined> = [];
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, numbers: { a: 10 } },
+				{ offset: 1, numbers: { a: 20, b: 5 } },
+			],
+			duration: 100,
+			fps: 20,
+			easing: "linear",
+			onFrame: (f) => values.push(f.numbers),
+		});
+
+		vi.advanceTimersByTime(100);
+		anim.stop();
+
+		const mid = values[1];
+		expect(mid?.a).toBeCloseTo(15, 5); // lerp(10, 20, 0.5)
+		expect(mid?.b).toBe(5); // only on b → carries through
+	});
+
+	it("fills {name} templates from resolved numbers", () => {
+		vi.useFakeTimers();
+		const contents: string[] = [];
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, content: "Loading {progress}%", numbers: { progress: 0 } },
+				{ offset: 1, content: "Loading {progress}%", numbers: { progress: 100 } },
+			],
+			duration: 100,
+			fps: 20,
+			easing: "linear",
+			onFrame: (f) => contents.push(f.content),
+		});
+
+		vi.advanceTimersByTime(100);
+		anim.stop();
+
+		expect(contents[0]).toBe("Loading 0%");
+		expect(contents[1]).toBe("Loading 50%");
+		expect(contents[2]).toBe("Loading 100%");
+	});
+
+	it("leaves unknown template keys untouched", () => {
+		vi.useFakeTimers();
+		const contents: string[] = [];
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, content: "v={v} missing={x}", numbers: { v: 0 } },
+				{ offset: 1, content: "v={v} missing={x}", numbers: { v: 10 } },
+			],
+			duration: 100,
+			fps: 20,
+			easing: "linear",
+			onFrame: (f) => contents.push(f.content),
+		});
+
+		vi.advanceTimersByTime(100);
+		anim.stop();
+
+		expect(contents[1]).toBe("v=5 missing={x}");
+	});
+
+	it("does not set numbers when keyframes have none", () => {
+		vi.useFakeTimers();
+		const frame = { numbers: "set" as unknown };
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, content: "a" },
+				{ offset: 1, content: "b" },
+			],
+			duration: 100,
+			onFrame: (f) => {
+				frame.numbers = f.numbers;
+			},
+		});
+
+		vi.advanceTimersByTime(10);
+		anim.stop();
+
+		expect(frame.numbers).toBeUndefined();
+	});
+
+	// ── direction ─────────────────────────────────────────────
+
+	it("direction: reverse plays backward", () => {
+		vi.useFakeTimers();
+		const values: number[] = [];
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, numbers: { v: 0 } },
+				{ offset: 1, numbers: { v: 100 } },
+			],
+			duration: 100,
+			fps: 20,
+			direction: "reverse",
+			easing: "linear",
+			onFrame: (f) => values.push(f.numbers?.v ?? -1),
+		});
+
+		vi.advanceTimersByTime(50);
+		anim.stop();
+
+		// Starts at the END value (100) and walks backward: 100 → 50.
+		expect(values[0]).toBeCloseTo(100, 5);
+		expect(values[1]).toBeCloseTo(50, 5);
+	});
+
+	it("direction: alternate ping-pongs across iterations", () => {
+		vi.useFakeTimers();
+		const values: number[] = [];
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, numbers: { v: 0 } },
+				{ offset: 1, numbers: { v: 100 } },
+			],
+			duration: 100,
+			fps: 20,
+			iterations: 2,
+			direction: "alternate",
+			easing: "linear",
+			onFrame: (f) => values.push(f.numbers?.v ?? -1),
+		});
+
+		vi.advanceTimersByTime(150);
+		anim.stop();
+
+		// Ping-pong: 0 → 50 → 100 (first iteration), then 50 (second
+		// iteration at elapsed 150, walking back toward 0).
+		expect(values[2]).toBeCloseTo(100, 5); // elapsed 100 — peak
+		expect(values[3]).toBeCloseTo(50, 5); // elapsed 150 — descending
+		expect(values[3]).toBeLessThan(values[2]);
+	});
+
+	// ── iterations ────────────────────────────────────────────
+
+	it("iterations runs the animation N times then completes", () => {
+		vi.useFakeTimers();
+		const onDone = vi.fn();
+		const onFrame = vi.fn();
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, content: "a" },
+				{ offset: 1, content: "b" },
+			],
+			duration: 50,
+			iterations: 2,
+			onFrame,
+		});
+		anim.then(onDone);
+
+		vi.advanceTimersByTime(200);
+
+		expect(onDone).toHaveBeenCalledTimes(1);
+		expect(anim.progress).toBe(1);
+	});
+
+	it("loop: true still loops forever (iterations superset)", () => {
+		vi.useFakeTimers();
+		const onFrame = vi.fn();
+		const anim = animate({
+			keyframes: [
+				{ offset: 0, content: "a" },
+				{ offset: 1, content: "b" },
+			],
+			duration: 50,
+			loop: true,
+			onFrame,
+		});
+
+		vi.advanceTimersByTime(200);
+
+		// ~12+ frames across 4 cycles — still firing after the first
+		// duration would have completed a non-looping animation.
+		expect(onFrame.mock.calls.length).toBeGreaterThan(10);
+		anim.stop();
+	});
 });
 
 // ── animateProgress ─────────────────────────────────────────────
@@ -401,5 +631,44 @@ describe("animateProgress", () => {
 
 		expect(values.length).toBeGreaterThan(0);
 		expect(values[values.length - 1]).toBeCloseTo(1, 5);
+	});
+
+	it("direction: reverse starts at 1 and decreases", () => {
+		vi.useFakeTimers();
+		const values: number[] = [];
+		const anim = animateProgress({
+			duration: 100,
+			fps: 20,
+			direction: "reverse",
+			easing: "linear",
+			onFrame: (p) => values.push(p),
+		});
+
+		vi.advanceTimersByTime(100);
+		anim.stop();
+
+		expect(values[0]).toBeCloseTo(1, 5);
+		expect(values[1]).toBeCloseTo(0.5, 5);
+		expect(values[2]).toBeCloseTo(0, 5);
+	});
+
+	it("iterations completes after N repeats", () => {
+		vi.useFakeTimers();
+		const values: number[] = [];
+		const anim = animateProgress({
+			duration: 100,
+			fps: 20,
+			iterations: 2,
+			easing: "linear",
+			onFrame: (p) => values.push(p),
+		});
+
+		vi.advanceTimersByTime(250);
+		anim.stop();
+
+		// Two full climbs 0→1, 0→1: 0, 0.5, 0, 0.5, 1.
+		expect(values[values.length - 1]).toBeCloseTo(1, 5);
+		expect(values.some((v) => v < 0.1)).toBe(true); // second cycle starts
+		expect(values).toEqual([0, 0.5, 0, 0.5, 1]);
 	});
 });

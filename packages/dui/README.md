@@ -102,9 +102,6 @@ configure({ theme: presets.nord })
 configure({ theme: presets.gruvbox })
 configure({ theme: presets.solarized })
 configure({ theme: presets.catppuccin })
-configure({ theme: presets.oneDark })
-configure({ theme: presets.monokai })
-configure({ theme: presets.github })
 ```
 
 ### Accessibility
@@ -129,6 +126,36 @@ if (isReducedMotion()) {
 ```
 
 Triggers on: `NO_COLOR`, `TERM=dumb`, screen reader (brltty / VoiceOver / NVDA / JAWS), or explicit `configure({ plain: true })`.
+
+**Every widget honors plain mode.** Box-drawing glyphs, ANSI escapes,
+and glyph markers (`•`, `✔`, `⌘`, …) collapse into ASCII `prefix:`
+annotations that read top-down for screen readers and log scrapers:
+
+```ts
+import { configure, box, badge, tasks, modal } from '@bdocs/dui'
+
+configure({ plain: true })
+
+box(['Line 1'], { title: 'Status' })  // box: Status
+                                      //   Line 1
+badge({ label: 'PASS' })              // badge: [ PASS ]
+tasks([{ label: 'Go', done: true }])  // tasks:
+                                      //   [x] Go
+modal({
+  title: 'Confirm',
+  content: ['Sure?'],
+  buttons: [{ label: 'OK' }],
+})                                    // modal: Confirm
+                                      //   Sure?
+                                      //
+                                      //   buttons:
+                                      //     [ ] OK
+```
+
+Coverage: `box`, `badge`, `section`, `divider`, `modal`, `tabs`,
+`kbd`, `list` (`bullet` / `ordered` / `tasks`), `steps`, and `table`
+swap to their `format*Plain` fallback; `grid` keeps its column layout
+and strips ANSI from nested widget content.
 
 ---
 
@@ -187,8 +214,8 @@ Keyboard shortcut hint display:
 ```ts
 import { kbd } from '@bdocs/dui'
 
-kbd({ keys: ['⌘', 'K'] })       // macOS
-kbd({ keys: ['Ctrl', 'K'] })    // cross-platform
+kbd({ keys: ['Cmd', 'K'] })                       // "⌘ K" on macOS, "Ctrl K" elsewhere
+kbd({ keys: ['Cmd', 'K'], platform: 'mac' })      // force macOS glyphs
 kbd({ keys: ['Ctrl', 'Alt', 'Del'], platform: 'linux' })
 ```
 
@@ -211,11 +238,9 @@ Segmented tab navigation:
 import { tabs } from '@bdocs/dui'
 
 tabs({
-  items: [
-    { label: 'Overview', active: true },
-    { label: 'Settings' },
-  ],
-  style: 'underline',   // or 'boxed'
+  items: ['Overview', 'Settings'],
+  active: 0,
+  style: 'underline',   // or 'pill', 'boxed'
 })
 ```
 
@@ -527,7 +552,7 @@ visibleLength('\x1b[31mred\x1b[0m')       // 3
 | `badge(opts)` | `string` | Colored status chip (info, success, warning, error, neutral) |
 | `kbd(opts)` | `string` | Keyboard shortcut hint |
 | `section(opts)` | `string` | Labeled divider line |
-| `tabs(opts)` | `string` | Segmented tab navigation (underline, boxed) |
+| `tabs(opts)` | `string` | Segmented tab navigation (underline, pill, boxed) |
 | `modal(opts)` | `string` | Overlay dialog box with buttons |
 | `grid(opts)` | `string` | Column-based side-by-side layout |
 
@@ -540,7 +565,7 @@ visibleLength('\x1b[31mred\x1b[0m')       // 3
 | `resetConfig()` | void | Reset configuration to defaults |
 | `resolveColor(slot, theme?)` | object | Resolve a slot name to apply/bg functions |
 | `resolveColorSimple(color, defaultFn)` | function | Resolve a simple color to a function |
-| `presets` | object | Curated palette presets: dracula, nord, gruvbox, solarized, catppuccin, oneDark, monokai, github |
+| `presets` | object | Curated palette presets: dracula, nord, gruvbox, solarized, catppuccin |
 
 ### Accessibility
 
@@ -550,6 +575,47 @@ visibleLength('\x1b[31mred\x1b[0m')       // 3
 | `isReducedMotion(config?)` | boolean | True when animation should be suppressed |
 | `getAccessibilityInfo(plainOverride?)` | `AccessibilityInfo` | Full probe result with individual flags |
 | `refreshAccessibility()` | `AccessibilityInfo` | Re-probe screen reader and env heuristics |
+
+### Plain
+
+Text-only formatters for the widget set — the exact output `box()`,
+`badge()`, `tabs()`, … emit when `isPlainMode()` is true. Use them
+directly to render a single widget in plain form, or compose your own
+scraper-friendly output:
+
+| Function | Returns | Description |
+|---|---|---|
+| `formatBoxPlain(lines, opts?)` | string | `box:` header + indented lines + `actions:` block |
+| `formatBadgePlain(label, status?)` | string | `badge: [ label ]` or `status: [ label ]` |
+| `formatSectionPlain(title)` | string | `section: -- title --` |
+| `formatDividerPlain(length?)` | string | `divider: --------` (ASCII dashes) |
+| `formatModalPlain(title, content?, buttons?)` | string | `modal:` header + content + `buttons:` with `[*]`/`[ ]` |
+| `formatTabsPlain(items)` | string | `tabs:` with `[*]`/`[ ]` per tab |
+| `formatKbdPlain(keys)` | string | `kbd:` with keys joined (no glyph substitution) |
+| `formatBulletPlain(items)` | string | `bullet:` with `-` markers |
+| `formatOrderedPlain(items)` | string | `ordered:` with numbering preserved |
+| `formatTasksPlain(items)` | string | `tasks:` with `[x]`/`[ ]` markers |
+| `formatStepsPlain(items)` | string | `steps:` with `[x]`/`[>]`/`[ ]`/`[!]` markers + indented details |
+| `formatTablePlain(headers, rows)` | string | `table:` header + indented rows |
+| `formatActionToken(action)` | string | `[ [K]ey ]`-style keybind highlight |
+| `formatActionTokens(actions)` | string | Action tokens joined with the canonical 2-space gap |
+| `formatActionsPlain(actions)` | string | The shared `actions:` block — single source of truth used by `box()` and `@dui-toolkit/plugin-notify` |
+
+`formatActionsPlain()` is the one grammar for the `actions:` block, so
+`box({ actions })` and the notify plugin's plain output can never
+diverge:
+
+```ts
+formatActionsPlain([
+  { id: 'open',  label: 'Open logs' },
+  { id: 'rerun', label: 'Re-run CI' },
+])
+// actions:
+//   [open] Open logs
+//   [rerun] Re-run CI
+```
+
+Types: `BoxLikeOpts`, `ActionInput`.
 
 ### Style
 

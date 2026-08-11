@@ -38,11 +38,13 @@
  *   width: 50,
  * })
  */
+import { isPlainMode } from "./accessibility";
 import { box, type BoxBorderStyle, type BoxOptions } from "./box";
 import { getConfig } from "./config";
+import { formatModalPlain } from "./plain";
 import { resolveColor } from "./theme";
 import type { ColorStyle } from "./theme";
-import { padCenter } from "./utils";
+import { padCenter, terminalWidth, visibleLength } from "./utils";
 
 export interface ModalButton {
 	label: string;
@@ -107,13 +109,22 @@ function buildButtonRow(
 }
 
 export function modal(opts: ModalOptions): string {
-	const theme = getConfig().theme;
-	const width = opts.width ?? 60;
-	const style = opts.style ?? "round";
+	const cfg = getConfig();
+	const theme = cfg.theme;
 
 	const contentLines = Array.isArray(opts.content)
 		? opts.content.filter((l) => l.length > 0)
 		: [opts.content];
+
+	// Plain-mode fallback — `modal: <title>` header, indented content
+	// lines, then a `buttons:` block with `[*]`/`[ ]` markers. No SGR,
+	// no box-drawing glyphs.
+	if (isPlainMode(undefined, cfg)) {
+		return formatModalPlain(opts.title, contentLines, opts.buttons);
+	}
+
+	let width = opts.width ?? 60;
+	const style = opts.style ?? "round";
 
 	const allLines: string[] = [...contentLines];
 
@@ -122,7 +133,20 @@ export function modal(opts: ModalOptions): string {
 		// content without depending on a custom-border box variant.
 		allLines.push("");
 		const innerWidth = Math.max(4, width - 2); // subtract left/right border
-		allLines.push(buildButtonRow(opts.buttons, innerWidth, theme, opts.colors));
+		const row = buildButtonRow(opts.buttons, innerWidth, theme, opts.colors);
+		// Buttons wider than the requested box must never wrap mid-token
+		// inside the frame — grow the modal so the footer fits on one
+		// line (capped at the terminal width). `box()` re-wraps body
+		// content to the new inner width, so only the footer's geometry
+		// changes.
+		const rowLen = visibleLength(row);
+		const needed = rowLen + 2; // left/right borders
+		if (needed > width) {
+			width = Math.min(needed, terminalWidth());
+		}
+		allLines.push(
+			buildButtonRow(opts.buttons, Math.max(4, width - 2), theme, opts.colors),
+		);
 	}
 
 	const boxColors: BoxOptions["colors"] = {

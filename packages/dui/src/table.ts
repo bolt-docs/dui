@@ -1,5 +1,7 @@
+import { isPlainMode } from "./accessibility";
 import type { BoxBorderStyle } from "./box";
 import { getConfig } from "./config";
+import { formatTablePlain } from "./plain";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { terminalWidth, visibleLength, wrapAnsiWord } from "./utils";
@@ -165,8 +167,17 @@ export function table(
 	rows: string[][],
 	opts?: TableOptions,
 ): string {
+	const cfg = getConfig();
+
+	// Plain-mode fallback — `table: <header cells>` + indented rows.
+	// Borders, junctions, and header color are all dropped; cells are
+	// joined with two spaces (deliberately minimal — no alignment).
+	if (isPlainMode(undefined, cfg)) {
+		return formatTablePlain(headers, rows);
+	}
+
 	const style = opts?.style ?? "single";
-	const theme = getConfig().theme;
+	const theme = cfg.theme;
 	const { apply: headerStyle } = resolveColor(
 		"table.header",
 		theme,

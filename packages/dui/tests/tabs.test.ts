@@ -45,4 +45,19 @@ describe("tabs", () => {
 		const out = tabs({ items: ["A", "B"], active: 1 });
 		expect(out).toContain("\u001b[4m");
 	});
+
+	it("sanitizes labels: tabs/newlines collapse, ANSI stripped", () => {
+		const out = tabs({
+			items: ["A\tB", "C\nD", "\u001b[31mE\u001b[0m"],
+			active: 0,
+			style: "boxed",
+		});
+		const plain = stripAnsi(out);
+		expect(plain).toContain("A B");
+		expect(plain).toContain("C D");
+		expect(plain).toContain("E");
+		// No raw newline inside a single tab token — the boxed frame
+		// stays on one line.
+		expect(plain.split("\n").length).toBe(1);
+	});
 });

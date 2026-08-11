@@ -206,10 +206,96 @@ describe("parseColor", () => {
 		expect(parseColor("rgb(100, 200, 50)")).toEqual({ r: 100, g: 200, b: 50 });
 	});
 
+	it("parses space-separated rgb() (CSS Color 4)", () => {
+		expect(parseColor("rgb(100 200 50)")).toEqual({ r: 100, g: 200, b: 50 });
+	});
+
+	it("parses space-separated rgb() with slash alpha", () => {
+		expect(parseColor("rgb(100 200 50 / 0.5)")).toEqual({
+			r: 100,
+			g: 200,
+			b: 50,
+			a: 0.5,
+		});
+	});
+
+	it("parses uppercase RGB() dispatch", () => {
+		expect(parseColor("RGB(10 20 30)")).toEqual({ r: 10, g: 20, b: 30 });
+	});
+
 	it("parses rgba() format", () => {
 		const c = parseColor("rgba(255, 0, 0, 0.5)");
 		expect(c.r).toBe(255);
 		expect(c.a).toBeCloseTo(0.5, 1);
+	});
+
+	it("parses space-separated rgba() with slash alpha", () => {
+		const c = parseColor("rgba(255 0 0 / 0.5)");
+		expect(c.r).toBe(255);
+		expect(c.a).toBeCloseTo(0.5, 1);
+	});
+
+	it("space-form rgba() without alpha is opaque", () => {
+		const c = parseColor("rgba(255 0 0)");
+		expect(c.r).toBe(255);
+		expect(c.a).toBe(1);
+	});
+
+	it("parses rgb()/rgba() percentage alpha", () => {
+		expect(parseColor("rgb(255 102 0 / 50%)").a).toBeCloseTo(0.5, 1);
+		expect(parseColor("rgba(255, 102, 0, 50%)").a).toBeCloseTo(0.5, 1);
+		expect(parseColor("rgba(255 102 0 / 50%)").a).toBeCloseTo(0.5, 1);
+	});
+
+	it("parses hsl() legacy comma syntax", () => {
+		expect(parseColor("hsl(120, 50%, 50%)")).toEqual({
+			r: 64,
+			g: 191,
+			b: 64,
+		});
+	});
+
+	it("parses hsl() space syntax with slash alpha", () => {
+		expect(parseColor("hsl(120 50% 50% / 0.5)")).toEqual({
+			r: 64,
+			g: 191,
+			b: 64,
+			a: 0.5,
+		});
+	});
+
+	it("parses hsla() legacy comma syntax with alpha", () => {
+		expect(parseColor("hsla(120, 50%, 50%, 0.5)")).toEqual({
+			r: 64,
+			g: 191,
+			b: 64,
+			a: 0.5,
+		});
+	});
+
+	it("parses hsl() percentage alpha", () => {
+		const c = parseColor("hsl(120 50% 50% / 50%)");
+		expect(c.a).toBeCloseTo(0.5, 1);
+	});
+
+	it("parses hsl() hue units: deg/turn/rad", () => {
+		// Equivalent hues expressed in different units must resolve to
+		// the same color: 120° == 1/3 turn == 2π/3 rad ≈ 2.094 rad.
+		const deg = parseColor("hsl(120deg 50% 50%)");
+		const turn = parseColor("hsl(0.3333turn 50% 50%)");
+		const rad = parseColor("hsl(2.0944rad 50% 50%)");
+		expect(deg).toEqual({ r: 64, g: 191, b: 64 });
+		expect(turn.r).toBeCloseTo(64, 0);
+		expect(rad.r).toBeCloseTo(64, 0);
+	});
+
+	it("parses hsl() negative hue by wrapping to 0..360", () => {
+		// -120° ≡ 240°
+		expect(parseColor("hsl(-120 50% 50%)")).toEqual({
+			r: 64,
+			g: 64,
+			b: 191,
+		});
 	});
 
 	it("parses oklch() format", () => {
@@ -230,6 +316,113 @@ describe("parseColor", () => {
 	it("parses oklch() with alpha", () => {
 		const c = parseColor("oklch(60% 0.15 250 / 0.8)");
 		expect(c.a).toBeCloseTo(0.8, 1);
+	});
+
+	it("parses oklch() percentage alpha", () => {
+		const c = parseColor("oklch(60% 0.15 250 / 80%)");
+		expect(c.a).toBeCloseTo(0.8, 1);
+	});
+
+	it("parses oklch() legacy comma syntax", () => {
+		const comma = parseColor("oklch(60%, 0.15, 250)");
+		const withAlpha = parseColor("oklch(0.6, 0.15, 250, 0.5)");
+		expect(comma.r).toBeGreaterThanOrEqual(0);
+		expect(withAlpha.a).toBeCloseTo(0.5, 1);
+	});
+
+	it("parses oklch() hue units: deg/turn/rad", () => {
+		// 250° in every supported unit resolves to the same color.
+		const deg = parseColor("oklch(60% 0.15 250deg)");
+		const bare = parseColor("oklch(60% 0.15 250)");
+		const turn = parseColor("oklch(60% 0.15 0.6944turn)");
+		const rad = parseColor("oklch(60% 0.15 4.3633rad)");
+		expect(deg).toEqual(bare);
+		expect(turn.r).toBeCloseTo(bare.r, 0);
+		expect(turn.g).toBeCloseTo(bare.g, 0);
+		expect(turn.b).toBeCloseTo(bare.b, 0);
+		expect(rad.r).toBeCloseTo(bare.r, 0);
+		expect(rad.g).toBeCloseTo(bare.g, 0);
+		expect(rad.b).toBeCloseTo(bare.b, 0);
+	});
+
+	it("parses oklch() hue units in the legacy comma form", () => {
+		const comma = parseColor("oklch(60%, 0.15, 250deg)");
+		expect(comma).toEqual(parseColor("oklch(60% 0.15 250)"));
+	});
+
+	it("parses oklch() negative hue by wrapping to 0..360", () => {
+		// -110° ≡ 250°
+		const neg = parseColor("oklch(60% 0.15 -110)");
+		const negUnit = parseColor("oklch(60% 0.15 -110deg)");
+		expect(neg).toEqual(parseColor("oklch(60% 0.15 250)"));
+		expect(negUnit).toEqual(neg);
+	});
+
+	it("parses rgb() with none keywords (missing → 0)", () => {
+		expect(parseColor("rgb(none none none)")).toEqual({
+			r: 0,
+			g: 0,
+			b: 0,
+		});
+		expect(parseColor("rgb(255 none none)")).toEqual({
+			r: 255,
+			g: 0,
+			b: 0,
+		});
+		expect(parseColor("rgb(none 200 none)")).toEqual({
+			r: 0,
+			g: 200,
+			b: 0,
+		});
+	});
+
+	it("treats none alpha as opaque (1)", () => {
+		expect(parseColor("rgb(100 200 50 / none)").a).toBe(1);
+		expect(parseColor("rgba(255, 0, 0, none)").a).toBe(1);
+		expect(parseColor("hsl(120 50% 50% / none)").a).toBe(1);
+		expect(parseColor("oklch(60% 0.15 250 / none)").a).toBe(1);
+	});
+
+	it("parses hsl() with none keywords", () => {
+		// Missing h/s/l all behave as 0 → black.
+		expect(parseColor("hsl(none none none)")).toEqual({
+			r: 0,
+			g: 0,
+			b: 0,
+		});
+		// Missing saturation → achromatic gray at 50% lightness.
+		expect(parseColor("hsl(120 none 50%)")).toEqual({
+			r: 128,
+			g: 128,
+			b: 128,
+		});
+		// Comma form + none alpha.
+		expect(parseColor("hsla(120, 50%, 50%, none)").a).toBe(1);
+	});
+
+	it("parses oklch() with none keywords", () => {
+		// Missing L/C/H → all zero → black.
+		expect(parseColor("oklch(none none none)")).toEqual({
+			r: 0,
+			g: 0,
+			b: 0,
+		});
+		// Missing chroma → achromatic gray.
+		const gray = parseColor("oklch(60% none 250)");
+		expect(gray.r).toBe(128);
+		expect(gray.g).toBe(128);
+		expect(gray.b).toBe(128);
+	});
+
+	it("none keyword is case-insensitive", () => {
+		expect(parseColor("rgb(NONE none None)")).toEqual({
+			r: 0,
+			g: 0,
+			b: 0,
+		});
+		expect(parseColor("oklch(60% 0.15 NONE)")).toEqual(
+			parseColor("oklch(60% 0.15 0)"),
+		);
 	});
 
 	it("throws on invalid format", () => {
