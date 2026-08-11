@@ -35,7 +35,15 @@ const TEST_QR = fakeQrMatrix();
 // Mock `qrcode()` so no real QR encoding runs in tests.
 // We need to mock the module that animate.ts imports.
 vi.mock("../src/index", () => ({
-	qrcode: vi.fn(() => Promise.resolve(TEST_QR)),
+	// Mirror the real renderer: qrcode() appends the label line
+	// (custom string, or the encoded text) unless label === false.
+	qrcode: vi.fn((_text: string, opts?: { label?: boolean | string }) =>
+		Promise.resolve(
+			opts?.label === false
+				? TEST_QR
+				: `${TEST_QR}\n${typeof opts?.label === "string" ? opts.label : _text}`,
+		),
+	),
 }));
 
 describe("animateQr", () => {

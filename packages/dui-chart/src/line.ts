@@ -1,4 +1,4 @@
-import { colorize, colors } from "@bdocs/dui";
+import { colorize, colors, stripAnsi, visibleLength } from "@bdocs/dui";
 import { clamp, scale } from "./utils";
 
 export interface LineOptions {
@@ -201,10 +201,14 @@ function makeLabels(labels: string[], cols: number): string[] {
 		if (i === 0) {
 			line += colors.dim(label.padEnd(2));
 		} else {
-			const pos = col - (line.length - 2);
+			// Position relative to the VISIBLE width — `line` carries ANSI
+			// escapes from `colors.dim()`, so `line.length` would over-count
+			// and pack labels leftward.
+			const visible = visibleLength(stripAnsi(line));
+			const pos = col - (visible - 2);
 			if (pos > 1) line += " ".repeat(pos - 1);
 			line += colors.dim(label);
 		}
 	}
-	return line.length > 2 ? [line] : [];
+	return visibleLength(stripAnsi(line)) > 2 ? [line] : [];
 }

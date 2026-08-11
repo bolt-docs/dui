@@ -157,6 +157,66 @@ describe("bar", () => {
 		const result = bar([99], { width: 40 });
 		expect(stripAnsi(result).length).toBeGreaterThan(0);
 	});
+
+	it("renders mixed-sign data without crashing", () => {
+		// Before min/max this threw: fill for -5 was negative and
+		// `"█".repeat(negative)` is a RangeError.
+		const result = bar([-5, 10, -2, 7], { labels: ["A", "B", "C", "D"], width: 40 });
+		const clean = stripAnsi(result);
+		expect(clean).toContain("A");
+		expect(clean).toContain("D");
+	});
+
+	it("maps min to an empty bar and max to a full bar", () => {
+		const result = bar([-5, 10], {
+			labels: ["A", "B"],
+			width: 40,
+			min: -10,
+			max: 10,
+		});
+		const lines = stripAnsi(result).split("\n");
+		// -5 sits halfway in [-10, 10] → a half bar; 10 → full bar.
+		expect(lines[0].includes("█")).toBe(true);
+		expect(lines[1].includes("█")).toBe(true);
+		expect((lines[0].match(/█/g) ?? []).length).toBeLessThan(
+			(lines[1].match(/█/g) ?? []).length,
+		);
+	});
+
+	it("clamps values outside the explicit range", () => {
+		const result = bar([-50, 5, 50], {
+			labels: ["A", "B", "C"],
+			width: 40,
+			min: -10,
+			max: 10,
+		});
+		const lines = stripAnsi(result).split("\n");
+		// -50 → clamped to empty bar; 50 → clamped to full bar.
+		expect(lines[0].includes("█")).toBe(false);
+		expect((lines[2].match(/█/g) ?? []).length).toBeGreaterThan(
+			(lines[1].match(/█/g) ?? []).length,
+		);
+	});
+
+	it("handles all-negative data via zero baseline", () => {
+		const result = bar([-5, -3, -1], { labels: ["A", "B", "C"], width: 40 });
+		const lines = stripAnsi(result).split("\n");
+		// -1 is closest to 0 → longest bar; -5 → empty.
+		expect(lines[0].includes("█")).toBe(false);
+		expect((lines[2].match(/█/g) ?? []).length).toBeGreaterThan(0);
+	});
+
+	it("respects progress with negative data", () => {
+		const full = stripAnsi(
+			bar([-5, 10], { labels: ["A", "B"], width: 40 }),
+		);
+		const half = stripAnsi(
+			bar([-5, 10], { labels: ["A", "B"], width: 40, progress: 0.5 }),
+		);
+		expect((half.match(/█/g) ?? []).length).toBeLessThan(
+			(full.match(/█/g) ?? []).length,
+		);
+	});
 });
 
 describe("column", () => {
@@ -253,6 +313,24 @@ describe("line", () => {
 		const result = line(data, { width: 16, height: 6 });
 		expect(stripAnsi(result).length).toBeGreaterThan(0);
 	});
+
+	it("label row positions labels by visible width, not ANSI length", () => {
+		const result = line([1, 3, 2, 5, 4], {
+			width: 16,
+			height: 4,
+			labels: ["A", "B", "C", "D", "E"],
+		});
+		const lastRow = stripAnsi(result).split("\n").pop() ?? "";
+		// Labels are placed every `step` columns. With the old
+		// ANSI-counting bug the second+ labels packed leftward (the
+		// escape bytes inflated `line.length`), so the visible spacing
+		// between label starts would collapse. Now they must appear in
+		// their expected order with real gaps.
+		expect(lastRow.indexOf("A")).toBeGreaterThanOrEqual(0);
+		expect(lastRow.indexOf("B")).toBeGreaterThan(lastRow.indexOf("A"));
+		expect(lastRow.indexOf("E")).toBeGreaterThan(lastRow.indexOf("D"));
+		expect(lastRow.indexOf("D")).toBeGreaterThan(lastRow.indexOf("C"));
+	});
 });
 
 describe("pie", () => {
@@ -289,6 +367,40 @@ describe("pie", () => {
 		expect(clean).toContain("%");
 	});
 
+	it("progress scales the percentage (was a no-op)", () => {
+		const full = stripAnsi(
+			pie(
+				[
+					{ label: "A", value: 60 },
+					{ label: "B", value: 40 },
+				],
+				{ progress: 1 },
+			),
+		);
+		const half = stripAnsi(
+			pie(
+				[
+					{ label: "A", value: 60 },
+					{ label: "B", value: 40 },
+				],
+				{ progress: 0.5 },
+			),
+		);
+		expect(full).toContain("60.0%");
+		// Half progress → half the percentage (30.0%), not 60.0%.
+		expect(half).toContain("30.0%");
+		expect(half).toContain("20.0%");
+	});
+
+	it("progress scales the bar fill length", () => {
+		const barChars = (s: string) => (stripAnsi(s).match(/█/g) ?? []).length;
+		const full = pie([{ label: "A", value: 100 }], { progress: 1 });
+		const half = pie([{ label: "A", value: 100 }], { progress: 0.5 });
+		// Full bar is 24 blocks; half progress is 12.
+		expect(barChars(full)).toBe(24);
+		expect(barChars(half)).toBe(12);
+	});
+
 	it("renders single slice", () => {
 		const result = pie([{ label: "Solo", value: 100 }]);
 		const clean = stripAnsi(result);
@@ -305,6 +417,38 @@ describe("pie", () => {
 			{ progress: 0 },
 		);
 		expect(stripAnsi(result)).toContain("0.0%");
+	});
+
+	it("clamps negative slices without crashing", () => {
+		// Mixed-sign data previously produced fill > barW or a negative
+		// fill ("█".repeat(negative) throws).
+		const result = stripAnsi(
+			pie([
+				{ label: "A", value: -5 },
+				{ label: "B", value: 10 },
+			]),
+		);
+		expect(result).toContain("B");
+		expect(result).toContain("0.0%"); // A clamped to empty
+	});
+
+	it("rescale with explicit max", () => {
+		const result = stripAnsi(pie([{ label: "done", value: 70 }], { max: 100 }));
+		expect(result).toContain("70.0%");
+	});
+
+	it("empty slices at or below min", () => {
+		const result = stripAnsi(
+			pie(
+				[
+					{ label: "A", value: 5 },
+					{ label: "B", value: 95 },
+				],
+				{ min: 50, max: 100 },
+			),
+		);
+		expect(result).toContain("0.0%"); // A below min
+		expect(result).toContain("90.0%"); // B = (95-50)/50
 	});
 });
 

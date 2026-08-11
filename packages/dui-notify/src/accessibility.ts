@@ -31,6 +31,7 @@ export {
 	type AccessibilityInfo,
 } from "@bdocs/dui";
 
+import { formatActionsPlain } from "@bdocs/dui";
 import type { NotifyOptions } from "./types.js";
 
 const LEVEL_PREFIX: Record<string, string> = {
@@ -63,10 +64,13 @@ export function plainEmit(opts: NotifyOptions): string {
 		for (const line of body.split("\n")) out.push(`  body: ${line}`);
 	}
 
-	if (opts.actions && opts.actions.length > 0) {
+	// Reuse the core's single source of truth for the `actions:` block
+	// (same grammar as `formatBoxPlain`) so notify plain output and
+	// box plain output never drift apart.
+	const actionsBlock = formatActionsPlain(opts.actions);
+	if (actionsBlock) {
 		out.push("");
-		out.push("actions:");
-		for (const a of opts.actions) out.push(`  [${a.id}] ${a.label}`);
+		out.push(actionsBlock);
 	}
 
 	return out.join("\n");

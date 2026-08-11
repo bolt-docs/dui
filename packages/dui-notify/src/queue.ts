@@ -134,34 +134,41 @@ function mergeBatch(items: QueuedItem[]): NotifyOptions {
 	if (items.length === 0) throw new Error("Cannot merge empty batch");
 	if (items.length === 1) return { ...items[0].opts };
 
-	// Highest priority item's level and title
+	// The highest-priority item drives both the merged level AND the
+	// merged title (docstring contract: "the highest-level title becomes
+	// the merged title"). A naive "first title wins" picks whichever
+	// item arrived first, which can surface an `info` title while the
+	// toast itself is `error`.
 	let mergedLevel: NotifyLevel = "info";
 	let mergedTitle = "";
 	const bodies: string[] = [];
 
-	for (const item of items) {
-		const lvl = item.opts.level ?? "info";
+	let highestIdx = 0;
+	for (let i = 0; i < items.length; i++) {
+		const lvl = items[i].opts.level ?? "info";
 		if (levelPriority(lvl) > levelPriority(mergedLevel)) {
 			mergedLevel = lvl;
+			highestIdx = i;
 		}
-		if (item.opts.title && !mergedTitle) {
-			mergedTitle = item.opts.title;
-		}
-		if (item.opts.body) {
-			const prefix = lvl === "error" ? "✖" : lvl === "warning" ? "⚠" : "·";
-			bodies.push(`${prefix} ${item.opts.body}`);
+		if (items[i].opts.body) {
+			const prefix =
+				lvl === "error" ? "✖" : lvl === "warning" ? "⚠" : "·";
+			bodies.push(`${prefix} ${items[i].opts.body}`);
 		}
 	}
+
+	mergedTitle = items[highestIdx].opts.title ?? "";
 
 	return {
 		level: mergedLevel,
 		title: mergedTitle || `${items.length} notifications`,
 		body: bodies.join("\n"),
-		// Carry forward optional settings from the first item
-		ttl: items[0].opts.ttl,
-		sound: items[0].opts.sound,
-		force: items[0].opts.force,
-		actions: items.length <= 2 ? items[0].opts.actions : undefined,
+		// Carry forward optional settings from the highest-priority item
+		ttl: items[highestIdx].opts.ttl,
+		sound: items[highestIdx].opts.sound,
+		force: items[highestIdx].opts.force,
+		actions:
+			items.length <= 2 ? items[highestIdx].opts.actions : undefined,
 	};
 }
 

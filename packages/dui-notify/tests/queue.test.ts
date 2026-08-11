@@ -55,6 +55,30 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((r) => setTimeout(r, ms));
 }
 
+/**
+ * Poll until `pred` is true (every 5ms, up to `timeout` ms).
+ *
+ * Fixed sleeps assert on absolute elapsed time, which is unreliable
+ * under CI load (timers fire late → log empty; or early → log fuller
+ * than expected). Waiting on a *condition* instead of a duration is
+ * immune to that jitter — the assertion runs as soon as the state is
+ * reached, no matter how long it took.
+ */
+async function waitFor(
+	pred: () => boolean,
+	timeout = 3000,
+): Promise<void> {
+	const start = Date.now();
+	while (!pred()) {
+		if (Date.now() - start > timeout) {
+			throw new Error(
+				`waitFor timed out after ${timeout}ms (condition never became true)`,
+			);
+		}
+		await sleep(5);
+	}
+}
+
 describe("NotifyQueue", () => {
 	let log: DispatchLog[];
 	let backend: NotifyApi;
@@ -100,7 +124,7 @@ describe("NotifyQueue", () => {
 
 		expect(q.depth()).toBe(1); // debounced — p2 merged into p1
 
-		await sleep(50);
+		await waitFor(() => log.length === 1);
 
 		const [r1, r2] = await Promise.all([p1, p2]);
 		expect(r1.id).toBe(r2.id); // same result for both callers
@@ -115,8 +139,7 @@ describe("NotifyQueue", () => {
 		q.notify({ body: "second", level: "info", force: "bell" });
 
 		expect(q.depth()).toBe(2);
-		await sleep(50);
-		expect(log.length).toBe(2);
+		await waitFor(() => log.length === 2);
 	});
 
 	it("fires immediately when debounceMs is 0", async () => {
@@ -134,9 +157,8 @@ describe("NotifyQueue", () => {
 		q.notify({ body: "error-first", level: "error", force: "bell" });
 
 		expect(q.depth()).toBe(2);
-		await sleep(50);
+		await waitFor(() => log.length === 2);
 
-		expect(log.length).toBe(2);
 		expect(log[0].opts.level).toBe("error"); // priority order
 		expect(log[1].opts.level).toBe("info");
 	});
@@ -144,18 +166,27 @@ describe("NotifyQueue", () => {
 	/* ── Throttle ────────────────────────────────────────────── */
 
 	it("respects throttleMs between dispatches", async () => {
-		const q = createNotifyQueue(backend, { debounceMs: 10, throttleMs: 50, batchTerminal: false });
+		// Wide margins: debounce 10ms, throttle 200ms. The old test used
+		// throttle 50 + sleep(60), where the second drain fired at exactly
+		// 60ms — a coin-flip race that flaked under load. Here we wait for
+		// the first dispatch, verify the throttle still holds shortly after,
+		// then wait for the second.
+		const q = createNotifyQueue(backend, { debounceMs: 10, throttleMs: 200, batchTerminal: false });
 
 		q.notify({ body: "first", level: "info", force: "bell" });
 		q.notify({ body: "second", level: "info", force: "bell" });
 
-		// After debounce fires, first drain dispatches 1 item, second drain
-		// waits for throttleMs
-		await sleep(60);
+		// First drain dispatches 1 item after the debounce window.
+		await waitFor(() => log.length === 1);
+
+		// The second must NOT have fired yet — we observed the first
+		// dispatch just now, and the throttle window is 200ms, so a 50ms
+		// check has 4x headroom even under load.
+		await sleep(50);
 		expect(log.length).toBe(1);
 
-		await sleep(100);
-		expect(log.length).toBe(2);
+		// Second dispatch arrives after the throttle window elapses.
+		await waitFor(() => log.length === 2);
 	});
 
 	/* ── Overflow protection ─────────────────────────────────── */
@@ -303,14 +334,34 @@ describe("NotifyQueue", () => {
 		q.notify({ body: "error!", level: "error", force: "auto" });
 
 		expect(q.depth()).toBe(3);
-		await sleep(50);
+		await waitFor(() => log.length === 1);
 
-		expect(log.length).toBe(1); // merged
 		const merged = log[0].opts;
 		expect(merged.level).toBe("error");
 		expect(merged.body).toContain("step 1");
 		expect(merged.body).toContain("step 2");
 		expect(merged.body).toContain("error!");
+	});
+
+	it("merged batch title comes from the highest-priority item", async () => {
+		const q = createNotifyQueue(backend, {
+			debounceMs: 10,
+			throttleMs: 0,
+			batchTerminal: true,
+		});
+
+		// Lower-priority info arrives first with a title; the error
+		// (highest priority) arrives second with its own title. The
+		// merged toast must use the ERROR title, not the first info one.
+		q.notify({ body: "low", title: "Info title", level: "info", force: "auto" });
+		q.notify({ body: "high", title: "Error title", level: "error", force: "auto" });
+
+		await waitFor(() => log.length === 1); // merged
+		const merged = log[0].opts;
+		expect(merged.level).toBe("error");
+		expect(merged.title).toBe("Error title");
+		expect(merged.body).toContain("low");
+		expect(merged.body).toContain("high");
 	});
 
 	it("dispatches individually when batchTerminal is false", async () => {
@@ -323,8 +374,7 @@ describe("NotifyQueue", () => {
 		q.notify({ body: "A", level: "info", force: "bell" });
 		q.notify({ body: "B", level: "info", force: "bell" });
 
-		await sleep(50);
-		expect(log.length).toBe(2);
+		await waitFor(() => log.length === 2);
 	});
 
 	/* ── Subscribe passthrough ───────────────────────────────── */
