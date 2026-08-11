@@ -848,23 +848,23 @@ export function GridDemo() {
 	const bgDim = "\u001b[48;2;60;60;60;38;2;200;200;200m";
 
 	const lines = [
-		`${bold}${green}╭── ${reset}${bold}System Dashboard${reset}${green} ───────────────────────╮${reset}`,
-		`${green}│${reset}                                                  ${green}│${reset}`,
+		`${green}╭── ${reset}${bold}System Dashboard${reset}${green} ────────────────────────────────────────╮${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
 		`${green}│${reset}  ${bold}CPU${reset}  ${cyan}██████████░░░░░${reset}  ${white}65%${reset}    ${bold}MEM${reset}  ${yellow}████░░░░░░░░${reset}  ${white}3.2/8 GB${reset}  ${green}│${reset}`,
 		`${green}│${reset}  ${bold}DSK${reset}  ${magenta}██████░░░░░░░░░${reset}  ${white}42%${reset}    ${bold}NET${reset}  ${blue}████████░░░░${reset}  ${white}1.5 MB/s${reset}  ${green}│${reset}`,
-		`${green}│${reset}                                                  ${green}│${reset}`,
-		`${green}│${reset}  ${dim}── Services ──────────────────────────────${reset}  ${green}│${reset}`,
-		`${green}│${reset}                                                  ${green}│${reset}`,
-		`${green}│${reset}   ${bgGreen} API ${reset}  ${green}●${reset} ${green}api-gateway${reset}   ${dim}uptime: 12d 4h${reset}        ${green}│${reset}`,
-		`${green}│${reset}   ${bgRed} DB  ${reset}  ${red}●${reset} ${red}postgres-main${reset}  ${dim}uptime: 2h 18m${reset}  ${red}!${reset}     ${green}│${reset}`,
-		`${green}│${reset}   ${bgDim} CACHE ${reset}  ${dim}●${reset} ${dim}redis-cluster${reset}  ${dim}uptime: 12d 4h${reset}      ${green}│${reset}`,
-		`${green}│${reset}                                                  ${green}│${reset}`,
-		`${green}│${reset}  ${dim}── Alerts ────────────────────────────────${reset}  ${green}│${reset}`,
-		`${green}│${reset}                                                  ${green}│${reset}`,
-		`${green}│${reset}  ${red}✖${reset} Disk use /dev/sda1 87% ${dim}[threshold: 80%]${reset}   ${green}│${reset}`,
-		`${green}│${reset}  ${yellow}⚠${reset} SSL cert expires in 14 days              ${green}│${reset}`,
-		`${green}│${reset}                                                  ${green}│${reset}`,
-		`${green}╰── ${reset}${dim}Grid • Section • Divider • Badge${reset}${green} ─────────────╯${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${dim}── Services ────────────────────────────────────────────${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}   ${bgGreen} API ${reset}  ${green}●${reset} ${green}api-gateway${reset}   ${dim}uptime: 12d 4h${reset}                    ${green}│${reset}`,
+		`${green}│${reset}   ${bgRed} DB  ${reset}  ${red}●${reset} ${red}postgres-main${reset}  ${dim}uptime: 2h 18m${reset}  ${red}!${reset}                ${green}│${reset}`,
+		`${green}│${reset}   ${bgDim} CACHE ${reset}  ${dim}●${reset} ${dim}redis-cluster${reset}  ${dim}uptime: 12d 4h${reset}                 ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${dim}── Alerts ──────────────────────────────────────────────${reset}  ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}│${reset}  ${red}✖${reset} Disk use /dev/sda1 87% ${dim}[threshold: 80%]${reset}                 ${green}│${reset}`,
+		`${green}│${reset}  ${yellow}⚠${reset} SSL cert expires in 14 days                             ${green}│${reset}`,
+		`${green}│${reset}                                                            ${green}│${reset}`,
+		`${green}╰── ${reset}${dim}Grid • Section • Divider • Badge${reset}${green} ────────────────────────╯${reset}`,
 	];
 
 	return (
@@ -873,10 +873,7 @@ export function GridDemo() {
 			command="node dashboard.js"
 			screenClassName="min-h-[360px] flex flex-col justify-start"
 		>
-			{[
-				`  ${dim}${bold}╭── layout demo ───────────────────────────────╮${reset}`,
-				...lines,
-			].join("\n")}
+			{lines.join("\n")}
 		</TerminalPreview>
 	);
 }
