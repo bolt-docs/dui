@@ -26,7 +26,7 @@ export default function Callout({ variant, children }: CalloutProps) {
 
 	return (
 		<div
-			className="my-8 border border-strong font-mono text-sm rounded-lg overflow-hidden"
+			className="my-6 border border-strong text-sm rounded-none overflow-hidden"
 			role={variant === "warning" ? "alert" : undefined}
 		>
 			<div className="flex items-center gap-2 border-b border-strong dark:bg-neutral-950/60 bg-neutral-50/80 px-4 py-2">

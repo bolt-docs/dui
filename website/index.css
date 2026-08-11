@@ -1,3 +1,10 @@
+/* Self-hosted Google Fonts (via @fontsource) */
+@import "@fontsource-variable/inter";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
 @import "tailwindcss";
 @import "boltdocs/theme/reset.css";
 @import "./terminal-theme.css";
@@ -11,13 +18,13 @@ body {
 	max-width: 100vw;
 }
 
-/* System font stack — no external font loading */
+/* Readable default font — MDX prose uses this. UI chrome uses font-mono. */
 html {
-	--font-display: "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	--font-sans: "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-display: "Inter Variable", "Inter", "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-sans: "Inter Variable", "Inter", "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 	--font-mono:
-		"ui-monospace", "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono",
-		Menlo, Monaco, Consolas, "liberation mono", "courier new", monospace;
+		"JetBrains Mono", "IBM Plex Mono", "ui-monospace", "SFMono-Regular",
+		Menlo, Monaco, Consolas, monospace;
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -82,11 +89,30 @@ button,
 /* ── Code block / terminal window ─────────────────────────── */
 pre {
 	position: relative;
+	border: none !important;
 }
 
 /* Shiki syntax highlighting overrides for terminal code blocks */
-pre .line {
-	min-height: 1.5em;
+/* Neutralize boltdocs reset.css's block lines: Shiki emits each line as
+   <span class="line"> followed by a "\n" text node; with display:block
+   the newlines render as phantom blank lines (double spacing). */
+pre.shiki span.line {
+	display: inline;
+	min-height: 0 !important;
+	padding: 0 !important;
+}
+
+/* Code blocks read at 14px with breathing room to match the larger MDX
+   typography — boltdocs' reset forces 12px on .shiki + spans and 8px
+   vertical padding, which makes the code feel cramped and small. */
+:root .shiki,
+:root .shiki span {
+	font-size: 14px !important;
+}
+pre.shiki {
+	font-size: 14px !important;
+	line-height: 1.6 !important;
+	padding: 1.25rem !important;
 }
 
 /* Make sure Shiki inline code spans inherit the terminal bg */
@@ -97,26 +123,4 @@ pre code {
 	padding: 0 !important;
 	font-size: inherit !important;
 	color: inherit !important;
-}
-
-/* Terminal code block scrollbar */
-pre::-webkit-scrollbar {
-	width: 6px;
-	height: 6px;
-}
-pre::-webkit-scrollbar-track {
-	background: transparent;
-}
-pre::-webkit-scrollbar-thumb {
-	background: rgba(0, 0, 0, 0.15);
-	border-radius: 3px;
-}
-pre::-webkit-scrollbar-thumb:hover {
-	background: rgba(0, 0, 0, 0.25);
-}
-.dark pre::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.12);
-}
-.dark pre::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.2);
 }

@@ -26,7 +26,7 @@ function SkeletonBox({
 }: { className?: string; children?: ReactNode }) {
 	return (
 		<div
-			className={`rounded-lg border border-strong bg-white/30 dark:bg-black/20 animate-pulse ${className}`}
+			className={`rounded-none border border-strong bg-white/30 dark:bg-black/20 animate-pulse ${className}`}
 		>
 			{children}
 		</div>
@@ -76,7 +76,7 @@ function ShapeSkeleton({ shape }: { shape: LazySectionShape }) {
 			);
 		case "terminal-small":
 			return (
-				<div className="flex flex-col gap-0 rounded-lg border border-strong overflow-hidden">
+				<div className="flex flex-col gap-0 rounded-none border border-strong overflow-hidden">
 					<div className="h-9 bg-neutral-200/60 dark:bg-neutral-800/60 border-b border-strong" />
 					<div className="p-4 flex flex-col gap-3">
 						<SkeletonText lines={3} />
@@ -85,7 +85,7 @@ function ShapeSkeleton({ shape }: { shape: LazySectionShape }) {
 			);
 		case "terminal-big":
 			return (
-				<div className="flex flex-col gap-0 rounded-xl border border-strong overflow-hidden">
+				<div className="flex flex-col gap-0 rounded-none border border-strong overflow-hidden">
 					<div className="h-10 bg-neutral-200/60 dark:bg-neutral-800/60 border-b border-strong" />
 					<div className="p-6 flex flex-col gap-3 min-h-[340px]">
 						<SkeletonBar className="w-1/3 h-3" />
@@ -96,7 +96,7 @@ function ShapeSkeleton({ shape }: { shape: LazySectionShape }) {
 		case "carousel":
 			return (
 				<div className="flex flex-col gap-4">
-					<div className="rounded-xl border border-strong overflow-hidden min-h-[400px]">
+					<div className="rounded-none border border-strong overflow-hidden min-h-[400px]">
 						<div className="p-6 flex flex-col gap-4">
 							<SkeletonBar className="w-1/4 h-4" />
 							<SkeletonBox className="flex-1 min-h-[280px]" />

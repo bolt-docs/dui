@@ -22,7 +22,7 @@ export default function TerminalLayout({ children }: LayoutProps) {
 			</a>
 
 			<TerminalNavbar />
-			<DocsLayout.Body className="max-w-[88rem] mx-auto w-full bg-main h-full">
+			<DocsLayout.Body className="max-w-[96rem] mx-auto w-full bg-main h-full gap-4 xl:gap-6">
 				<TerminalSidebar />
 
 				<DocsLayout.Content
@@ -30,7 +30,7 @@ export default function TerminalLayout({ children }: LayoutProps) {
 					className="scroll-smooth outline-none"
 					tabIndex={-1}
 				>
-					<DocsLayout.ContentMdx className="terminal-content-mdx max-w-5xl mx-auto pt-8 pb-20 px-4 sm:px-5">
+					<DocsLayout.ContentMdx className="terminal-content-mdx max-w-6xl mx-auto pt-8 pb-20 px-5 sm:px-8">
 						<DocsLayout.Header>
 							<div className="flex flex-col gap-3 mb-4 border-b border-strong pb-4">
 								<div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -46,12 +46,12 @@ export default function TerminalLayout({ children }: LayoutProps) {
 								</div>
 							</div>
 							{currentRoute?.title && (
-								<h1 className="text-3xl font-bold text-body mt-6 mb-2 font-display tracking-tight">
+								<h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-body mt-6 mb-3 font-display">
 									{currentRoute.title}
 								</h1>
 							)}
 							{currentRoute?.description && (
-								<p className="text-paragraph mb-8 text-sm leading-relaxed max-w-prose">
+								<p className="text-paragraph mb-8 text-base leading-relaxed">
 									{currentRoute.description}
 								</p>
 							)}

@@ -74,6 +74,9 @@ export function TerminalOnThisPage() {
 
 	const headings = currentRoute?.headings || [];
 	if (headings.length === 0) return null;
+	// Pages can opt out of the on-this-page rail via frontmatter:
+	//   onThisPage: false
+	if (currentRoute?.frontmatter?.onThisPage === false) return null;
 
 	const tocItems = headings.map((h) => ({
 		title: h.text,

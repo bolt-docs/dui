@@ -18,7 +18,7 @@ export const layout = ({ children }: { children: React.ReactNode }) => (
 						<span className="text-terminal-green font-bold">$</span>
 						<span className="text-body font-bold">DUI CLI Toolkit</span>
 						<span className="bg-soft border border-strong text-muted px-1.5 py-0.25 text-[10px] rounded">
-							v0.6.0-next
+							v0.6.0
 						</span>
 					</div>
 					<div>©2026 Boltdocs Contributors. MIT License.</div>
@@ -26,13 +26,13 @@ export const layout = ({ children }: { children: React.ReactNode }) => (
 
 				<div className="flex flex-wrap gap-x-6 gap-y-2 text-muted">
 					<a
-						href="/docs/next/overview/getting-started"
+						href="/docs/v0.6.0/overview/getting-started"
 						className="hover:text-terminal-green transition-colors"
 					>
 						Docs
 					</a>
 					<a
-						href="/docs/next/api"
+						href="/docs/v0.6.0/api"
 						className="hover:text-terminal-green transition-colors"
 					>
 						API

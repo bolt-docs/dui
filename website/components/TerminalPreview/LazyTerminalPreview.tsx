@@ -41,12 +41,12 @@ function SkeletonPlaceholder({
 
 	return (
 		<div
-			className="my-6 overflow-hidden rounded-lg border border-strong bg-white dark:bg-main font-mono text-xs sm:text-sm animate-pulse"
+			className="my-6 overflow-hidden rounded-none border border-strong bg-white dark:bg-main font-mono text-xs sm:text-sm animate-pulse"
 			role="status"
 			aria-label={`Loading ${title} demo`}
 		>
 			{/* Terminal Top Bar skeleton */}
-			<div className="flex items-center border-b dark:border-neutral-900 border-strong dark:bg-neutral-900/60 bg-neutral-100 px-4 py-2 select-none">
+			<div className="flex items-center border-b border-strong/60 bg-[var(--term-bar-bg,#f4f4f4)] dark:bg-[var(--term-bar-bg-dark,#1a1a1a)] px-4 py-2 select-none">
 				<div className="h-3 w-20 rounded bg-neutral-300 dark:bg-neutral-700" />
 			</div>
 

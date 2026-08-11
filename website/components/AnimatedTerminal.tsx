@@ -58,17 +58,12 @@ export function AnimatedTerminal() {
 	);
 
 	return (
-		<div className="overflow-hidden rounded-lg border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs md:text-sm max-h-[600px]">
-			<div className="flex items-center justify-between border-b dark:border-neutral-900 border-strong dark:bg-neutral-900/60 bg-neutral-100 px-4 py-2 select-none">
-				<div className="flex gap-1.5">
-					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-700" />
-					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-700" />
-					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-700" />
-				</div>
-				<span className="text-[10px] text-neutral-500 dark:text-neutral-500 uppercase tracking-wider font-bold">
+		<div className="overflow-hidden rounded-none border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs md:text-sm max-h-[600px]">
+			<div className="flex items-center gap-2 border-b border-strong/60 bg-[var(--term-bar-bg,#f4f4f4)] dark:bg-[var(--term-bar-bg-dark,#1a1a1a)] px-4 py-2 select-none">
+				<span className="text-terminal-green font-bold" aria-hidden="true">$</span>
+				<span className="text-[10px] text-[var(--term-bar-fg,#888888)] dark:text-[var(--term-bar-fg-dark,#777777)] font-medium font-mono tracking-wide select-none">
 					terminal — dui demo
 				</span>
-				<div className="w-10" />
 			</div>
 			<div className="p-4 md:p-6 min-h-[300px] flex flex-col gap-1.5 leading-relaxed overflow-x-auto">
 				<div className="flex items-center text-neutral-500 dark:text-neutral-400 select-none">

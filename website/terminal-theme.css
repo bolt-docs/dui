@@ -1,9 +1,11 @@
 @theme {
-	--font-display: "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	--font-sans: "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	/* Readable fonts for MDX content (prose, headings, tables) */
+	--font-display: "Inter Variable", "Inter", "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-sans: "Inter Variable", "Inter", "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	/* Terminal font for UI chrome + code */
 	--font-mono:
-		"ui-monospace", "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono",
-		Menlo, Monaco, Consolas, "liberation mono", "courier new", monospace;
+		"JetBrains Mono", "IBM Plex Mono", "ui-monospace", "SFMono-Regular",
+		Menlo, Monaco, Consolas, monospace;
 
 	--breakpoint-3xl: 120rem;
 
@@ -61,7 +63,7 @@
 	--color-dim: #9a9a9a;
 	--color-subtle: #e5e4e2;
 	--color-strong: #d4d3d0;
-	--color-code-bg: #f0efee;
+	--color-code-bg: transparent;
 	--color-code-text: #1a1918;
 	--color-link: #2563eb;
 	--color-link-hover: #1d4ed8;
@@ -69,7 +71,7 @@
 	/* Spacing and Dimensions */
 	--spacing-navbar: 3.5rem;
 	--spacing-sidebar: 16rem;
-	--spacing-toc: 16rem;
+	--spacing-toc: 15rem;
 	--spacing-content-max: 54rem;
 
 	@keyframes pulse {
@@ -113,8 +115,7 @@
   --term-prompt-fg-dark: #888888;
 }
 
-@variant dark 
-(&:where(.dark, .dark *));
+@variant dark (&:where(.dark, .dark *));
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -127,21 +128,19 @@
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-:root[data-theme="dark"],
+}:root[data-theme="dark"],
 :root.dark {
-  --color-main: #0a0a0a;
-  --color-surface: #121212;
-  --color-soft: #1a1a1a;
-  --color-body: #e8e8e8;
-  --color-paragraph: #b0b0b0;
-  --color-muted: #888888;
-  --color-dim: #666666;
-  --color-subtle: #262626;
-  --color-strong: #333333;
-  --color-code-bg: #111111;
-  --color-code-text: #e0e0e0;
+	--color-main: #0a0a0a;
+	--color-surface: #121212;
+	--color-soft: #1a1a1a;
+	--color-body: #e8e8e8;
+	--color-paragraph: #c0c0c0;
+	--color-muted: #949494;
+	--color-dim: #666666;
+	--color-subtle: #262626;
+	--color-strong: #333333;
+	--color-code-bg: transparent;
+	--color-code-text: #e0e0e0;
   --color-link: #60a5fa;
   --color-link-hover: #93bbfd;
 
@@ -240,8 +239,15 @@
 /* ── Content MDX headings anchor hover ────────────────────────────── */
 
 .terminal-content-mdx h2:hover .anchor,
-.terminal-content-mdx h3:hover .anchor {
+.terminal-content-mdx h3:hover .anchor,
+.terminal-content-mdx h4:hover .anchor {
   opacity: 1;
+}
+
+/* ── Content MDX tables — keep them scrollable on small screens ──── */
+
+.terminal-content-mdx table {
+  width: 100%;
 }
 
 /* ── Scrollbar for previews ───────────────────────────────────────── */

@@ -195,20 +195,19 @@ export function TerminalSidebar() {
 		<>
 			<Sidebar className="hidden lg:flex border-r border-strong bg-main">
 				{sidebarContent}
-			</Sidebar>
-			<Sidebar.Mobile className="bg-main">
-				<Sidebar.Header className="flex items-center justify-between border-b border-subtle px-4 py-3">
-					<span className="text-xs font-bold uppercase tracking-widest text-dim font-mono">
-						Menu
-					</span>
-					<Button
-						onPress={closeSidebar}
-						className="h-8 w-8 flex items-center justify-center text-muted hover:text-body rounded-lg hover:bg-soft transition-colors"
-					>
-						<Menu size={12} />
-					</Button>
-				</Sidebar.Header>
-				<Sidebar.Content className="p-4">
+			</Sidebar>				<Sidebar.Mobile className="bg-main">
+					<Sidebar.Header className="flex items-center justify-between border-b border-strong/60 px-4 py-3.5 bg-[var(--term-bar-bg,#f4f4f4)] dark:bg-[var(--term-bar-bg-dark,#1a1a1a)]">
+						<span className="text-xs font-bold uppercase tracking-widest text-dim font-mono">
+							Menu
+						</span>
+						<Button
+							onPress={closeSidebar}
+							className="h-9 w-9 flex items-center justify-center text-muted hover:text-body rounded-none border border-strong/60 hover:bg-soft transition-colors"
+						>
+							<Menu size={14} />
+						</Button>
+					</Sidebar.Header>
+					<Sidebar.Content className="p-4 pb-10 [&_a]:py-2 [&_a]:text-sm">
 					{mobileLocaleSwitcher && (
 						<div className="flex gap-2 mb-6">{mobileLocaleSwitcher}</div>
 					)}

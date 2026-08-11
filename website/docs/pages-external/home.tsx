@@ -3,10 +3,9 @@ import { Link } from "boltdocs/primitives";
 import { lazy, Suspense } from "react";
 import { Card } from "../../components/mdx/Card";
 import PackageManager from "../../components/PackageManager";
-import { TerminalBackground } from "../../components/TerminalBackground";
 import LazySection from "../../components/LazySection";
+import TerminalPreview from "../../components/TerminalPreview/TerminalPreview";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
-const XtermDemo = lazy(() => import("../../components/XtermDemo"));
 
 // Demo ANSI content helpers
 const dim = "\u001b[90m";
@@ -45,58 +44,60 @@ const demoData = {
 	colors: [
 		`${dim}  dui colors — 24-bit true color engine${reset}`,
 		"",
-		`  ${red}color  ${green}gradient  ${cyan}engine  ${yellow}HEX  ${magenta}RGB  ${blue}OKLCH${reset}`,
+		`  ${red}color  ${green}gradient  ${cyan}engine  ${yellow}HEX${reset}`,
+		`  ${magenta}RGB  ${blue}OKLCH${reset}`,
 		"",
-		`  ${red}██${green}██${yellow}██${cyan}██${magenta}██${blue}██${reset}  True Color interpolation`,
+		`  ${red}██${green}██${yellow}██${cyan}██${magenta}██${blue}██${reset}  True Color`,
 		`  ${dim}  12 built-in named colors • 16M RGB palette${reset}`,
 	],
 	grid: [
-		`${dim}  dui — grid & layout — system dashboard${reset}`,
+		`${dim}  dui — grid & layout — dashboard${reset}`,
 		"",
-		`  ${green}╭${dim}──${reset} ${bold}System Dashboard${reset} ${green}───────────────────────╮${reset}`,
-		`  ${green}│${reset}                                                  ${green}│${reset}`,
-		`  ${green}│${reset}  ${bold}CPU${reset}  ${cyan}██████████░░░░░${reset}  ${white}65%${reset}    ${bold}MEM${reset}  ${yellow}████░░░░░░░░${reset}  ${white}3.2/8 GB${reset}  ${green}│${reset}`,
-		`  ${green}│${reset}  ${bold}DSK${reset}  ${magenta}██████░░░░░░░░░${reset}  ${white}42%${reset}    ${bold}NET${reset}  ${blue}████████░░░░${reset}  ${white}1.5 MB/s${reset}  ${green}│${reset}`,
-		`  ${green}│${reset}                                                  ${green}│${reset}`,
-		`  ${green}│${reset}   ${bgGreen} API ${reset}  ${green}● api-gateway${reset}    ${dim}uptime: 12d 4h${reset}       ${green}│${reset}`,
-		`  ${green}│${reset}   ${bgRed} DB  ${reset}  ${red}● postgres-main${reset}   ${dim}uptime: 2h 18m${reset} ${red}!${reset}    ${green}│${reset}`,
-		`  ${green}│${reset}   ${bgDim} CACHE ${reset} ${dim}● redis-cluster${reset}   ${dim}uptime: 12d 4h${reset}     ${green}│${reset}`,
-		`  ${green}│${reset}                                                  ${green}│${reset}`,
-		`  ${green}│${reset}  ${red}✖${reset} Disk use /dev/sda1 87%              ${green}│${reset}`,
-		`  ${green}│${reset}  ${yellow}⚠${reset} SSL cert expires in 14 days          ${green}│${reset}`,
-		`  ${green}╰${dim}──${reset} ${dim}Section • Grid • Divider • Badge${reset}${green} ─────────────╯${reset}`,
+		`  ${green}╭${dim}──${reset} ${bold}System Dashboard${reset} ${green}────────────────────────────╮${reset}`,
+		`  ${green}│${reset}                                                ${green}│${reset}`,
+		`  ${green}│${reset}  ${bold}CPU${reset}  ${cyan}████████░░░░${reset}  ${white}65%${reset}   ${bold}MEM${reset}  ${yellow}████░░░░${reset}  ${white}3.2G${reset}  ${green}│${reset}`,
+		`  ${green}│${reset}  ${bold}DSK${reset}  ${magenta}██████░░░░░░${reset}  ${white}42%${reset}   ${bold}NET${reset}  ${blue}██████░░${reset}  ${white}1.5M${reset}  ${green}│${reset}`,
+		`  ${green}│${reset}                                                ${green}│${reset}`,
+		`  ${green}│${reset}   ${bgGreen} API ${reset}  ${green}● api-gateway${reset}   ${dim}up:12d${reset}                ${green}│${reset}`,
+		`  ${green}│${reset}   ${bgRed} DB  ${reset}  ${red}● postgres${reset}   ${dim}up:2h${reset} ${red}!${reset}                  ${green}│${reset}`,
+		`  ${green}│${reset}   ${bgDim} CACHE ${reset}  ${dim}● redis${reset}    ${dim}up:12d${reset}                   ${green}│${reset}`,
+		`  ${green}│${reset}                                                ${green}│${reset}`,
+		`  ${green}│${reset}  ${red}✖${reset} ${dim}Disk /dev/sda1 87%${reset}                          ${green}│${reset}`,
+		`  ${green}│${reset}  ${yellow}⚠${reset} ${dim}SSL cert expires 14d${reset}                        ${green}│${reset}`,
+		`  ${green}╰${dim}──${reset} ${dim}Section • Grid • Badge${reset}${green} ──────────────────────╯${reset}`,
 	],
 	animation: [
 		`${dim}  dui animation — easing curves${reset}`,
 		"",
 		`  ${bold}Easing Curves (60 fps)${reset}`,
-		`  ${dim}  linear     ${reset}████████████████████████████████`,
-		`  ${dim}  ease-out   ${reset}██████████████████████████████░░`,
-		`  ${dim}  ease-in-out${reset}████████████████████████████████`,
+		`  ${dim}  linear     ${reset}██████████████████████████████`,
+		`  ${dim}  ease-out   ${reset}████████████████████████░░░░░░`,
+		`  ${dim}  ease-in-out${reset}██████████████████████████████`,
 		"",
-		`  ${dim}25+ easing functions • spring physics • timelines${reset}`,
+		`  ${dim}25+ easing functions • spring physics${reset}`,
 	],
 	boxes: [
 		`${dim}  dui boxes — border styles${reset}`,
 		"",
-		`  ${dim}╔${dim}══════════════════════${dim}╗${reset}`,
-		`  ${dim}║${reset}  ${bold}DUI Terminal UI${reset}      ${dim}║${reset}`,
-		`  ${dim}║${reset}  Boxes & Borders       ${dim}║${reset}`,
-		`  ${dim}║${reset}  ${green}•${reset} double border     ${dim}║${reset}`,
-		`  ${dim}║${reset}  ${cyan}•${reset} single border     ${dim}║${reset}`,
-		`  ${dim}║${reset}  ${yellow}•${reset} round corners     ${dim}║${reset}`,
-		`  ${dim}╚${dim}══════════════════════${dim}╝${reset}`,
+		`  ${dim}╔══════════════════════════╗${reset}`,
+		`  ${dim}║${reset}  ${bold}DUI Terminal UI${reset}         ${dim}║${reset}`,
+		`  ${dim}║${reset}  Boxes & Borders         ${dim}║${reset}`,
+		`  ${dim}║${reset}  ${green}•${reset} double border         ${dim}║${reset}`,
+		`  ${dim}║${reset}  ${cyan}•${reset} single border         ${dim}║${reset}`,
+		`  ${dim}║${reset}  ${yellow}•${reset} round corners         ${dim}║${reset}`,
+		`  ${dim}╚══════════════════════════╝${reset}`,
 		"",
-		`  ${dim}→ bordered output for structured CLIs${reset}`,
+		`  ${dim}→ bordered output for CLIs${reset}`,
 	],
 	diff: [
 		`${dim}  dui diff — unified diff view${reset}`,
 		"",
 		`  ${dim}src/greet.ts${reset}`,
 		"",
-		`  ${red}-export function greet(name: string): string {${reset}`,
-		`  ${green}+export function greet(name: string, polite = false): string {${reset}`,
-		`   const prefix = polite ? "Hello, " : "Hi ";`,
+		`  ${red}-export function greet(name: string) {${reset}`,
+		`  ${green}+export function greet(name: string,  ${reset}`,
+		`  ${green}+  polite = false) {${reset}`,
+		`   const prefix = polite ? "Hi " : "Hey "`,
 		`  ${red}-  console.log("Hello", name);${reset}`,
 		`  ${green}+  console.log(prefix + name);${reset}`,
 		"",
@@ -117,7 +118,7 @@ const AnimatedTerminal = lazy(loadAnimatedTerminal);
 
 function TerminalFallback() {
 	return (
-		<div className="flex flex-col gap-0 rounded-xl border border-strong overflow-hidden animate-pulse">
+		<div className="flex flex-col gap-0 rounded-none border border-strong overflow-hidden animate-pulse">
 			<div className="h-10 bg-neutral-200/60 dark:bg-neutral-800/60 border-b border-strong" />
 			<div className="p-6 flex flex-col gap-3 min-h-[340px]">
 				<div className="h-4 w-1/3 rounded bg-neutral-300/60 dark:bg-neutral-700/50" />
@@ -171,16 +172,19 @@ export function HomePage() {
 	useIdlePrefetch([loadAnimatedTerminal]);
 
 	return (
-		<div className="min-h-screen bg-main/80 text-paragraph font-sans relative overflow-x-hidden">
-			<TerminalBackground />
-
+		<div className="min-h-screen bg-main text-paragraph relative overflow-x-hidden">
 			{/* ── Hero ──────────────────────────────────────────────── */}
-			<section className="border-b border-strong px-6 py-20 md:py-28 relative overflow-hidden">
-				<div className="mx-auto max-w-4xl flex flex-col items-center md:items-start text-center md:text-left">
-					<div className="text-xs text-dim mb-4 select-none font-mono self-center md:self-start tracking-wider">
-						{">> @bdocs/dui v0.5.0"}
+			<section className="border-b border-strong px-6 py-20 md:py-24 relative overflow-hidden">
+				<div className="mx-auto max-w-4xl flex flex-col items-center text-center">
+					<div className="text-xs text-dim mb-4 select-none font-mono tracking-wider">
+						{">> @bdocs/dui v0.6.0"}
 					</div>
-					<pre className="font-mono font-bold leading-none select-none text-terminal-green drop-shadow-[0_0_20px_rgba(74,222,128,0.3)] text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
+					<div className="flex items-center gap-2 text-xs text-muted mb-8 select-none font-mono tracking-wider border border-strong/60 bg-soft/40 px-3 py-1.5">
+						<span className="text-terminal-green font-bold">$</span>
+						<span className="text-dim">pnpm</span> add @bdocs/dui
+						<span className="text-terminal-green ml-1">▍</span>
+					</div>
+					<pre className="font-mono font-bold leading-none select-none text-terminal-green text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
 						{
 							"██████╗ ██╗   ██╗██╗\n██╔══██╗██║   ██║██║\n██║  ██║██║   ██║██║\n██║  ██║██║   ██║██║\n██████╔╝╚██████╔╝██║\n╚═════╝  ╚═════╝ ╚═╝"
 						}
@@ -188,17 +192,17 @@ export function HomePage() {
 					<p className="mt-4 text-base md:text-lg text-muted max-w-2xl leading-relaxed">
 						{txt("subtitle")}
 					</p>
-					<div className="mt-8 flex flex-wrap justify-center md:justify-start gap-3">
+					<div className="mt-8 flex flex-wrap justify-center gap-3">
 						<Link
-							href="/docs/v0.5.0/overview/getting-started"
-							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-terminal-green/60 text-terminal-green bg-terminal-green/5 hover:bg-terminal-green/10 hover:border-terminal-green transition-all duration-150 rounded-lg"
+							href="/docs/v0.6.0/overview/getting-started"
+							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium font-mono border border-terminal-green/60 text-terminal-green bg-terminal-green/5 hover:bg-terminal-green/10 hover:border-terminal-green transition-all duration-150 rounded-none"
 						>
 							<span className="font-mono text-xs">$</span>
 							{txt("gettingStarted")}
 						</Link>
 						<Link
-							href="/docs/v0.5.0/api"
-							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-strong/70 text-muted hover:text-body hover:border-strong hover:bg-soft/50 transition-all duration-150 rounded-lg"
+							href="/docs/v0.6.0/api"
+							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium font-mono border border-strong/70 text-muted hover:text-body hover:border-strong hover:bg-soft/50 transition-all duration-150 rounded-none"
 						>
 							{txt("apiReference")}
 						</Link>
@@ -208,8 +212,8 @@ export function HomePage() {
 
 			{/* ── Modules section ──────────────────────────────────── */}
 			<section className="border-b border-strong px-6 py-16 relative">
-				<div className="mx-auto max-w-5xl">
-					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8 font-mono">
+				<div className="mx-auto max-w-6xl">
+					<h2 className="text-base font-bold text-body uppercase tracking-wider select-none mb-8 font-mono">
 						<span className="text-terminal-green">#</span> 01 /{" "}
 						{txt("modulesTitle")}
 					</h2>
@@ -225,72 +229,43 @@ export function HomePage() {
 
 			{/* ── Demo showcase ──────────────────────────────────── */}
 			<section className="border-b border-strong px-6 py-16 relative">
-				<div className="mx-auto max-w-5xl">
-					<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none mb-8 font-mono">
+				<div className="mx-auto max-w-6xl">
+					<h2 className="text-base font-bold text-body uppercase tracking-wider select-none mb-8 font-mono">
 						<span className="text-terminal-green">#</span> 02 /{" "}
 						{txt("showcaseTitle")}
 					</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-								<Suspense fallback={<TerminalFallback />}>
-						<XtermDemo
-							title="dui — lists"
-							command="node lists.js"
-							lines={demoData.lists}
-							columns={46}
-							rows={16}
-							typewriterMs={8}
-						/>
-					</Suspense>
-						<Suspense fallback={<TerminalFallback />}>
-						<XtermDemo
-							title="dui — true color"
-							command="node colorize.js"
-							lines={demoData.colors}
-							columns={46}
-							rows={8}
-							typewriterMs={10}
-						/>
-					</Suspense>
-						<Suspense fallback={<TerminalFallback />}>
-						<XtermDemo
-							title="dui — grid & layout"
-							command="node dashboard.js"
-							lines={demoData.grid}
-							columns={50}
-							rows={14}
-							typewriterMs={6}
-						/>
-					</Suspense>
-						<Suspense fallback={<TerminalFallback />}>
-						<XtermDemo
-							title="dui — animation"
-							command="node animate.js"
-							lines={demoData.animation}
-							columns={46}
-							rows={9}
-							typewriterMs={12}
-						/>
-					</Suspense>
-						<Suspense fallback={<TerminalFallback />}>
-						<XtermDemo
-							title="dui — boxes"
-							command="node boxes.js"
-							lines={demoData.boxes}
-							columns={46}
-							rows={11}
-							typewriterMs={8}
-						/>
-					</Suspense>
-						<Suspense fallback={<TerminalFallback />}>
-						<XtermDemo
-							title="dui — diff"
-							command="node diff.js"
-							lines={demoData.diff}
-							columns={46}
-							rows={16}
-							typewriterMs={10}
-						/>
-					</Suspense>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+							<TerminalPreview
+								title="dui — lists"
+								command="node lists.js"
+								lines={demoData.lists}
+								className="my-0!"
+							/>							<TerminalPreview
+								title="dui — grid & layout"
+								command="node dashboard.js"
+								lines={demoData.grid}
+								className="my-0!"
+							/>							<TerminalPreview
+								title="dui — diff"
+								command="node diff.js"
+								lines={demoData.diff}
+								className="my-0!"
+							/>							<TerminalPreview
+								title="dui — true color"
+								command="node colorize.js"
+								lines={demoData.colors}
+								className="my-0!"
+							/>							<TerminalPreview
+								title="dui — animation"
+								command="node animate.js"
+								lines={demoData.animation}
+								className="my-0!"
+							/>							<TerminalPreview
+								title="dui — boxes"
+								command="node boxes.js"
+								lines={demoData.boxes}
+								className="my-0!"
+							/>
 					</div>
 				</div>
 			</section>
@@ -298,19 +273,19 @@ export function HomePage() {
 			{/* ── Installation + Interactive demo ───────────────────── */}
 			<LazySection shape="terminal-big" minHeight="400px">
 				<section className="border-b border-strong px-6 py-16 relative">
-					<div className="mx-auto max-w-5xl">
+					<div className="mx-auto max-w-6xl">
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
 							<div className="flex flex-col gap-4">
 								<div>
-									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none font-mono">
-										<span className="text-terminal-green">#</span>{" "}
-										03 / {txt("installationTitle")}
-									</h2>
-									<p className="text-sm text-muted mt-2 leading-relaxed">
-										{txt("installationDesc")}
-									</p>
+							<h2 className="text-base font-bold text-body uppercase tracking-wider select-none font-mono">
+								<span className="text-terminal-green">#</span>{" "}
+								03 / {txt("installationTitle")}
+							</h2>
+							<p className="text-base text-muted mt-2 leading-relaxed">
+								{txt("installationDesc")}
+							</p>
 								</div>
-								<PackageManager className="my-0" />
+								<PackageManager className="my-0!" />
 								<div className="text-xs text-dim leading-relaxed border-l-2 border-terminal-green/40 pl-4 py-2 mt-2">
 									{txt("importNote")}
 								</div>
@@ -318,13 +293,13 @@ export function HomePage() {
 
 							<div className="flex flex-col gap-4">
 								<div>
-									<h2 className="text-sm font-bold text-body uppercase tracking-wider select-none font-mono">
-										<span className="text-terminal-green">#</span>{" "}
-										04 / {txt("interactiveDemoTitle")}
-									</h2>
-									<p className="text-sm text-muted mt-2 leading-relaxed">
-										{txt("interactiveDemoDesc")}
-									</p>
+							<h2 className="text-base font-bold text-body uppercase tracking-wider select-none font-mono">
+								<span className="text-terminal-green">#</span>{" "}
+								04 / {txt("interactiveDemoTitle")}
+							</h2>
+							<p className="text-base text-muted mt-2 leading-relaxed">
+								{txt("interactiveDemoDesc")}
+							</p>
 								</div>
 								<Suspense fallback={<TerminalFallback />}>
 									<AnimatedTerminal />
@@ -336,11 +311,39 @@ export function HomePage() {
 			</LazySection>
 
 			{/* ── Footer ───────────────────────────────────────────── */}
-			<footer className="px-6 py-8 text-center text-xs text-dim font-mono border-t border-strong/50">
-				<p>
-					<span className="text-terminal-green">$</span> dui — build beautiful CLIs{" "}
-					<span className="text-terminal-green">◆</span> MIT
-				</p>
+			<footer className="px-6 py-10 border-t border-strong/50 bg-main">
+				<div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-dim">
+					<p className="flex items-center gap-2 select-none">
+						<span className="text-terminal-green font-bold">$</span>
+						<span>dui — build beautiful CLIs</span>
+					</p>
+					<nav className="flex items-center gap-5">
+						<Link
+							href="/docs/v0.6.0/overview"
+							className="hover:text-body transition-colors"
+						>
+							Docs
+						</Link>
+						<Link
+							href="/docs/v0.6.0/overview/changelog"
+							className="hover:text-body transition-colors"
+						>
+							Changelog
+						</Link>
+						<a
+							href="https://github.com/bolt-docs/dui"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="hover:text-body transition-colors"
+						>
+							GitHub
+						</a>
+						<span className="flex items-center gap-1.5">
+							<span className="text-terminal-green">◆</span>
+							MIT
+						</span>
+					</nav>
+				</div>
 			</footer>
 		</div>
 	);

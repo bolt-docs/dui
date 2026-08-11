@@ -1,3 +1,6 @@
+import ChangelogTimeline, {
+	ChangelogTimelineItem,
+} from "../components/ChangelogTimeline";
 import { Badge } from "../components/mdx/Badge";
 import Callout from "../components/mdx/Callout";
 import { Card } from "../components/mdx/Card";
@@ -31,6 +34,8 @@ import TerminalPreview, {
 export default {
 	...table,
 	...typographics,
+	ChangelogTimeline,
+	ChangelogTimelineItem,
 	AnimationDemo,
 	Badge,
 	BoxesDemo,

@@ -12,7 +12,7 @@ export function Card({ href, title, icon, children }: CardProps) {
 	return (
 		<Link
 			href={href}
-			className="group block border border-strong p-5 hover:border-terminal-green/50 hover:bg-terminal-green/5 transition-all duration-150 rounded-lg"
+			className="group block border border-strong p-6 hover:border-terminal-green/50 hover:bg-terminal-green/5 transition-all duration-150 rounded-none"
 		>
 			<div className="flex items-center gap-2.5 mb-2.5">
 				{icon ? (
@@ -22,14 +22,14 @@ export function Card({ href, title, icon, children }: CardProps) {
 				) : (
 					<span className="text-terminal-green text-sm font-mono font-bold">$</span>
 				)}
-				<h3 className="text-sm font-semibold text-body group-hover:text-terminal-green transition-colors font-display">
+				<h3 className="text-base font-semibold text-body group-hover:text-terminal-green transition-colors font-display">
 					{title}
 					<span className="hidden group-hover:inline animate-pulse text-terminal-green ml-1">
 						▌
 					</span>
 				</h3>
 			</div>
-			<div className="text-xs text-muted leading-relaxed">{children}</div>
+			<div className="text-sm text-muted leading-relaxed">{children}</div>
 		</Link>
 	);
 }

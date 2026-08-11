@@ -9,6 +9,8 @@ export interface TerminalPreviewProps {
 	children?: React.ReactNode;
 	lines?: string[];
 	screenClassName?: string;
+	/** Extra classes for the terminal window wrapper. */
+	className?: string;
 }
 
 const DIVIDER_CHARS = new Set(["─", "═", "━", "·", "-", "*"]);
@@ -74,6 +76,7 @@ export default function TerminalPreview({
 	lines,
 	children,
 	screenClassName,
+	className = "",
 }: TerminalPreviewProps) {
 	let contentLines: string[] = [];
 
@@ -88,26 +91,22 @@ export default function TerminalPreview({
 
 	return (
 		<div
-			className="my-8 overflow-hidden rounded-xl border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs sm:text-sm shadow-sm"
+			className={`my-8 overflow-hidden rounded-none border border-strong bg-white text-neutral-800 dark:bg-main dark:text-neutral-300 font-mono text-xs sm:text-sm shadow-none ${className}`}
 			style={{ contentVisibility: "auto", containIntrinsicSize: "200px" }}
 			role="region"
 			aria-label={`Terminal preview: ${title}`}
 		>
-			{/* Terminal Top Bar */}
-			<div className="flex items-center border-b border-strong bg-soft/80 dark:bg-neutral-900/80 text-neutral-600 dark:text-neutral-400 px-4 py-2.5 select-none gap-3">
-				<div className="flex items-center gap-1.5">
-					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
-					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
-					<span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
-				</div>
-				<div className="text-xs text-neutral-500 dark:text-neutral-500 font-medium font-sans tracking-tight">
+			{/* Terminal Top Bar — clean prompt + title, no window buttons */}
+			<div className="flex items-center gap-2 border-b border-strong/60 bg-[var(--term-bar-bg,#f4f4f4)] dark:bg-[var(--term-bar-bg-dark,#1a1a1a)] px-4 py-2 select-none">
+				<span className="text-terminal-green font-bold" aria-hidden="true">$</span>
+				<div className="text-[11px] text-[var(--term-bar-fg,#888888)] dark:text-[var(--term-bar-fg-dark,#777777)] font-medium font-mono tracking-wide truncate">
 					{title}
 				</div>
 			</div>
 
 			{/* Terminal Screen */}
 			<div
-				className={`p-5 overflow-x-auto overflow-y-auto whitespace-pre font-mono leading-relaxed ${screenClassName || ""}`}
+				className={`p-4 sm:p-5 overflow-x-auto overflow-y-auto whitespace-pre text-left font-mono leading-relaxed ${screenClassName || ""}`}
 			>
 				{command && (
 					<div className="mb-3 text-neutral-500 dark:text-neutral-400 select-none text-xs">

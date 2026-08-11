@@ -10,27 +10,30 @@ const Anchor = (props: React.ComponentProps<typeof Link>) => (
 
 const Blockquote = (props: React.HTMLAttributes<HTMLQuoteElement>) => (
 	<blockquote
-		className="border-l-2 border-strong pl-5 py-3 my-10 text-muted leading-relaxed text-sm"
+		className="border-l-2 border-strong pl-5 py-3 my-6 text-muted leading-relaxed text-base"
 		{...props}
 	/>
 );
 
 const Hr = (props: React.HTMLAttributes<HTMLHRElement>) => (
-	<hr className="my-16 border-t border-strong" {...props} />
+	<hr className="my-12 border-t border-strong" {...props} />
 );
 
 const H1 = (props: React.ComponentProps<typeof Heading>) => (
 	<Heading
 		level={1}
-		className="text-3xl sm:text-4xl font-bold tracking-tight text-body border-b border-strong pb-5 mb-10 font-display"
+		className="text-4xl sm:text-5xl font-black tracking-tight text-body border-b border-strong pb-4 mb-8 font-display"
 		{...props}
 	/>
 );
 
+/* Proximity rule: a heading sits closer to the paragraph below it than
+   to the content above. Spacing after heading < spacing between
+   paragraphs < spacing before the next heading. */
 const H2 = (props: React.ComponentProps<typeof Heading>) => (
 	<Heading
 		level={2}
-		className="text-xl sm:text-2xl font-semibold tracking-tight text-body mt-14 mb-5 border-b border-subtle pb-3 font-display"
+		className="text-2xl sm:text-3xl font-bold tracking-tight text-body mt-14 mb-3 border-b border-subtle pb-2 font-display"
 		{...props}
 	/>
 );
@@ -38,33 +41,44 @@ const H2 = (props: React.ComponentProps<typeof Heading>) => (
 const H3 = (props: React.ComponentProps<typeof Heading>) => (
 	<Heading
 		level={3}
-		className="text-base sm:text-lg font-semibold text-body mt-10 mb-3 font-display"
+		className="text-lg sm:text-xl font-semibold tracking-tight text-body mt-10 mb-2 font-display"
 		{...props}
 	/>
+);
+
+const Strong = (props: React.HTMLAttributes<HTMLElement>) => (
+	<strong className="font-bold text-body" {...props} />
+);
+
+const Em = (props: React.HTMLAttributes<HTMLElement>) => (
+	<em className="italic text-paragraph" {...props} />
 );
 
 const H4 = (props: React.ComponentProps<typeof Heading>) => (
 	<Heading
 		level={4}
-		className="text-sm font-medium text-body mt-8 mb-2 font-display"
+		className="text-base font-semibold tracking-tight text-body mt-8 mb-2 font-display"
 		{...props}
 	/>
 );
 
 const P = (props: React.HTMLAttributes<HTMLParagraphElement>) => (
-	<p className="text-paragraph leading-7 mt-4 mb-6 max-w-prose" {...props} />
+	<p
+		className="text-paragraph text-base leading-7 mt-2 mb-4"
+		{...props}
+	/>
 );
 
 const Ul = (props: React.HTMLAttributes<HTMLUListElement>) => (
 	<ul
-		className="list-disc list-outside mt-4 mb-6 pl-6 space-y-2 text-paragraph leading-7"
+		className="list-disc list-outside mt-2 mb-4 pl-6 space-y-1.5 text-paragraph text-base leading-7"
 		{...props}
 	/>
 );
 
 const Ol = (props: React.HTMLAttributes<HTMLOListElement>) => (
 	<ol
-		className="list-decimal list-outside mt-4 mb-6 pl-6 space-y-2 text-paragraph leading-7"
+		className="list-decimal list-outside mt-2 mb-4 pl-6 space-y-1.5 text-paragraph text-base leading-7"
 		{...props}
 	/>
 );
@@ -130,6 +144,18 @@ const Pre = (props: React.HTMLAttributes<HTMLPreElement>) => {
 		setText(preRef.current?.textContent ?? "");
 	}, []);
 
+	// Shiki highlights code by passing its own className + an inline style
+	// with CSS variables for dual-theme tokens. Merge the shiki class onto
+	// the site's base (padding/bg/font) instead of letting {...props} clobber
+	// it, and keep only the --shiki-* variables so token colors still resolve.
+	const { className, style, ...rest } = props;
+	const shikiStyle =
+		style && typeof style === "object"
+			? (Object.fromEntries(
+					Object.entries(style).filter(([k]) => k.startsWith("--"))
+			  ) as React.CSSProperties)
+			: undefined;
+
 	// Extract a filename hint from the first code line if available.
 	// Skip shebangs (#!/usr/bin/node) — those aren't filenames.
 	const firstLine = text.split("\n")[0] ?? "";
@@ -140,27 +166,24 @@ const Pre = (props: React.HTMLAttributes<HTMLPreElement>) => {
 			: "";
 
 	return (
-		<div className="group/code my-8 overflow-hidden rounded-xl border border-strong/60 shadow-lg shadow-black/[0.06] dark:shadow-black/[0.3]">
-			{/* Terminal window title bar */}
-			<div className="flex items-center justify-between px-4 py-2.5 bg-[#e8e7e5] dark:bg-[#1e1e1e] border-b border-black/[0.06] dark:border-white/[0.06] select-none">
-				<div className="flex items-center gap-2" aria-hidden="true">
-					<span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57] shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)]" />
-					<span className="w-2.5 h-2.5 rounded-full bg-[#febc2e] shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)]" />
-					<span className="w-2.5 h-2.5 rounded-full bg-[#28c840] shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)]" />
-				</div>
-				{fileNameHint && (
-					<div className="text-[11px] text-[#888888] dark:text-[#666666] font-medium font-sans tracking-wide truncate max-w-[50%]">
-						{fileNameHint}
+		<div className="group/code my-6 overflow-hidden rounded-none border border-strong/60 shadow-none">
+			{/* Terminal window title bar — no window buttons, just a prompt + filename */}
+			<div className="flex items-center justify-between gap-3 px-4 py-2 bg-[var(--term-bar-bg,#f4f4f4)] dark:bg-[var(--term-bar-bg-dark,#1a1a1a)] border-b border-strong/60 select-none">
+				<div className="flex items-center min-w-0 gap-2">
+					<span className="text-terminal-green font-bold select-none">$</span>
+					<div className="text-[11px] text-[var(--term-bar-fg,#888888)] dark:text-[var(--term-bar-fg-dark,#777777)] font-medium font-mono tracking-wide truncate">
+						{fileNameHint || "terminal"}
 					</div>
-				)}
+				</div>
 				<CopyButton text={text} />
 			</div>
 
-			{/* Code content — bg uses CSS var with terminal-dark fallback */}
+			{/* Code content — site bg/padding wins; shiki class + CSS vars merge */}
 			<pre
 				ref={preRef}
-				className="overflow-x-auto bg-[var(--color-code-bg,#f5f4f2)] dark:bg-[var(--color-code-bg,#0d0d0d)] px-5 py-4 text-sm leading-relaxed font-mono text-[#1a1a1a] dark:text-[#e0e0e0]"
-				{...props}
+				className={`overflow-x-auto bg-[var(--color-code-bg,#f5f4f2)] dark:bg-[var(--color-code-bg,#0d0d0d)] px-5 py-5 text-sm leading-[1.6] font-mono text-[#1a1a1a] dark:text-[#e0e0e0] ${className ?? ""}`}
+				style={shikiStyle}
+				{...rest}
 			/>
 		</div>
 	);
@@ -172,7 +195,7 @@ const Code = (props: React.HTMLAttributes<HTMLElement>) => {
 		<code
 			className={`font-mono ${
 				isInline
-					? "rounded-md px-1.5 py-0.5 bg-[var(--color-code-bg,#f0efee)] dark:bg-[var(--color-code-bg,#111111)] text-[var(--color-code-text,#1a1918)] dark:text-[var(--color-code-text,#e0e0e0)] text-[0.8125em] border border-strong/50"
+					? "rounded-md px-1.5 py-0.5 text-[var(--color-code-text,#1a1918)] dark:text-[var(--color-code-text,#e0e0e0)] text-[0.8125em] border border-strong/40 bg-subtle/60 dark:bg-subtle/50"
 					: ""
 			}`}
 			{...props}
@@ -192,6 +215,10 @@ export const typographics = {
 	ul: Ul,
 	ol: Ol,
 	li: Li,
+	strong: Strong,
+	b: Strong,
+	em: Em,
+	i: Em,
 	pre: Pre,
 	code: Code,
 	inlineCode: Code,

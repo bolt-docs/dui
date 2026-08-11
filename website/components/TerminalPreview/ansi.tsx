@@ -264,8 +264,10 @@ function renderToken(
 				</span>,
 			);
 		} else if (ct === "progress") {
+			// No letter-spacing: block chars (█░) must stay aligned for
+			// progress bars, box-drawing, and QR codes.
 			nodes.push(
-				<span key={k} style={{ ...css, letterSpacing: "0.05em" }}>
+				<span key={k} style={css}>
 					{p}
 				</span>,
 			);

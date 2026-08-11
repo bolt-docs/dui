@@ -28,7 +28,7 @@ export function TerminalNavbar() {
 					{showSidebarToggle ? (
 						<Button
 							onPress={toggleSidebar}
-							className="mr-2 lg:hidden p-1.5 text-muted hover:text-body rounded-lg hover:bg-soft transition-colors"
+							className="mr-2 lg:hidden p-1.5 text-muted hover:text-body rounded-none hover:bg-soft transition-colors"
 						>
 							<MenuIcon size={20} />
 						</Button>
@@ -113,7 +113,7 @@ export function TerminalNavbar() {
 								href={localizedHref}
 								active={active}
 								onPress={() => setMobileOpen(false)}
-								className="text-lg py-2"
+								className="text-lg py-2 font-mono"
 							/>
 						);
 					})}

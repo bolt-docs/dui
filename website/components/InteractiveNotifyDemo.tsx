@@ -1,7 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import LazySection from "./LazySection";
-
-const XtermDemo = lazy(() => import("./XtermDemo"));
+import TerminalPreview from "./TerminalPreview/TerminalPreview";
 
 /* ── ANSI helpers ─────────────────────────────────────────── */
 
@@ -180,7 +179,7 @@ export default function InteractiveNotifyDemo() {
 				<button
 					type="button"
 					onClick={() => sendNotification((current + 1) % NOTIFICATIONS.length)}
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium rounded-lg border border-terminal-green/50 text-terminal-green bg-terminal-green/5 hover:bg-terminal-green/10 hover:border-terminal-green transition-all duration-150 cursor-pointer"
+					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium rounded-none border border-terminal-green/50 text-terminal-green bg-terminal-green/5 hover:bg-terminal-green/10 hover:border-terminal-green transition-all duration-150 cursor-pointer"
 				>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8 4a2 2 0 0 1-4 0" />
@@ -218,23 +217,11 @@ export default function InteractiveNotifyDemo() {
 
 			{/* Terminal preview — lazy-loaded on scroll with IntersectionObserver */}
 			<LazySection shape="terminal" minHeight="340px">
-				<Suspense
-					fallback={
-						<div className="rounded-xl border border-strong bg-main animate-pulse" style={{ height: 340 }}>
-							<div className="h-8 bg-neutral-200/60 dark:bg-neutral-800/60 border-b border-strong rounded-t-xl" />
-						</div>
-					}
-				>
-					<XtermDemo
-						title="dui — cross-platform notifications"
-						command="node notifier.js"
-						lines={allLines}
-						columns={56}
-						rows={16}
-						typewriterMs={4}
-						loopPause={8000}
-					/>
-				</Suspense>
+				<TerminalPreview
+					title="dui — cross-platform notifications"
+					command="node notifier.js"
+					lines={allLines}
+				/>
 			</LazySection>
 
 			{/* Backend badges */}

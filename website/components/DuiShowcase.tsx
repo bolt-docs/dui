@@ -10,7 +10,6 @@ import {
 	ImageDemo,
 	ListsDemo,
 	LoggerDemo,
-	NotifyDemo,
 	ProgressBarDemo,
 	QrCodeDemo,
 	SpinnerDemo,
@@ -128,13 +127,6 @@ const ITEMS: ShowcaseMeta[] = [
 		title: "QR Code",
 		tag: "plugin",
 		desc: "Scannable QR codes in the terminal with custom colors, width cap, labels, and error correction.",
-	},
-	{
-		id: "notify",
-		demoFactory: () => <NotifyDemo />,
-		title: "Notify",
-		tag: "plugin",
-		desc: "Cross-platform desktop notifications — osascript, notify-send, powershell, and OSC 99 terminal toasts — behind one unified notify() API.",
 	},
 	{
 		id: "image",
@@ -287,7 +279,7 @@ function PauseIcon() {
 /* ── Shared button classes ─────────────────────────────────── */
 
 const NAV_BUTTON =
-	"flex items-center justify-center w-8 h-8 rounded-lg border border-strong text-muted hover:text-body hover:bg-soft hover:border-terminal-green/50 hover:text-terminal-green transition-all duration-150 cursor-pointer";
+	"flex items-center justify-center w-8 h-8 rounded-none border border-strong text-muted hover:text-body hover:bg-soft hover:border-terminal-green/50 hover:text-terminal-green transition-all duration-150 cursor-pointer";
 
 const PAUSE_BUTTON =
 	"flex items-center justify-center w-7 h-7 rounded border border-strong text-muted hover:text-body hover:bg-soft transition-all duration-150 cursor-pointer";
@@ -410,7 +402,7 @@ interface DuiShowcaseProps {
 		>
 			{/* Carousel Stage */}
 			<div
-				className="relative overflow-hidden rounded-xl border border-strong bg-white/5 touch-pan-y select-none"
+				className="relative overflow-hidden rounded-2xl border border-strong bg-white/5 touch-pan-y select-none"
 				{...swipeHandlers}
 			>
 				{/* Demo slot with stable height */}
@@ -437,10 +429,10 @@ interface DuiShowcaseProps {
 				</div>
 
 				{/* Overlay info bar */}
-				<div className="border-t border-strong bg-soft/80 backdrop-blur-sm px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+				<div className="border-t border-strong bg-soft/80 backdrop-blur-sm px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono">
 					<div className="flex items-center gap-3">
 						<span
-							className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border ${TAG_COLORS[current.tag] || TAG_COLORS.core}`}
+							className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-none border ${TAG_COLORS[current.tag] || TAG_COLORS.core}`}
 						>
 							{current.tag}
 						</span>

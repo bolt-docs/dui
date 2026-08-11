@@ -32,7 +32,7 @@ export default function Field({
 					</span>
 				)}
 			</div>
-			<div className="ml-4 mt-0.5 text-muted leading-relaxed">{children}</div>
+			<div className="ml-4 mt-0.5 text-muted leading-relaxed font-sans">{children}</div>
 		</div>
 	);
 }
