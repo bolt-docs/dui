@@ -69,6 +69,13 @@ export default defineConfig({
 			"https://github.com/bolt-docs/dui/edit/main/website/docs/:version/:path",
 		githubRepo: "bolt-docs/dui",
 	},
+	vite: {
+		ssr: {
+			// Bundle boltdocs in the SSR graph so its dist chunks resolve
+			// virtual:boltdocs-* modules instead of leaking them to Node.
+			noExternal: ["boltdocs"],
+		},
+	},
 	robots: {
 		rules: [
 			{
