@@ -400,7 +400,7 @@ function getDefaultFn(slot: string): DefaultSpec {
 		"markdown.listCheck": "#50c878",
 		"markdown.listCross": "#b4b4b4",
 		"markdown.thematic": "#888888",
-		// Native widget set (v0.7.0) — modal, tabs, badge, kbd, section.
+		// Native widget set (v0.6.0) — modal, tabs, badge, kbd, section.
 		// Modal buttons use a compound `{fg, bg}` chip so primary actions
 		// pop in the dialog footer without further configuration.
 		"modal.border": "cyan",

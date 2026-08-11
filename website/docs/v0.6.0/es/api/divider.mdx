@@ -1,0 +1,87 @@
+---
+title: Divisor
+sidebarPosition: 6
+description: Separadores de línea horizontales.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { divider, dividerLog } from '@bdocs/dui'
+```
+
+## divider
+
+```ts
+divider(char?: string, len?: number): string
+```
+
+<Field name="char" type="string" default="'─'">Carácter repetido para la línea.</Field>
+<Field name="len" type="number" default="ancho terminal">Longitud de la línea en columnas.</Field>
+
+Devuelve una línea horizontal que se ajusta al ancho de la terminal.
+
+### Por defecto
+
+```ts
+divider('─')        // línea sólida gris
+```
+
+<TerminalPreview command="divider()">
+{`\x1b[90m───────────────────────────────────────────────────────────────────────────────\x1b[39m`}
+</TerminalPreview>
+
+### Doble
+
+```ts
+divider('═', 30)    // línea doble gris
+```
+
+<TerminalPreview command={`divider('═', 30)`}>
+{`\x1b[90m══════════════════════════════════\x1b[39m`}
+</TerminalPreview>
+
+### Punteado
+
+```ts
+divider('·', 20)    // línea punteada gris
+```
+
+<TerminalPreview command={`divider('·', 20)`}>
+{`\x1b[90m······················\x1b[39m`}
+</TerminalPreview>
+
+### Rayado
+
+```ts
+divider('-', 40)    // línea rayada gris
+```
+
+<TerminalPreview command={`divider('-', 40)`}>
+{`\x1b[90m------------------------------------------\x1b[39m`}
+</TerminalPreview>
+
+Ambas funciones aceptan una opción `color` para sobrescribir el color gris por defecto:
+
+```ts
+divider('─', 40, { color: '#ff6b6b' })
+dividerLog('═', 24, { color: '#00aaff' })
+```
+
+<TerminalPreview command="node color-divider.js">
+{`\x1b[38;2;255;107;107m──────────────────────────────────────────\x1b[39m`}
+</TerminalPreview>
+
+## dividerLog
+
+```ts
+dividerLog(char?: string, len?: number, opts?: { color?: ColorInput }): void
+```
+
+Imprime el divisor directamente en stdout.
+
+```ts
+dividerLog()
+dividerLog('·', 16)
+dividerLog('═', 40, { color: '#00cc88' })
+```

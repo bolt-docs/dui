@@ -1,5 +1,250 @@
 # @bdocs/dui
 
+## 0.6.0
+
+### Minor Changes
+
+- b6c513d: New accessibility layer — auto-detected text-only fallback when
+  the host signals non-ANSI conditions, with a forced opt-in flag
+  orthogonal to theme presets.
+
+  Heuristic overlay (any one triggers plain mode):
+
+  - `NO_COLOR` env var set to a non-empty value ([no-color.org](https://no-color.org)).
+  - `TERM=dumb`.
+  - `process.stdout?.isTTY === false` (piped-to-file / CI / `tee` / `less`).
+  - Screen reader presence — `brltty` (Linux via `pgrep -f brltty`),
+    VoiceOver (macOS via `defaults read com.apple.universalaccess voiceOverOn`),
+    NVDA / JAWS (Windows via PowerShell `Get-Process`). Probes are
+    cached on the first call and run with a 100 ms hard timeout so
+    startup stays fast.
+  - `PREFERS_REDUCED_MOTION=1` / `REDUCE_MOTION=1` (separate
+    `isReducedMotion()` getter — animation cadence only).
+
+  Forced fallback:
+
+  - `configure({ plain: true })` — flips every widget + every notify
+    call into text-only output.
+  - Composes with presets: `configure({ theme: presets.dracula, plain: true })`
+    resolves the Dracula palette (still observable through
+    `getConfig().theme`) but renders as text-only.
+
+  Plain-mode output format:
+
+  ```
+  box: <title>
+    <line>
+    <line>
+  actions:
+    [<id>] <label>
+  ```
+
+  Widgets with early-return paths: `box`, `badge`, `section`,
+  `divider`. The `box` / `badge` early-returns skip SGR resolution
+  entirely so plain-mode `box()` is roughly 6× faster on hot paths
+  than the styled variant (no border math, no padding calc, no
+  `resolveColor`). `modal`, `tabs`, `kbd` keep their styled paint
+  under the standard path; consumers needing them in plain mode
+  emit their own multi-line text via `formatModalPlain` /
+  `formatTabsPlain` / `formatKbdPlain` from `packages/dui/src/plain.ts`.
+
+  Public API additions:
+
+  ```ts
+  import {
+    isPlainMode, // opts + config-aware getter
+    isReducedMotion, // PREFERS_REDUCED_MOTION + plain-aware
+    getAccessibilityInfo, // structured {noColor, dumbTerm, nonTty,
+    //             screenReader, reducedMotion,
+    //             plainOverride}
+    refreshAccessibility, // re-probe (e.g. after env mutation in tests)
+    type AccessibilityInfo,
+  } from "@bdocs/dui";
+  ```
+
+  Tests:
+
+  - `packages/dui/tests/accessibility.test.ts` — each heuristic
+    independently + the `plain: true` global override + per-call
+    opts-level override + `refreshAccessibility()` cache refresh.
+  - `packages/dui/tests/plain-mode.test.ts` — `box`, `badge`,
+    `section`, `divider` plain-mode output shape and `prefix:`
+    markers, no SGR in body, no box drawing glyphs.
+  - `packages/dui-notify/tests/notify.test.ts` — five new cases
+    exercising the `notify.plain: true` opt-in: bell text path,
+    terminal box-skip, no `notify-send` spawn under `force: "os"`,
+    NO_COLOR env auto-detect.
+
+- ## v0.6.0-next — Animation and color control
+
+  ### Animation API (`animate()` / `animateProgress()`)
+
+  - **`AnimationHandle.pause()` / `.resume()`** — Pause and resume a running animation. The internal clock tracks accumulated time across pause/resume cycles so the animation continues exactly where it stopped.
+  - **`AnimationHandle.seek(progress)`** — Jump to any point in the animation (0..1). Renders the frame at that position immediately. Running animations continue from the new virtual start time.
+  - **`AnimationHandle.progress`** — Read the current animation progress (0..1) at any time.
+  - **`AnimationHandle.paused`** — Read whether the animation is currently paused.
+
+  ```ts
+  const anim = animate({ keyframes, duration: 2000, onFrame });
+  anim.pause();
+  console.log(anim.progress, anim.paused); // e.g. 0.42, true
+  anim.resume();
+  anim.seek(0.5); // jump to halfway
+  ```
+
+  ### Color parsing
+
+  - **HSL / HSLA color format** — `parseColor()` now accepts `hsl(H, S%, L%)` and `hsla(H, S%, L%, A)` strings. The standard HSL→RGB conversion is used.
+
+  ```ts
+  parseColor("hsl(120, 100%, 50%)"); // { r: 0, g: 255, b: 0 }
+  parseColor("hsla(0, 100%, 50%, 0.5)"); // { r: 255, g: 0, b: 0, a: 0.5 }
+  ```
+
+  ### Gradient presets (`gradient()` / `gradientPresets`)
+
+  - **`gradient(count, stops)`** — Generate N evenly-spaced hex colours by interpolating through `GradientStop` positions. Powers colour ramps for bar charts, sparklines, and progress bars.
+  - **`gradientPresets`** — 8 curated presets: `sunset`, `ocean`, `forest`, `royal`, `fire`, `ice`, `rainbow`, `terminal`.
+
+- Unified terminal capability detection module.
+
+  - `getCapabilities()` returns a cached snapshot of terminal features: truecolor, hyperlinks, Kitty/Sixel/iTerm2 support, SGR mouse, color depth (1|16|256|16777216), eastAsianWidth, columns, rows, cursor shape, bracketed paste, tmux/screen detection.
+  - `refreshCapabilities()` forces re-detection on next call.
+  - `setCapabilities(partial)` overrides detected values for testing.
+  - Convenience predicates: `hasTrueColor()`, `hasHyperlinks()`, `hasKitty()`, `colorDepthLabel()`.
+
+- b6c513d: v0.6.0 — interactive prompts overhaul
+
+  **`@bdocs/dui` core:**
+
+  - **Plugin API v2** — `usePluginAsync(plugin)` is now the canonical register entry point. Plugins can declare metadata (`description`, `tags`, `homepage`, `author`, `dependsOn`); peer-dependency warnings surface on major-version mismatch. Lifecycle is now observable via `awaitPluginsReady([names])` and `isPluginReady(name)`; status (`loading` / `ready` / `error`) is exposed through `getPlugin(name)` and `listPlugins()`.
+  - **Wheel scrolling across `select`, `multiselect`, `tree`** — every prompt reads multi-tick SGR bursts correctly (prior implementation only kept the last tick in a chunk). A new `wheelSensitivity?: number` option multiplies the per-burst magnitude — `wheelSensitivity: 3` + two ticks = 6 rows/second rendered.
+  - **Plugin wheel hooks** — `PluginEvents` gained `"wheel-up"` and `"wheel-down"` pre-filtered events so dashboards can subscribe via `api.on('wheel-up', handler)` instead of filtering every `MouseEvent`.
+  - **Drag-and-drop reordering on `multiselect({ enableDragReorder: true })`** — press-and-drag any enabled row to MOVE (insert, not swap) into a new position with live `multiselect.dragSource` / `multiselect.dropTarget` color previews. Checked state and the cursor both follow their logical row across the splice in **both directions** — `cursor remapIndex` helper makes the cursor visually pinned to its original choice even when row indices shift.
+  - **Dropping past `pageSize` boundary** — registered clickable areas extend during an active drag so a release on a row past the visible viewport resolves to the correct logical choice and scrolls the window to show the drop.
+  - **`MouseEvent` discriminated union** — `type === "wheel"` narrows to `MouseWheelEvent` and forces reading `event.wheel` instead of `event.button`. `MouseWheelEvent.button` is now `undefined` at runtime and marked `@deprecated` so cross-branch consumers no longer hit the false-positive left-click on wheel-up.
+  - **Theme slots** — new slots `multiselect.dragSource` and `multiselect.dropTarget` (defaults in `getDefaultFn`). Wheel-only events no longer leak into `MouseEventBase.button`.
+
+  **`@dui-toolkit/plugin-markdown`:**
+
+  - Headings render without the literal `#` marker; indentation scales with depth (H1 single indent, H2 deeper) and H1/H2 use `bold` for a typographic hierarchy.
+
+  **`@dui-toolkit/plugin-diff`:**
+
+  - Slot key renamed `thunk` → `hunk` (the old name was a typo); the symmetric `diff.hunk` default cyan now resolves correctly via `resolveColor('diff.hunk', theme)` and the test pins the default.
+
+  **Cross-plugin:**
+
+  - All five `@dui-toolkit/plugin-*` packages bumped to align with the DUI 0.6.0 release line.
+
+- feat: add JSON output formatter for structured DUI rendering
+
+  - `formatJson(nodes, opts?)` serializes a `JsonNode[]` tree to compact or pretty-printed JSON
+  - `ansiToJson(text, opts?)` parses ANSI SGR escape sequences into `JsonNode[]` with extracted styles
+  - `parseSgr(text)` decomposes ANSI text into styled content segments (bold, fg, bg, etc.)
+  - Widget helpers: `widgetNode(type, content, meta?)`, `progressNode(content, pct)`, `spinnerNode(content, frame?)`, `imageNode(alt, format)`, `diffNode(content, hunks?)`
+  - `JsonNode` supports type, content, styles, meta, position (x/y/w/h), and children
+  - Options for pretty-print, position inclusion, style stripping, and text merging
+  - ANSI 256‑color to hex conversion for faithful color reproduction
+
+- ## Keyframe animation extensions
+
+  `animate()` and `animateProgress()` gained numeric interpolation, content templates, and CSS-style playback control:
+
+  - **Numeric channels (`numbers`)** — keyframes can carry arbitrary `Record<string, number>` values that interpolate (with easing) between consecutive frames. Unlocks animated counters, degrees, bar widths, and any numeric state:
+
+    ```ts
+    animate({
+      keyframes: [
+        { offset: 0, numbers: { progress: 0, rotation: 0 } },
+        { offset: 1, numbers: { progress: 100, rotation: 360 } },
+      ],
+      duration: 2000,
+      easing: "ease-out",
+      onFrame: (f) => render(f.numbers!.progress, f.numbers!.rotation),
+    });
+    ```
+
+    `ResolvedFrame.numbers` is only present when keyframes define numbers; keys on one side of a segment carry through unchanged.
+
+  - **Content templates** — `content` supports `{name}` placeholders filled from the resolved numbers each frame: `content: "Downloading {progress}%"` → `"Downloading 42%"`. Integers render without decimals; floats trim to two.
+
+  - **`direction`** — CSS `animation-direction` on both `animate()` and `animateProgress()`: `normal` (default), `reverse`, `alternate` (ping-pong), `alternate-reverse`. Odd iterations flip for the alternate modes.
+
+  - **`iterations`** — finite repeat count (`iterations: 3`), a superset of `loop` (`loop: true` ≡ `iterations: Infinity`). `handle.progress` reports 0→1 across the whole multi-iteration run; `then()` fires once all iterations complete.
+
+- Native widget set for building CLIs and TUIs à la open-code.
+
+  New primitives:
+
+  - `grid({ columns, width?, gap? })` — column-based layout that wraps each cell independently and zips rows top-down, supporting fixed widths and `"1fr"`/`"2fr"` flex units.
+  - `modal({ title?, content, width?, buttons?, style? })` — overlay dialog with title + content + auto-composed `[ label ]` button footer (primary/secondary coloring).
+  - `tabs({ items, active, style? })` — segmented control with `underline` / `pill` / `boxed` render modes.
+  - `badge({ label, status? })` — status chip with five severity levels (`info` / `success` / `warning` / `error` / `neutral`) and compound `{ fg, bg }` color overrides.
+  - `kbd({ keys, separator?, platform? })` — keyboard hint with auto platform detection (`darwin` → Mac glyphs like `⌘ ⌥ ⇧ ⎋`; `win32` → full names).
+  - `section({ title, width?, align? })` — single-line labeled divider that truncates titles to preserve strict one-row geometry.
+
+  `BoxBorderStyle` extended with `thick`, `ascii`, `dashed`, and `dotted` — pass straight to `box({ style: "ascii" })` for pure-ASCII log scrapers, or `style: "dashed"`/`"dotted"` for softer visual rhythms.
+
+  Each new widget respects the existing `configure({ theme: { … } })` slot system (`modal.border`, `tabs.active`, `badge.success`, `kbd.text`, `section.line`, etc.) and accepts per-call `colors: { … }` overrides.
+
+- feat: add output batching system for reduced terminal I/O and flicker
+
+  - `createBatch(opts?)` creates a batch buffer with configurable maxSize, flushInterval, stream target, and passthrough mode
+  - `batch.write(text)` accumulates text in the internal buffer
+  - `batch.writeAndFlush(text)` writes and immediately flushes
+  - `batch.flush()` sends the accumulated buffer to the output stream in one write call
+  - `batch.defer()` schedules a flush on the next microtask/setImmediate, coalescing multiple sync writes
+  - `batch.read()` / `batch.size()` / `batch.clear()` for buffer introspection
+  - `batch.setPassthrough(bool)` toggles direct-write mode (bypass batch)
+  - `batch.destroy()` stops timers, flushes remaining content, releases resources
+  - `getDefaultBatch(opts?)` singleton for simple CLI workflows
+  - `resetDefaultBatch()` destroys and resets the singleton
+  - Composes with `RenderSurface.flush()` — write the diff string through the batch
+
+- Pagination system for long-form terminal output.
+
+  - `paginate(content, options?)` splits multi-line ANSI text into viewport-sized pages, accounting for wrapped lines via visual-length counting. Returns an array of page strings with optional footer (`▴ 1/3 ▾  [↑↓] scroll  [q] quit`).
+  - `paginateInteractive(content, options?)` renders one page at a time with interactive scrolling — ↑/↓, Page Up/Page Down, Home/End, mouse wheel, and `q`/Escape to quit. Non-TTY fallback suggests piping to `less`.
+  - `terminalHeight()` returns terminal row count with 24 fallback.
+
+- b6c513d: Add curated theme palette presets — `dracula`, `nord`, `solarized`,
+  `catppuccin`, `gruvbox` — exported as `presets` from `@bdocs/dui`.
+  Each preset is a `Partial<DuiTheme>` so a single
+  `configure({ theme: presets.dracula })` retints every widget
+  (`badge`, `modal`, `tabs`, `box`, `section`, `spinner`, `progress`,
+  `markdown`, `kbd`) without touching code. The registry is typed as
+  `Readonly<Record<PresetName, DuiThemePreset>>` and frozen at
+  runtime to prevent accidental palette mutation.
+
+  Highlights:
+
+  - `PresetName` union keeps palette identifiers type-checked so
+    misspelled names surface at compile time.
+  - Partial cascade + per-slot fallback (each palette only overrides
+    the high-impact surfaces; the rest fall through to the built-in
+    defaults).
+  - Per-call overrides remain on top via standard spread:
+    `configure({ theme: { ...presets.dracula, error: "#ff00ff" } })`.
+  - `tests/presets.test.ts` exercises the registry shape, palette
+    distinctness (no duplicate hexes), cascade correctness into
+    `badge`, `modal`, `tabs`, `section`, and resetConfig isolation.
+  - `examples/20-presets/index.ts` renders the same composition under
+    each of the five palettes for side-by-side comparison.
+  - `website/docs/api/presets.mdx` documents each palette with
+    swatch tables + extend-on-your-own guidance.
+
+- feat: add `RenderSurface` — virtual terminal canvas with diff-based flushing and overlays
+
+  - `RenderSurface(width, height)` creates a cell grid with per-cell SGR tracking
+  - `write(x, y, text, style?)` places content at absolute coordinates
+  - `fill(x, y, w, h, char?, style?)` fills a rectangle
+  - `flush()` emits minimal ANSI diff (only dirty cells, cursor moves + SGR deltas)
+  - `render()` emits the entire surface as a styled ANSI string
+  - `createOverlay(x, y, w, h)` creates a viewport overlay for floating panels
+  - `flushToTerminal()` / `renderToTerminal()` for direct stdout output
+  - Full `resize()` / `clear()` / `invalidate()` lifecycle methods
+
 ## 0.6.0-next.2
 
 ### Minor Changes
@@ -101,7 +346,7 @@
   - `website/docs/api/presets.mdx` documents each palette with
     swatch tables + extend-on-your-own guidance.
 
-- [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - ## v0.7.0-next — Animation and color control
+- [`b6c513d`](https://github.com/bolt-docs/dui/commit/b6c513d22458e6dd6b638cb78de515982bfdbc2c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - ## v0.6.0-next — Animation and color control
 
   ### Animation API (`animate()` / `animateProgress()`)
 

@@ -1,0 +1,32 @@
+{
+	"title": "API Reference",
+	"icon": "Code2",
+	"order": 2,
+	"pages": [
+		"index",
+		"config",
+		"logger",
+		"box",
+		"list",
+		"divider",
+		"theme",
+		"color",
+		"animation",
+		"badge",
+		"progress",
+		"utils",
+		"prompt",
+		"table",
+		"presets",
+		"grid",
+		"spinner",
+		"steps",
+		"plugin",
+		"kbd",
+		"modal",
+		"section",
+		"tabs",
+		"best-practices",
+		"troubleshooting"
+	]
+}

@@ -1,0 +1,66 @@
+---
+title: Badge
+sidebarPosition: 10
+description: Chip / píldora de estado con cinco niveles de severidad y sobrescrituras de tema.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { badge } from '@bdocs/dui'
+```
+
+Renderiza un chip de una sola línea, con un espacio de padding a cada lado (` label `), pensado para dashboards densos, paletas de comandos e indicadores de estado en CLI.
+
+```ts
+console.log(badge({ label: 'PASS', status: 'success' }))
+console.log(badge({ label: 'ERR',  status: 'error'   }))
+console.log(badge({ label: 'INFO', status: 'info'    }))
+```
+
+<TerminalPreview command="node badge.js">
+{`\x1b[48;2;34;197;94m\x1b[38;2;255;255;255m PASS \x1b[0m  \x1b[48;2;239;68;68m\x1b[38;2;255;255;255m ERR \x1b[0m  \x1b[48;2;96;165;250m\x1b[38;2;255;255;255m INFO \x1b[0m`}
+</TerminalPreview>
+
+## Niveles de estado
+
+| Estado | `fg` por defecto | `bg` por defecto |
+| --- | --- | --- |
+| `"info"` | `"white"` | `"blue"` |
+| `"success"` | `"white"` | `"green"` |
+| `"warning"` | `"black"` | `"yellow"` |
+| `"error"` | `"white"` | `"red"` |
+| `"neutral"` | `"white"` | `"gray"` |
+
+## Opciones
+
+<Field name="label" type="string">Texto del chip.</Field>
+<Field name="status" type="'info' | 'success' | 'warning' | 'error' | 'neutral'" default="'neutral'">Severidad.</Field>
+<Field name="colors.text" type="ColorStyle">Sobrescribe el color de frente (o ambos fg+bg vía `{ fg, bg }`).</Field>
+<Field name="colors.bg" type="ColorStyle">Sobrescribe solo el fondo.</Field>
+
+## Prioridad de sobrescritura
+
+1. `opts.colors.text` / `opts.colors.bg` (por llamada)
+2. `configure({ theme: { badge: { success: { fg, bg } } } })` (tema)
+3. Valor por defecto según el estado
+
+Chip solo con color de frente (sin fondo):
+
+```ts
+badge({ label: 'draft', colors: { text: 'gray' } })
+```
+
+Chip con sobrescritura compuesta:
+
+```ts
+badge({ label: 'PRO', colors: { text: { fg: 'black', bg: 'magenta' } } })
+```
+
+## Cuándo usarlo
+
+- Filas de resultados de tests (chips "PASS / FAIL / SKIP").
+- Etiquetas de estado junto a nombres de archivo.
+- Indicadores de severidad compactos en dashboards.
+
+`badge()` es un render de una sola vez — no sustituye a `log.info()` para líneas completas de log; usa `info()` / `success()` para logs de línea completa y `badge()` para chips inline.

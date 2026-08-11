@@ -1,5 +1,67 @@
 # @dui-toolkit/plugin-image
 
+## 0.3.0
+
+### Minor Changes
+
+- Lighter image loading pipeline — sharp is no longer a hard dependency.
+
+  - `loadPixels(path, width, height, dither?, page?)` loads images using sharp when available (fast, all formats). When sharp is not installed, falls back to a pure-JS PPM/PGM/PBM reader with nearest-neighbor scaling. PNG/JPEG require sharp.
+  - `nearestNeighborResize(pixels, srcW, srcH, dstW, dstH)` pure-JS RGBA resizer suitable for pixel art and small images.
+  - `hasSharp()` returns whether the native sharp binary is available.
+  - Reduces install size from ~35 MB to ~2 MB when sharp is not needed.
+
+- b6c513d: v0.6.0 — interactive prompts overhaul
+
+  **`@bdocs/dui` core:**
+
+  - **Plugin API v2** — `usePluginAsync(plugin)` is now the canonical register entry point. Plugins can declare metadata (`description`, `tags`, `homepage`, `author`, `dependsOn`); peer-dependency warnings surface on major-version mismatch. Lifecycle is now observable via `awaitPluginsReady([names])` and `isPluginReady(name)`; status (`loading` / `ready` / `error`) is exposed through `getPlugin(name)` and `listPlugins()`.
+  - **Wheel scrolling across `select`, `multiselect`, `tree`** — every prompt reads multi-tick SGR bursts correctly (prior implementation only kept the last tick in a chunk). A new `wheelSensitivity?: number` option multiplies the per-burst magnitude — `wheelSensitivity: 3` + two ticks = 6 rows/second rendered.
+  - **Plugin wheel hooks** — `PluginEvents` gained `"wheel-up"` and `"wheel-down"` pre-filtered events so dashboards can subscribe via `api.on('wheel-up', handler)` instead of filtering every `MouseEvent`.
+  - **Drag-and-drop reordering on `multiselect({ enableDragReorder: true })`** — press-and-drag any enabled row to MOVE (insert, not swap) into a new position with live `multiselect.dragSource` / `multiselect.dropTarget` color previews. Checked state and the cursor both follow their logical row across the splice in **both directions** — `cursor remapIndex` helper makes the cursor visually pinned to its original choice even when row indices shift.
+  - **Dropping past `pageSize` boundary** — registered clickable areas extend during an active drag so a release on a row past the visible viewport resolves to the correct logical choice and scrolls the window to show the drop.
+  - **`MouseEvent` discriminated union** — `type === "wheel"` narrows to `MouseWheelEvent` and forces reading `event.wheel` instead of `event.button`. `MouseWheelEvent.button` is now `undefined` at runtime and marked `@deprecated` so cross-branch consumers no longer hit the false-positive left-click on wheel-up.
+  - **Theme slots** — new slots `multiselect.dragSource` and `multiselect.dropTarget` (defaults in `getDefaultFn`). Wheel-only events no longer leak into `MouseEventBase.button`.
+
+  **`@dui-toolkit/plugin-markdown`:**
+
+  - Headings render without the literal `#` marker; indentation scales with depth (H1 single indent, H2 deeper) and H1/H2 use `bold` for a typographic hierarchy.
+
+  **`@dui-toolkit/plugin-diff`:**
+
+  - Slot key renamed `thunk` → `hunk` (the old name was a typo); the symmetric `diff.hunk` default cyan now resolves correctly via `resolveColor('diff.hunk', theme)` and the test pins the default.
+
+  **Cross-plugin:**
+
+  - All five `@dui-toolkit/plugin-*` packages bumped to align with the DUI 0.6.0 release line.
+
+- feat: enhance Kitty graphics protocol support in image renderer
+
+  - `renderKitty()` rewritten with proper APC encoding (`\x1b_Ga=T,f=100,m=…`)
+  - Chunked at 4096 bytes per protocol spec for reliable large-image transfer
+  - `placementX`/`placementY`/`placementId` for absolute screen positioning
+  - `compression: 1` enables zlib/deflate to reduce payload size
+  - `renderImage()` now auto-detects Kitty via core `hasKitty()` when `format: "auto"`
+  - `deleteKittyImage(id)` emits delete sequence for animations/overlays
+  - `queryKittyCapabilities()` emits query sequence for capability probing
+  - `renderKitty` gracefully falls back to ANSI when `sharp` is not installed
+  - Zero-size image guard prevents crash on empty metadata
+
+### Patch Changes
+
+- Updated dependencies [b6c513d]
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [b6c513d]
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [b6c513d]
+- Updated dependencies
+  - @bdocs/dui@0.6.0
+
 ## 0.3.0-next.2
 
 ### Patch Changes

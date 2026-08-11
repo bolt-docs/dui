@@ -1,5 +1,59 @@
 # @dui-toolkit/plugin-diff
 
+## 0.3.0
+
+### Minor Changes
+
+- feat: add block-level move detection for diffs
+
+  - `detectMoves(removedLines, addedLines, opts?)` identifies when contiguous blocks of code were moved (not deleted and re-added) by comparing content hashes
+  - Algorithm splits removed/added lines into contiguous blocks, computes a DJB2 hash per block, and matches removed ↔ added blocks by exact hash equality
+  - `diff({ detectMoves: true })` enables move detection in the unified diff renderer; moved lines render in yellow (instead of green/red) with a `~` marker and `M` gutter indicator
+  - Move source lines show `M` in the gutter and yellow styling; move destination lines show `M` as well — making it visually obvious that `function X()` was moved rather than deleted and rewritten
+  - `moveMinLines` option (default 3) controls the minimum block size for move detection, preventing false positives on small boilerplate blocks
+  - Theme slot `diff.move` (default yellow `#33`) for customizable move color
+  - Exported types: `LineBlock`, `MovePair`, `MoveDetectOptions`
+  - Gutter styles updated: bracket (`M`), bar (`M`), compact (`M`), arrow (`⇄`) for moved lines
+
+- b6c513d: v0.6.0 — interactive prompts overhaul
+
+  **`@bdocs/dui` core:**
+
+  - **Plugin API v2** — `usePluginAsync(plugin)` is now the canonical register entry point. Plugins can declare metadata (`description`, `tags`, `homepage`, `author`, `dependsOn`); peer-dependency warnings surface on major-version mismatch. Lifecycle is now observable via `awaitPluginsReady([names])` and `isPluginReady(name)`; status (`loading` / `ready` / `error`) is exposed through `getPlugin(name)` and `listPlugins()`.
+  - **Wheel scrolling across `select`, `multiselect`, `tree`** — every prompt reads multi-tick SGR bursts correctly (prior implementation only kept the last tick in a chunk). A new `wheelSensitivity?: number` option multiplies the per-burst magnitude — `wheelSensitivity: 3` + two ticks = 6 rows/second rendered.
+  - **Plugin wheel hooks** — `PluginEvents` gained `"wheel-up"` and `"wheel-down"` pre-filtered events so dashboards can subscribe via `api.on('wheel-up', handler)` instead of filtering every `MouseEvent`.
+  - **Drag-and-drop reordering on `multiselect({ enableDragReorder: true })`** — press-and-drag any enabled row to MOVE (insert, not swap) into a new position with live `multiselect.dragSource` / `multiselect.dropTarget` color previews. Checked state and the cursor both follow their logical row across the splice in **both directions** — `cursor remapIndex` helper makes the cursor visually pinned to its original choice even when row indices shift.
+  - **Dropping past `pageSize` boundary** — registered clickable areas extend during an active drag so a release on a row past the visible viewport resolves to the correct logical choice and scrolls the window to show the drop.
+  - **`MouseEvent` discriminated union** — `type === "wheel"` narrows to `MouseWheelEvent` and forces reading `event.wheel` instead of `event.button`. `MouseWheelEvent.button` is now `undefined` at runtime and marked `@deprecated` so cross-branch consumers no longer hit the false-positive left-click on wheel-up.
+  - **Theme slots** — new slots `multiselect.dragSource` and `multiselect.dropTarget` (defaults in `getDefaultFn`). Wheel-only events no longer leak into `MouseEventBase.button`.
+
+  **`@dui-toolkit/plugin-markdown`:**
+
+  - Headings render without the literal `#` marker; indentation scales with depth (H1 single indent, H2 deeper) and H1/H2 use `bold` for a typographic hierarchy.
+
+  **`@dui-toolkit/plugin-diff`:**
+
+  - Slot key renamed `thunk` → `hunk` (the old name was a typo); the symmetric `diff.hunk` default cyan now resolves correctly via `resolveColor('diff.hunk', theme)` and the test pins the default.
+
+  **Cross-plugin:**
+
+  - All five `@dui-toolkit/plugin-*` packages bumped to align with the DUI 0.6.0 release line.
+
+### Patch Changes
+
+- Updated dependencies [b6c513d]
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [b6c513d]
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [b6c513d]
+- Updated dependencies
+  - @bdocs/dui@0.6.0
+
 ## 0.3.0-next.2
 
 ### Patch Changes

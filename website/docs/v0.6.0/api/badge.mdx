@@ -1,0 +1,94 @@
+---
+title: Badge
+sidebarPosition: 10
+badge: New
+description: Status pill / chip primitive with five severity levels and theme overrides.
+---
+
+import LiveDemo from '../../../components/LiveDemo'
+
+# `badge(opts)` — status pill
+
+## Live demo
+
+<LiveDemo
+  title="badge"
+  command="node badge-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui badge --status-chip-demo\x1b[0m",
+    "",
+    "  Testing results:  \x1b[48;2;34;197;94m\x1b[38;2;255;255;255m PASS \x1b[0m  \x1b[48;2;239;68;68m\x1b[38;2;255;255;255m FAIL \x1b[0m  \x1b[48;2;234;179;8m\x1b[38;2;0;0;0m WARN \x1b[0m  \x1b[48;2;96;165;250m\x1b[38;2;255;255;255m INFO \x1b[0m  \x1b[48;2;107;114;128m\x1b[38;2;255;255;255m SKIP \x1b[0m",
+    "",
+    "  \x1b[1m── Status dashboard ────────────────────────\x1b[0m",
+    "",
+    "  \x1b[1mSystem Health\x1b[0m",
+    "",
+    "  \x1b[95mCPU:\x1b[0m   45%      \x1b[48;2;34;197;94m\x1b[38;2;255;255;255m OK \x1b[0m",
+    "  \x1b[95mRAM:\x1b[0m   1.2/4GB  \x1b[48;2;34;197;94m\x1b[38;2;255;255;255m OK \x1b[0m",
+    "  \x1b[95mDisk:\x1b[0m  87%     \x1b[48;2;234;179;8m\x1b[38;2;0;0;0m WARN \x1b[0m",
+    "  \x1b[95mNet:\x1b[0m   ⬇ 1.2G  \x1b[48;2;34;197;94m\x1b[38;2;255;255;255m OK \x1b[0m",
+    "",
+    "  \x1b[1m── Custom colored badges ───────────────────\x1b[0m",
+    "",
+    "  \x1b[48;2;0;0;0m\x1b[38;2;255;105;180m PRO \x1b[0m  \x1b[48;2;0;0;0m\x1b[38;2;255;215;0m VIP \x1b[0m  \x1b[48;2;0;0;0m\x1b[38;2;100;255;218m NEW \x1b[0m",
+  ]}
+  columns={54}
+  rows={14}
+  typewriterMs={5}
+  autoRun
+/>
+
+Renders a single-line chip suitable for dense dashboards, command palettes, and CLI status indicators. The chip is padded with a single space on each side (` label `) so it reads as a distinct inline token against surrounding text.
+
+```ts
+import { badge } from "@bdocs/dui";
+
+console.log(badge({ label: "PASS", status: "success" }));
+console.log(badge({ label: "ERR",  status: "error"   }));
+console.log(badge({ label: "INFO", status: "info"    }));
+```
+
+## Status levels
+
+| Status | Default `fg` | Default `bg` |
+| --- | --- | --- |
+| `"info"` | `"white"` | `"blue"` |
+| `"success"` | `"white"` | `"green"` |
+| `"warning"` | `"black"` | `"yellow"` |
+| `"error"` | `"white"` | `"red"` |
+| `"neutral"` | `"white"` | `"gray"` |
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `label` | `string` | — | Chip text. |
+| `status` | `"info" \| "success" \| "warning" \| "error" \| "neutral"` | `"neutral"` | Severity. |
+| `colors.text` | `ColorStyle` | — | Override fg (or both fg+bg via `{ fg, bg }`). |
+| `colors.bg` | `ColorStyle` | — | Override bg only. |
+
+## Override priority
+
+1. `opts.colors.text / opts.colors.bg` (per-call)
+2. `configure({ theme: { badge: { success: { fg, bg } } } })` (theme)
+3. Built-in default per status
+
+If you only need fg-only chips (no background), pass a plain string:
+
+```ts
+badge({ label: "draft", colors: { text: "gray" } });
+```
+
+For a chip that pops, use a compound override:
+
+```ts
+badge({ label: "PRO", colors: { text: { fg: "black", bg: "magenta" } } });
+```
+
+## When to use
+
+- Test result rows ("PASS / FAIL / SKIP" chips).
+- Status labels next to file names ("STAGED", "MODIFIED", "UNTRACKED").
+- Compact severity indicators on dashboards.
+
+`badge()` is a one-off render — it doesn't replace a colored `log.info()` line for `info` messages. Use `info()` / `success()` from `@bdocs/dui` for full-line logs; use `badge()` for inline chips.

@@ -1,0 +1,32 @@
+---
+title: Changelog
+sidebarPosition: 5
+onThisPage: false
+description: What ships in DUI, release by release.
+---
+
+Scroll the timeline below to see what's new in the upcoming release and everything that shipped before it. Every item links to the docs page that covers the feature.
+
+<ChangelogTimeline>
+<ChangelogTimelineItem version="v0.6.0" date="current stable">
+
+- **Interactive prompts v2** — async plugin API with lifecycle observability, wheel scrolling with `wheelSensitivity`, drag-and-drop reordering, and the discriminated `MouseEvent` union ([`prompt`](/docs/v0.6.0/api/prompt), [`plugin`](/docs/v0.6.0/api/plugin)).
+- **Native widget set** — [`badge()`](/docs/v0.6.0/api/badge), [`kbd()`](/docs/v0.6.0/api/kbd), [`section()`](/docs/v0.6.0/api/section), [`tabs()`](/docs/v0.6.0/api/tabs), [`modal()`](/docs/v0.6.0/api/modal) and [`grid()`](/docs/v0.6.0/api/grid), plus `thick` / `ascii` / `dashed` / `dotted` border styles.
+- **Preset palettes** — five drop-in themes: dracula, nord, solarized, catppuccin and gruvbox ([`presets`](/docs/v0.6.0/api/presets)).
+- **Accessibility layer** — every widget honors plain mode, with `NO_COLOR` / `TERM=dumb` / screen-reader detection and the shared `formatActionsPlain()` grammar ([accessibility](/docs/v0.6.0/overview/accessibility)).
+- **Gradient presets + style system** — `gradientPresets.*` ramps and `defineClass()` / `applyClass()` named styles ([api overview](/docs/v0.6.0/api)).
+- **Animation API** — pause/resume/seek, numeric keyframe channels, content templates, `direction` and `iterations` ([`animation`](/docs/v0.6.0/api/animation)).
+- **CSS Color 4 syntax** — space-separated `rgb()` / `hsl()` / `oklch()`, hue units, `none` keywords and percentage alpha ([`color`](/docs/v0.6.0/api/color)).
+- **Rendering infrastructure** — `RenderSurface`, output batching, pagination, JSON output and capability detection ([api overview](/docs/v0.6.0/api)).
+- **Chart precision** — explicit `min` / `max` axes, negative data and real `pie()` progress scaling ([plugin-chart](/docs/v0.6.0/plugins/chart)).
+- **Notify precision** — highest-priority `mergeBatch()` and a debounced, throttled queue ([plugin-notify](/docs/v0.6.0/plugins/notify)).
+- **Plugin upgrades** — animated QR ([plugin-qrcode](/docs/v0.6.0/plugins/qrcode)), Kitty graphics with optional `sharp` ([plugin-image](/docs/v0.6.0/plugins/image)), diff move detection ([plugin-diff](/docs/v0.6.0/plugins/diff)) and nested markdown tokenizer ([plugin-markdown](/docs/v0.6.0/plugins/markdown)).
+
+</ChangelogTimelineItem>
+<ChangelogTimelineItem version="v0.5.0" date="previous release">
+
+- **Animation API** — 25 easing presets, `createEasing()`, `createSpring()`, `animateProgress()`, `createTimeline()` and configurable `fps` ([`animation`](/docs/v0.6.0/api/animation)).
+- **Core widgets** — [`box()`](/docs/v0.6.0/api/box), [`list()`](/docs/v0.6.0/api/list), [`divider()`](/docs/v0.6.0/api/divider), the [`theme()`](/docs/v0.6.0/api/theme) system, `color`, `logger` and the interactive [`prompt()`](/docs/v0.6.0/api/prompt) family.
+
+</ChangelogTimelineItem>
+</ChangelogTimeline>

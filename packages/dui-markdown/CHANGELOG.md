@@ -1,5 +1,69 @@
 # @dui-toolkit/plugin-markdown
 
+## 0.3.0
+
+### Minor Changes
+
+- b6c513d: v0.6.0 — interactive prompts overhaul
+
+  **`@bdocs/dui` core:**
+
+  - **Plugin API v2** — `usePluginAsync(plugin)` is now the canonical register entry point. Plugins can declare metadata (`description`, `tags`, `homepage`, `author`, `dependsOn`); peer-dependency warnings surface on major-version mismatch. Lifecycle is now observable via `awaitPluginsReady([names])` and `isPluginReady(name)`; status (`loading` / `ready` / `error`) is exposed through `getPlugin(name)` and `listPlugins()`.
+  - **Wheel scrolling across `select`, `multiselect`, `tree`** — every prompt reads multi-tick SGR bursts correctly (prior implementation only kept the last tick in a chunk). A new `wheelSensitivity?: number` option multiplies the per-burst magnitude — `wheelSensitivity: 3` + two ticks = 6 rows/second rendered.
+  - **Plugin wheel hooks** — `PluginEvents` gained `"wheel-up"` and `"wheel-down"` pre-filtered events so dashboards can subscribe via `api.on('wheel-up', handler)` instead of filtering every `MouseEvent`.
+  - **Drag-and-drop reordering on `multiselect({ enableDragReorder: true })`** — press-and-drag any enabled row to MOVE (insert, not swap) into a new position with live `multiselect.dragSource` / `multiselect.dropTarget` color previews. Checked state and the cursor both follow their logical row across the splice in **both directions** — `cursor remapIndex` helper makes the cursor visually pinned to its original choice even when row indices shift.
+  - **Dropping past `pageSize` boundary** — registered clickable areas extend during an active drag so a release on a row past the visible viewport resolves to the correct logical choice and scrolls the window to show the drop.
+  - **`MouseEvent` discriminated union** — `type === "wheel"` narrows to `MouseWheelEvent` and forces reading `event.wheel` instead of `event.button`. `MouseWheelEvent.button` is now `undefined` at runtime and marked `@deprecated` so cross-branch consumers no longer hit the false-positive left-click on wheel-up.
+  - **Theme slots** — new slots `multiselect.dragSource` and `multiselect.dropTarget` (defaults in `getDefaultFn`). Wheel-only events no longer leak into `MouseEventBase.button`.
+
+  **`@dui-toolkit/plugin-markdown`:**
+
+  - Headings render without the literal `#` marker; indentation scales with depth (H1 single indent, H2 deeper) and H1/H2 use `bold` for a typographic hierarchy.
+
+  **`@dui-toolkit/plugin-diff`:**
+
+  - Slot key renamed `thunk` → `hunk` (the old name was a typo); the symmetric `diff.hunk` default cyan now resolves correctly via `resolveColor('diff.hunk', theme)` and the test pins the default.
+
+  **Cross-plugin:**
+
+  - All five `@dui-toolkit/plugin-*` packages bumped to align with the DUI 0.6.0 release line.
+
+- feat: add auto-link detection and OSC 8 hyperlink support in markdown renderer
+
+  - Auto-link detection: bare URLs like `https://example.com` are now recognized inline and rendered as clickable links
+  - `tokenizeInline()` detects URL patterns via `https?://…` regex and emits `autolink` tokens
+  - The text accumulator stops at `https://` or `http://` so URLs get their own token instead of being absorbed into adjacent text
+  - Renderer wraps auto-links with OSC 8 hyperlink sequences: `\x1b]8;;<url>\x1b\\<styled-url>\x1b]8;;\x1b\\`
+  - Both `link` and `autolink` tokens emit OSC 8 hyperlinks for terminal emulators that support clickable links (Kitty, iTerm2, WezTerm, foot, GNOME Terminal, etc.)
+  - `tokenizeInline` is now exported from the package for direct use without going through the full block parser
+
+- Nested inline markdown parsing — rewrite of `tokenizeInline` as a recursive char-by-char state machine.
+
+  - **Before:** Sequential regex passes (`BOLD_RE`, then `ITALIC_RE`, then `CODE_RE`). Could not handle `**bold _and italic_**` — the italic inside bold was ignored because the regexes ran independently.
+  - **After:** Recursive state machine. When a delimiter opens (`**`, `*`, `~~`, `` ` ``), the inner text is extracted and recursively tokenized as children. This correctly produces `bold([text("bold "), italic([text("and italic")])])`.
+
+  New features:
+
+  - `~~strikethrough~~` rendering via SGR `\x1b[9m...\x1b[29m`.
+  - `children?: InlineToken[]` on `InlineToken` for nested inline tokens.
+  - Code spans inside bold/italic/strikethrough work correctly.
+  - Unmatched delimiters render as literal text.
+
+### Patch Changes
+
+- Updated dependencies [b6c513d]
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [b6c513d]
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [b6c513d]
+- Updated dependencies
+  - @bdocs/dui@0.6.0
+
 ## 0.3.0-next.2
 
 ### Patch Changes

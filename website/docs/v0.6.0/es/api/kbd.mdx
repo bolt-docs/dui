@@ -1,0 +1,54 @@
+---
+title: Kbd
+sidebarPosition: 20
+description: Primitiva de atajos de teclado con mapeo de glifos por plataforma.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { kbd } from '@bdocs/dui'
+```
+
+Renderiza un array de tokens de tecla normalizados para la plataforma activa vía la tabla `PLATFORM_KEY_MAP`. Por defecto lee `process.platform` automáticamente (`darwin` → `"mac"`, `win32` → `"win"`, cualquier otra → `"linux"`). Pasa `platform` para forzarlo en tests, docs o barras de atajos multiplataforma.
+
+```ts
+console.log(`Find file  ${kbd({ keys: ['Cmd', 'P'] })}`)   // "⌘ P" en macOS
+console.log(`Quit       ${kbd({ keys: ['Cmd', 'Q'], platform: 'win' })}`) // "Ctrl Q"
+```
+
+<TerminalPreview command="node kbd.js">
+{`\x1b[1mFind file\x1b[0m  \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255mP\x1b[0m
+\x1b[1mQuit\x1b[0m       \x1b[38;2;100;200;255mCtrl\x1b[0m \x1b[38;2;100;200;255mQ\x1b[0m`}
+</TerminalPreview>
+
+## Opciones
+
+<Field name="keys" type="string | string[]">Etiquetas de tecla. String = atajo de una sola tecla.</Field>
+<Field name="separator" type="string" default="' '">Separador entre tokens.</Field>
+<Field name="platform" type="'mac' | 'win' | 'linux' | 'auto'" default="'auto'">Fuerza una plataforma (tests/docs) o la detecta de `process.platform`.</Field>
+<Field name="colors.text" type="ColorStyle" default="theme.kbd.text">Color de los glifos.</Field>
+<Field name="colors.border" type="ColorStyle" default="theme.kbd.border">Reservado para la futura variante boxed.</Field>
+
+## Mapeo de tokens
+
+La tabla de plataforma cubre los tokens más comunes. Los tokens desconocidos pasan tal cual para que puedas escribir tus propias etiquetas (`"F12"`, `"Ω"`).
+
+```ts
+PLATFORM_KEY_MAP.mac.Cmd     // "⌘"
+PLATFORM_KEY_MAP.mac.Option  // "⌥"
+PLATFORM_KEY_MAP.mac.Shift   // "⇧"
+PLATFORM_KEY_MAP.mac.Ctrl    // "⌃"
+PLATFORM_KEY_MAP.mac.Esc     // "⎋"
+PLATFORM_KEY_MAP.win.Cmd     // "Ctrl"
+PLATFORM_KEY_MAP.win.Option  // "Alt"
+PLATFORM_KEY_MAP.win.Esc     // "Esc"
+```
+
+## Cuándo usarlo
+
+- Barras de atajos en el pie de ventana (ej. la línea bajo un viewport de editor).
+- Leyendas inline en renders de README / sitios de docs.
+- Test packs donde quieras leer `kbd({ platform: 'mac' })` de forma determinista sin importar el SO anfitrión.
+
+El slot reservado `kbd.border` ya está cableado para que los consumidores puedan registrar una futura variante boxed vía sobrescrituras de tema sin cambio de código.

@@ -1,0 +1,79 @@
+---
+title: Tabs
+sidebarPosition: 23
+badge: New
+description: Segmented control / nav bar primitive with three visual styles.
+---
+
+import LiveDemo from '../../../components/LiveDemo'
+
+# `tabs(opts)` — segmented control
+
+## Live demo
+
+<LiveDemo
+  title="tabs"
+  command="node tabs-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui tabs --style=underline\x1b[0m",
+    "",
+    "  \x1b[38;2;255;200;100mHome\x1b[0m  \x1b[38;2;100;200;255mDocs\x1b[0m  \x1b[4m\x1b[38;2;100;200;255mBlog\x1b[0m  \x1b[38;2;100;200;255mAPI\x1b[0m  \x1b[38;2;100;200;255mAbout\x1b[0m",
+    "  \x1b[90m────────────────────────────────\x1b[0m",
+    "  \x1b[3m\"Active tab: Blog (underline style)\"\x1b[0m",
+    "",
+    "  \x1b[1m$ dui tabs --style=pill\x1b[0m",
+    "",
+    "  \x1b[90m[\x1b[0m \x1b[38;2;100;200;255mHome\x1b[0m \x1b[90m]\x1b[0m  \x1b[90m[\x1b[0m \x1b[38;2;100;200;255mDocs\x1b[0m \x1b[90m]\x1b[0m  \x1b[90m[\x1b[0m \x1b[38;2;255;200;100m\x1b[1mBlog\x1b[0m \x1b[90m]\x1b[0m  \x1b[90m[\x1b[0m \x1b[38;2;100;200;255mAPI\x1b[0m \x1b[90m]\x1b[0m",
+    "  \x1b[3m\"Active tab: Blog (pill style)\"\x1b[0m",
+    "",
+    "  \x1b[1m$ dui tabs --style=boxed\x1b[0m",
+    "",
+    "  \x1b[90m╭─\x1b[0m \x1b[90mHome\x1b[0m  \x1b[90m─╮\x1b[0m  \x1b[90m╭─\x1b[0m \x1b[90mDocs\x1b[0m  \x1b[90m─╮\x1b[0m  \x1b[38;2;255;200;100m╭─\x1b[0m \x1b[1m\x1b[38;2;255;200;100mBlog\x1b[0m \x1b[38;2;255;200;100m─╮\x1b[0m  \x1b[90m╭─\x1b[0m \x1b[90mAPI\x1b[0m   \x1b[90m─╮\x1b[0m",
+    "  \x1b[3m\"Active tab: Blog (boxed style)\"\x1b[0m",
+  ]}
+  columns={54}
+  rows={12}
+  typewriterMs={5}
+  autoRun
+/>
+
+Renders an array of tab labels with one marked active. Three visual styles are supported:
+
+- `"underline"` (default) — flat single-line strip where the active tab gets its color plus an SGR underline.
+- `"pill"` — bracketed rendering `[ label ]` with the active tab's color.
+- `"boxed"` — framed rendering `╭─label─╮` with active tab color on the label and `tabs.border` on the strokes.
+
+```ts
+import { tabs } from "@bdocs/dui";
+
+console.log(tabs({
+  items: ["Home", "Docs", "Blog"],
+  active: 1,
+  style: "underline",
+}));
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `items` | `string[]` | — | Tab labels. |
+| `active` | `number` | — | Index of the active tab (0-based). |
+| `style` | `"underline" \| "pill" \| "boxed"` | `"underline"` | Visual renderer. |
+| `colors.active` | `ColorStyle` | `theme.tabs.active` | Active label color. |
+| `colors.inactive` | `ColorStyle` | `theme.tabs.inactive` | Inactive label color. |
+| `colors.border` | `ColorStyle` | `theme.tabs.border` | Stroke color (boxed mode). |
+
+## Style trade-offs
+
+- **`underline`** reads cleanest in dense CLI output and is the canonical look. The active tab is differentiated by both hue AND an SGR underline SGR (`\x1b[4m`/`\x1b[24m`), so it remains visible even when fg color is identical to inactive.
+- **`pill`** brackets `[ label ]` make each tab visually distinct and are easy to scan at a glance. They consume ~2 extra chars per tab.
+- **`boxed`** frames each tab in `╭─╮` strokes. Looks most "GUI-like" but consumes ~4 extra chars per tab. Best for nav bars where the rest of the dashboard is plain.
+
+## When to use
+
+- Top-of-screen navigation between dashboard panes.
+- Sub-pane toggle rows (e.g. `Files | Branches | Tags | Logs`).
+- Wizard step indicators (`Step 1 / Step 2 / …`).
+
+`tabs()` is non-interactive — wire `active` index back to your navigation state. For interactive tab selection, drive `active` from a `select({ choices: items })` result.

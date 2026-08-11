@@ -73,7 +73,7 @@ describe("box", () => {
 		expect(resultRound).toContain("\x1b[38;2;255;136;0m");
 	});
 
-	// New border styles (v0.7.0) — verify each literal char shows up in
+	// New border styles (v0.6.0) — verify each literal char shows up in
 	// the rendered output. These tests also lock in the BORDERS map so a
 	// future regression that re-points the unicode chars is caught.
 	it("renders thick border style with heavy strokes", () => {

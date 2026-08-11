@@ -42,13 +42,13 @@ const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 
 export const notifyPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-notify",
-	version: "0.1.0-next.2",
+	version: "0.1.0",
 	description:
 		"Cross-platform desktop notifications — auto-routes between osascript/notify-send/PowerShell, OSC escape sequences (Kitty/iTerm2/WezTerm), and box-rendered TUI toasts depending on the host environment, with theme slots for every severity level.",
 	tags: ["renderer", "notify", "notification", "toast", "bell", "osc", "ansi"],
 	homepage: "https://github.com/bdocs/dui/tree/main/packages/dui-notify",
 	author: "DUI Toolkit",
-	peerDependencies: { dui: ">=0.6.0-next.0 <0.7.0" },
+	peerDependencies: { dui: "^0.6.0" },
 	setup(api) {
 		for (const [slot, def] of Object.entries(DEFAULTS)) {
 			api.registerThemeSlot(slot, def as never);
