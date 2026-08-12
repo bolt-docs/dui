@@ -1,0 +1,85 @@
+---
+title: Testing Utilities
+sidebarPosition: 36
+badge: New
+description: Mock TTY + snapshot helpers — assert exactly what widgets render in unit tests.
+---
+
+# Widget testing utilities
+
+Interactive widgets paint with cursor escapes and in-place repaints that
+are useless in unit tests. These helpers give you a **mock TTY** — a fake
+write stream with `isTTY: true`, configurable `columns`/`rows`, and
+captured output — so you can snapshot what a widget rendered.
+
+```ts
+import { snapshotWidget } from '@bdocs/dui'
+
+const { plain } = await snapshotWidget(() => {
+  process.stdout.write(box(['hi'], { width: 12 }))
+})
+expect(plain).toContain('hi')
+```
+
+## API
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `createMockTty(options?)` | `MockTtyStream` | Fake stream + captured output (no `process` patching) |
+| `withMockTty(options?)` | `MockTty` | Like `createMockTty`, but swaps `process.stdout`/`stderr` for the mock; call `restore()` when done |
+| `snapshotWidget(render, options?)` | `{ result, output, plain }` | Runs `render` with patched streams, awaits it, restores in `finally` |
+| `snapshotStatic(render, options?)` | `{ result, output, plain }` | Synchronous variant for pure string renders |
+
+### `MockTtyOptions`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `columns` | `number` | `80` | Fake terminal width |
+| `rows` | `number` | `24` | Fake terminal height |
+
+### Snapshot fields
+
+| Field | Notes |
+| --- | --- |
+| `result` | Whatever `render` returned (resolved value) |
+| `output` | Raw bytes including cursor/render escape sequences |
+| `plain` | The same text with ANSI stripped — ready for assertions |
+
+## Asserting against widgets that take a `stream`
+
+Some widgets (logger, statusbar, toasts, announcements) accept an
+explicit `stream` — pass `mock.stream` and inspect `mock.plain`:
+
+```ts
+import { createMockTty, createStatusBar } from '@bdocs/dui'
+
+const mock = createMockTty({ columns: 60 })
+const bar = createStatusBar({ left: 'main.ts', right: 'utf-8', stream: mock.stream })
+bar.clear()
+expect(mock.plain).toContain('main.ts')
+```
+
+## Testing a full interactive prompt
+
+`snapshotWidget` swaps `process.stdout` for the mock, so an interactive
+prompt's writes land in `output` while you drive its keys through the
+normal stdin mock:
+
+```ts
+const { plain } = await snapshotWidget(async () => {
+  // process.stdout is now the mock — the prompt paints into it.
+  const value = await select('Pick', { choices: [...] })
+  return value
+})
+// Drive stdin keys, then assert on `plain`.
+```
+
+## Notes
+
+- The mock stream exposes `columns`/`rows`/`isTTY` so widgets that
+  compute layout from the terminal size behave like a real TTY.
+- `snapshotWidget` restores `process.stdout`/`stderr` even when `render`
+  throws — safe for tests that assert error paths.
+- The render sequences are deterministic: run the same render twice and
+  `output` matches byte-for-byte, so you can use `toMatchInlineSnapshot`
+  or write fixtures from `plain`.

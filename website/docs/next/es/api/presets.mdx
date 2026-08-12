@@ -1,0 +1,232 @@
+---
+title: Presets
+sidebarPosition: 15
+description: Paletas de tema curadas (dracula, nord, solarized, catppuccin, gruvbox) para configure({ theme: presets.X }).
+---
+
+```ts
+import { configure, presets } from '@bdocs/dui'
+```
+
+Ocho paletas curadas vienen incluidas en `@bdocs/dui` para tematizar cada widget — `badge`, `modal`, `tabs`, `box`, `section`, `spinner`, `progress`, `markdown`, `kbd` — con **una línea** de código:
+
+```ts
+configure({ theme: presets.dracula })
+```
+
+Un preset es un `Partial<DuiTheme>` (ver [`DuiTheme`](./theme)). Los slots que no define caen a los valores por defecto integrados, así que cada paleta se enfoca en las superficies de alto impacto en lugar de escribir cada hoja.
+
+```ts
+import { presets, type PresetName } from '@bdocs/dui'
+
+const theme: PresetName = 'catppuccin'
+configure({ theme: presets[theme] })
+```
+
+La unión `PresetName` hace que las paletas mal escritas fallen en tiempo de compilación — un typo como `presets.draclua` lo detecta `tsc --noEmit` antes de llegar a CI.
+
+## Paletas disponibles
+
+1. [`dracula`](#dracula) — [draculatheme.com](https://draculatheme.com).
+2. [`nord`](#nord) — [nordtheme.com](https://www.nordtheme.com).
+3. [`solarized`](#solarized) — [ethanschoonover.com/solarized](http://ethanschoonover.com/solarized).
+4. [`catppuccin`](#catppuccin-mocha) — [catppuccin.com](https://catppuccin.com). Variante Mocha.
+5. [`gruvbox`](#gruvbox) — [github.com/morhetz/gruvbox](https://github.com/morhetz/gruvbox). Oscura.
+6. [`tokyonight`](#tokyo-night) — [github.com/folke/tokyonight.nvim](https://github.com/folke/tokyonight.nvim). Variante Storm.
+7. [`rose-pine`](#rose-pine) — [rosepinetheme.com](https://rosepinetheme.com).
+8. [`ayu`](#ayu) — [github.com/ayu-theme/ayu-colors](https://github.com/ayu-theme/ayu-colors). Oscura.
+
+El registro se exporta como `Readonly<Record<PresetName, DuiThemePreset>>` y el objeto subyacente está `Object.freeze`d para que una mutación accidental de un llamador no se filtre entre consumidores.
+
+## Cómo funciona la cascada
+
+Los presets usan el mismo pipeline `configure({ theme })` que un `DuiTheme` a mano. Tres capas componen, en orden de prioridad:
+
+1. **Sobrescrituras del usuario** — lo que pases inline gana:
+   ```ts
+   configure({
+     theme: {
+       ...presets.dracula,
+       error: '#ff00ff', // fija este único slot
+     },
+   })
+   ```
+2. **Paleta del preset** — el valor en `presets.X.<slot>`.
+3. **Valores por defecto** — el `map[slot]` interno de `resolveColor` (`packages/dui/src/theme.ts`), aplicado al final.
+
+También aplica el fallback por slot: si `box.title` no está en un preset pero el `title` global sí, `box.title` reutiliza `title`.
+
+## Dracula
+
+Fondo `#282a36`, frente `#f8f8f2`, acento `#bd93f9` (púrpura).
+
+| Slot | Hex | Se mapea a |
+| --- | --- | --- |
+| `accent` | `#bd93f9` | Subrayado de tabs, borde de modal, flecha de box |
+| `success` | `#50fa7b` | Badge.success bg, spinner.success fg |
+| `error` | `#ff5555` | Badge.error bg, spinner.fail fg |
+| `warning` | `#f1fa8c` | Badge.warning bg, spinner.warn fg |
+| `info` | `#8be9fd` | Badge.info bg, spinner.info fg |
+| `muted` | `#6272a4` | Comentarios, texto secundario |
+| `box.border` | `#6272a4` | Marco exterior |
+| `modal.border` | `#bd93f9` | Acento del marco del modal |
+
+## Nord
+
+Paleta de azules fríos + frost. Polar night `#2e3440`, snow storm `#d8dee9`, frost blues `#5e81ac` / `#81a1c1` / `#88c0d0`.
+
+| Slot | Hex | Se mapea a |
+| --- | --- | --- |
+| `accent` | `#5e81ac` | Flecha de box, subrayado de tabs |
+| `success` | `#a3be8c` | Badge.success bg, spinner.success |
+| `error` | `#bf616a` | Aurora rojo |
+| `warning` | `#ebcb8b` | Aurora amarillo |
+| `info` | `#88c0d0` | Frost cian |
+| `muted` | `#4c566a` | Comentarios |
+| `modal.border` | `#5e81ac` | Marco frost azul |
+
+## Solarized
+
+Paleta oscura de Ethan Schoonover. Fondo `#002b36`, frente `#839496`, acento `#6c71c6` (violeta).
+
+| Slot | Hex | Se mapea a |
+| --- | --- | --- |
+| `accent` | `#6c71c6` | Subrayado de tabs, borde de modal |
+| `success` | `#859900` | Verde solar |
+| `error` | `#dc322f` | Rojo solar |
+| `warning` | `#b58900` | Amarillo solar |
+| `info` | `#268bd2` | Azul solar |
+| `muted` | `#586e75` | Base01 |
+| `markdown.heading1..6` | Arcoíris semántico | Code-inline bg `#073642` |
+
+## Catppuccin Mocha
+
+Paleta pastel de la org Catppuccin. Base `#1e1e2e`, texto `#cdd6f4`, acento `#cba6f7` (malva).
+
+| Slot | Hex | Se mapea a |
+| --- | --- | --- |
+| `accent` | `#cba6f7` | Subrayado de tabs, borde de modal, badge neutral |
+| `success` | `#a6e3a1` | Verde pastel |
+| `error` | `#f38ba8` | Rojo pastel |
+| `warning` | `#f9e2af` | Amarillo pastel |
+| `info` | `#89b4fa` | Azul pastel |
+| `muted` | `#6c7280` | Sub-texto |
+| `markdown.heading1..6` | Arcoíris pastel | Code-inline bg `#313244` |
+
+El registro incluye Mocha como variante por defecto de Catppuccin. Para registrar una variante Frappé/Latte/Macchiato, añade a `packages/dui/src/presets.ts` — ver [Añadir tu propio preset](#añadir-tu-propio-preset).
+
+## Gruvbox
+
+Paleta oscura retro groove. Fondo `#282828`, frente `#ebdbb2`, acento `#b16286` (púrpura).
+
+| Slot | Hex | Se mapea a |
+| --- | --- | --- |
+| `accent` | `#b16286` | Subrayado de tabs, borde de modal |
+| `success` | `#98971a` | Verde oliva |
+| `error` | `#cc241d` | Rojo brillante |
+| `warning` | `#d79921` | Amarillo brillante |
+| `info` | `#458588` | Azul apagado |
+| `muted` | `#928374` | Gris |
+| `markdown.heading1..6` | Arcoíris cálido | Code-inline bg `#3c3836` |
+
+## Tokyo Night
+
+Paleta enfocada a editores (variante Storm). Fondo `#24283b`, texto
+`#c0caf5`, acento `#bb9af7` (magenta).
+
+| Slot | Hex | Mapea a |
+| --- | --- | --- |
+| `accent` | `#bb9af7` | Subrayado de tabs, borde de modal, box value |
+| `success` | `#9ece6a` | Verde |
+| `error` | `#f7768e` | Rojo |
+| `warning` | `#e0af68` | Amarillo |
+| `info` | `#7aa2f7` | Azul |
+| `muted` | `#565f89` | Comentarios |
+
+## Rose Pine
+
+Paleta suave y de bajo contraste. Base `#191724`, texto `#e0def4`,
+acento `#c4a7e7` (iris).
+
+| Slot | Hex | Mapea a |
+| --- | --- | --- |
+| `accent` | `#c4a7e7` | Subrayado de tabs, borde de modal |
+| `success` | `#31748f` | Pine |
+| `error` | `#eb6f92` | Love |
+| `warning` | `#f6c177` | Gold |
+| `info` | `#9ccfd8` | Foam |
+| `muted` | `#6e6a86` | Muted |
+
+## Ayu
+
+Paleta oscura cálida. Fondo `#0b0e14`, texto `#bfbdb6`, acento
+`#d2a6ff` (púrpura).
+
+| Slot | Hex | Mapea a |
+| --- | --- | --- |
+| `accent` | `#d2a6ff` | Subrayado de tabs, borde de modal |
+| `success` | `#a6cc70` | Verde |
+| `error` | `#ff3333` | Rojo brillante |
+| `warning` | `#ffb454` | Amarillo |
+| `info` | `#59c2ff` | Azul |
+| `muted` | `#5c6773` | Comentario |
+
+## Cascada en la salida de los widgets
+
+Una vez aplicada, cada widget usa la paleta vía `resolveColor`:
+
+```ts
+configure({ theme: presets.dracula })
+const out = badge({ label: 'PASS', status: 'success' })
+// out contiene `\u001b[48;2;80;250;123m` (Dracula success bg)
+```
+
+El SGR RGB de 24 bits abre con `\u001b[48;2;<r>;<g>;<b>m`, así que un consumidor puede buscar el hex del preset inspeccionando la pintura cruda.
+
+## Forzar salida de texto plano
+
+`plain: true` es **ortogonal** a los presets. Pásalo junto a una paleta para mantener la introspección del tema mientras colapsas cada render al fallback de texto `prefix:` — útil para lectores de pantalla en Linux, scrapers de logs de CI o cualquier host sin render ANSI:
+
+```ts
+configure({ theme: presets.dracula, plain: true })
+```
+
+La paleta Dracula se sigue resolviendo en el mapa de slots (así `getConfig().theme` muestra la paleta prevista), pero cada widget emite salida solo-texto. Ver la referencia completa de accesibilidad en [Accessibility](/docs/next/overview/accessibility).
+
+## Añadir tu propio preset
+
+Añade una nueva entrada a `packages/dui/src/presets.ts`:
+
+```ts
+import type { DuiThemePreset } from '@bdocs/dui'
+
+const myPreset: DuiThemePreset = {
+  success: '#...tu hex...',
+  error: '#...tu hex...',
+  /* ... */
+}
+
+Object.assign(presets, { myPreset })
+```
+
+La receta habitual: 1) añade `"myPreset"` a `PresetName`, 2) añade la constante + entrada en el literal `Readonly<Record>` para que el cambio esté type-checked desde ambos lados.
+
+Una paleta nueva usa automáticamente el mismo pipeline `markRawTheme` / `resolveColor` / `configure`. Sin paso de registro separado.
+
+## Sobrescribir un solo slot
+
+```ts
+// sobrescribe el color success SOLO, manteniendo el resto de Gruvbox
+configure({
+  theme: {
+    ...presets.gruvbox,
+    success: '#b4dc54',
+  },
+})
+```
+
+O vía el argumento `colors:` por llamada en el propio widget:
+
+```ts
+badge({ label: 'DRAFT', status: 'neutral', colors: { bg: '#bd93f9' } })
+```

@@ -1,0 +1,197 @@
+---
+title: Logger
+sidebarPosition: 3
+description: info, warn, error, success, debug — consistent [prefix]-prefixed output.
+---
+
+```ts
+import { info, warn, error, success, debug } from '@bdocs/dui'
+```
+
+import LiveDemo from '../../../components/LiveDemo'
+
+## Live demo
+
+<LiveDemo
+  title="logger"
+  command="node logger-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui build\x1b[0m",
+    "",
+    "  \x1b[1m[\x1b[0m\x1b[36mdui\x1b[0m\x1b[1m]\x1b[0m Starting build pipeline…",
+    "  \x1b[1m[\x1b[0m\x1b[36mdui\x1b[0m\x1b[1m]\x1b[0m Compiling TypeScript modules",
+    "  \x1b[1m[\x1b[0m\x1b[32mdui\x1b[0m\x1b[1m]\x1b[0m Build completed!  \x1b[90m(2.4s)\x1b[0m",
+    "  \x1b[1m[\x1b[0m\x1b[33mdui\x1b[0m\x1b[1m]\x1b[0m Deprecated API: `oldMethod()` used in src/utils.ts",
+    "  \x1b[1m[\x1b[0m\x1b[31mdui\x1b[0m\x1b[1m]\x1b[0m Failed to connect to registry  \x1b[90m— retrying…\x1b[0m",
+    "  \x1b[90m[dui]\x1b[0m  \x1b[90m→\x1b[0m  \x1b[2mVerbose: cache miss for @scope/pkg\x1b[0m",
+    "  \x1b[1m[\x1b[0m\x1b[32mdui\x1b[0m\x1b[1m]\x1b[0m \x1b[32mEverything up-to-date\x1b[0m",
+    "",
+    "  \x1b[1m━━━ Custom prefix logger ───────────────────\x1b[0m",
+    "",
+    "  \x1b[1m[\x1b[0m\x1b[35mmyapp\x1b[0m\x1b[1m]\x1b[0m Running installer…",
+    "  \x1b[1m[\x1b[0m\x1b[35mmyapp\x1b[0m\x1b[1m]\x1b[0m Writing configuration",
+    "  \x1b[1m[\x1b[0m\x1b[32m\x1b[1mmyapp\x1b[0m\x1b[1m]\x1b[0m \x1b[32mInstallation complete!\x1b[0m",
+  ]}
+  columns={56}
+  rows={15}
+  typewriterMs={5}
+  autoRun
+/>
+
+---
+
+Each function accepts an optional options object as the last argument:
+
+```ts
+info(msg, { prefix?: string, color?: ColorInput })
+warn(msg, { prefix?: string, color?: ColorInput })
+error(msg, err?, { prefix?: string, color?: ColorInput })
+success(msg, { prefix?: string, color?: ColorInput })
+debug(msg, { prefix?: string, color?: ColorInput })
+```
+
+| Function | Default Color | Stream | Gate |
+|----------|--------------|--------|------|
+| `info(msg)` | none | stdout | no |
+| `warn(msg)` | yellow | stdout | no |
+| `error(msg, err?)` | red | stderr | no |
+| `success(msg)` | green | stdout | no |
+| `debug(msg)` | dim | stdout | `DEBUG` |
+
+<Callout variant="info">
+  `debug()` only prints when `DEBUG` or `BOLTDOCS_DEBUG` is set.
+</Callout>
+
+### examples
+
+```ts
+info('Starting build...')
+success('Build completed!')
+warn('Deprecated API used')
+error('Failed to connect')
+debug('Verbose trace') // only shown with DEBUG=1
+```
+
+<TerminalPreview command="node demo.js">
+{`\x1b[1m[dui]\x1b[0m Starting build...
+\x1b[32m\x1b[1m[dui] Build completed!\x1b[0m
+\x1b[33m\x1b[1m[dui] Deprecated API used\x1b[0m
+\x1b[31m\x1b[1m[dui] Failed to connect\x1b[0m`}
+</TerminalPreview>
+
+Pass a `color` option to override the default color for any logger call:
+
+```ts
+import { info, success } from '@bdocs/dui'
+
+info('Custom blue message', { color: '#00aaff' })
+success('Green is the default, but we can override', { color: '#ff8800' })
+```
+
+<TerminalPreview command="node colors.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255mCustom blue message\x1b[39m
+\x1b[1m[dui]\x1b[0m \x1b[38;2;255;136;0mGreen is the default, but we can override\x1b[39m`}
+</TerminalPreview>
+
+The `error` function accepts an optional error object that will be printed after the message:
+
+```ts
+error('Something broke', err)
+// [mytool] Something broke
+// [mytool]   ↳ Error: Something broke
+//       at main (file.ts:10)
+```
+
+## createLogger
+
+```ts
+createLogger(prefix: string): LoggerInstance
+```
+
+Creates an isolated logger instance with a custom prefix. Useful for sub-modules or plugins where you want a different prefix from the global `configure({ prefix })` setting.
+
+```ts
+import { createLogger } from '@bdocs/dui'
+
+const log = createLogger('myapp')
+log.info('Running installer...')
+log.success('Installation complete!')
+```
+
+All methods (`info`, `warn`, `error`, `success`, `debug`) behave exactly like the global logger functions but output with the custom `[prefix]`.
+
+---
+
+## Logger v2 — levels, timestamps, files & JSON
+
+v0.7.0 adds a structured layer on top of the classic logger: severity
+**levels** with filtering, **timestamps**, a **file transport**, and a
+**JSON mode** — plus per-instance configuration via `createLogger`.
+
+### Levels & env verbosity
+
+Severity order: `debug < info/warn < error` (`success` shares `info`'s
+tier). The effective minimum level is resolved from, in priority
+order: `LOG_LEVEL` / `BOLTDOCS_LOG_LEVEL` env vars → `configureLogger({ level })`
+→ default `"info"`. `LOG_LEVEL=silent` (or `off`/`none`) disables all
+output.
+
+```ts
+import { configureLogger, getEffectiveLogLevel } from '@bdocs/dui'
+
+configureLogger({ level: 'warn' })   // drop info/debug/success
+
+// $ LOG_LEVEL=debug ./my-cli        // env wins at runtime
+```
+
+`debug()` keeps its classic gate too: `DEBUG=1` or `BOLTDOCS_DEBUG=1`
+forces debug lines through regardless of the configured level.
+
+### `configureLogger(options)`
+
+Configure the module-level logger — options merge over the previous
+ones:
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `level` | `LogLevel` | `"info"` | Minimum severity to emit |
+| `timestamp` | `boolean` | `false` | Prefix lines with `[HH:MM:SS]` |
+| `format` | `"text" \| "json"` | `"text"` | JSON emits one object per line |
+| `file` | `string` | — | Append every line (plain text, no ANSI) to this file |
+
+```ts
+configureLogger({ timestamp: true, file: 'run.log', format: 'json' })
+
+info('deploying') // → {"time":"2026-08-12T…","level":"info","prefix":"dui","message":"deploying"}
+```
+
+In JSON mode the file transport writes the same JSON lines; in text
+mode the file gets plain `[prefix] message` lines with all ANSI
+stripped, so logs stay greppable and CI-safe. Errors serialize to
+`{ name, message, stack }`.
+
+### `createLogger(prefix, options)`
+
+The instance accepts the full options set — and, unlike the global
+logger, its `level` is **not** overridden by the env vars unless you
+opt in with `respectEnv: true`:
+
+```ts
+import { createLogger } from '@bdocs/dui'
+
+const build = createLogger('build', { level: 'debug', timestamp: true })
+build.debug('cache miss')   // shown (instance level is debug)
+```
+
+### Level filtering in action
+
+```ts
+configureLogger({ level: 'warn' })
+
+info('quiet')       // dropped
+warn('visible')     // emitted
+error('boom')       // emitted (stderr)
+```
+
+See also [`getLoggerOptions()`](/docs/next/api/logger) and
+[`getEffectiveLogLevel()`](/docs/next/api/logger) for introspection.

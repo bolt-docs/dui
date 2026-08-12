@@ -13,6 +13,7 @@ import {
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
+import { filterFuzzy, highlightFuzzy } from "./fuzzy";
 import { applyClass } from "./style";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
@@ -73,6 +74,20 @@ export interface MultiselectOptions<T = string> {
 	 * index may shift.
 	 */
 	enableDragReorder?: boolean;
+	/**
+	 * When `true`, typing filters the choices with fuzzy matching
+	 * (Backspace edits the query, Escape clears it). While a query is
+	 * active, Space types into the query instead of toggling; with an
+	 * empty query Space toggles as usual. Mutually exclusive with
+	 * `enableDragReorder` — when both are set, searchable wins.
+	 */
+	searchable?: boolean;
+	/**
+	 * Called once when the prompt is cancelled — Escape (with an empty
+	 * query) or Ctrl+C. Use it to restore terminal state or release
+	 * resources before the promise rejects / the process exits.
+	 */
+	onCancel?: () => void;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
@@ -103,6 +118,8 @@ export async function multiselect<T = string>(
 		colors: colorsOverride,
 		wheelSensitivity: wheelSensitivityOption,
 		enableDragReorder = false,
+		searchable = false,
+		onCancel,
 	} = options;
 
 	if (!choices.length) {
@@ -122,6 +139,8 @@ export async function multiselect<T = string>(
 		colorsOverride,
 		wheelSensitivity,
 		enableDragReorder,
+		searchable,
+		onCancel,
 	);
 }
 
@@ -175,6 +194,8 @@ function interactiveMultiselect<T>(
 	colorsOverride: MultiselectOptions["colors"],
 	wheelSensitivity: number,
 	enableDragReorder: boolean,
+	searchable: boolean,
+	onCancel: (() => void) | undefined,
 ): Promise<T[]> {
 	return new Promise<T[]>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -256,6 +277,8 @@ function interactiveMultiselect<T>(
 		let done = false;
 		let linesRendered = 0;
 		let buf = "";
+		let query = "";
+		let filtered: number[] | null = null;
 
 		// Drag-and-drop state. `dragSource` is the index of the
 		// row the user pressed; `dragHover` is the row the cursor
@@ -268,15 +291,43 @@ function interactiveMultiselect<T>(
 		let dragSource: number | null = null;
 		let dragHover: number | null = null;
 
+		function totalCount(): number {
+			return filtered ? filtered.length : activeChoices.length;
+		}
+
+		function itemAt(pos: number): { idx: number; choice: MultiselectChoice<T> } | undefined {
+			if (filtered) {
+				if (pos < 0 || pos >= filtered.length) return undefined;
+				const idx = filtered[pos];
+				return { idx, choice: activeChoices[idx] };
+			}
+			if (pos < 0 || pos >= activeChoices.length) return undefined;
+			return { idx: pos, choice: activeChoices[pos] };
+		}
+
+		function resetFilter() {
+			filtered = null;
+			if (query) {
+				const hits = filterFuzzy(query, activeChoices, (c) => c.label);
+				filtered = hits ? hits.map((h) => activeChoices.indexOf(h.item)) : [];
+			}
+			cursor = 0;
+			offset = 0;
+			hoveredIndex = null;
+		}
+
 		function clampCursor(pos: number): number {
-			const total = activeChoices.length;
+			const total = totalCount();
+			if (total === 0) return 0;
 			const p = ((pos % total) + total) % total;
-			if (!activeChoices[p].disabled) return p;
+			const item = itemAt(p);
+			if (!item || !item.choice.disabled) return p;
 			const dir = pos > cursor ? 1 : -1;
 			let next = p;
 			for (let i = 0; i < total; i++) {
 				next = (((next + dir) % total) + total) % total;
-				if (!activeChoices[next].disabled) return next;
+				const it = itemAt(next);
+				if (it && !it.choice.disabled) return next;
 			}
 			return cursor;
 		}
@@ -319,8 +370,8 @@ function interactiveMultiselect<T>(
 
 		function render() {
 			if (done) return;
-			const effective = Math.min(pageSize, activeChoices.length);
-			offset = Math.max(0, Math.min(offset, activeChoices.length - effective));
+			const effective = Math.min(pageSize, totalCount());
+			offset = Math.max(0, Math.min(offset, totalCount() - effective));
 
 			for (const id of clickableAreaIds) {
 				unregisterClickableArea(id);
@@ -331,23 +382,42 @@ function interactiveMultiselect<T>(
 			}
 			hoverableAreaIds.clear();
 
-			const visible = activeChoices.slice(offset, offset + effective);
+			const visible = filtered
+				? filtered
+						.slice(offset, offset + effective)
+						.map((idx) => ({ idx, choice: activeChoices[idx] }))
+				: activeChoices
+						.slice(offset, offset + effective)
+						.map((choice, i) => ({ idx: offset + i, choice }));
 			const lines: string[] = [];
 
 			const help = required
-				? "(Use arrow keys + space, click to toggle, enter to confirm)"
-				: "(Use arrow keys + space, click to toggle)";
+				? searchable
+					? "(Type to filter, arrows + space to toggle, enter to confirm)"
+					: "(Use arrow keys + space, click to toggle, enter to confirm)"
+				: searchable
+					? "(Type to filter, arrows + space to toggle)"
+					: "(Use arrow keys + space, click to toggle)";
 			const msgLine = `${messageColor(`? ${message}`)} ${colors.dim(help)}`;
 			lines.push(msgLine);
 
+			const filterLine = searchable
+				? `  ${colors.cyan("\u25b8")} ${query}`
+				: "";
+			if (filterLine) lines.push(filterLine);
+
 			const msgRowDelta = Math.floor(visibleLength(msgLine) / terminalWidth());
+			const filterRowCount = filterLine
+				? Math.max(1, Math.ceil(visibleLength(filterLine) / terminalWidth()))
+				: 0;
+			const listTop = 1 + msgRowDelta + filterRowCount;
 
 			for (let i = 0; i < visible.length; i++) {
-				const idx = offset + i;
-				const choice = activeChoices[idx];
-				const isCursor = idx === cursor;
+				const pos = offset + i;
+				const { idx, choice } = visible[i];
+				const isCursor = pos === cursor;
 				const isChecked = checked.has(idx);
-				const isHovered = idx === hoveredIndex;
+				const isHovered = pos === hoveredIndex;
 				// Drag visuals: the source row is the one the user
 				// pressed; the drop target is the row currently
 				// under the cursor during the drag. They're
@@ -366,6 +436,7 @@ function interactiveMultiselect<T>(
 				const checkbox = isChecked
 					? checkedColor(CHECKED)
 					: colors.dim(UNCHECKED);
+				const highlighted = filtered && query;
 
 				let label: string;
 				if (choice.disabled) {
@@ -375,11 +446,19 @@ function interactiveMultiselect<T>(
 				} else if (isDropTarget) {
 					label = `${checkbox} ${dropTargetColor(choice.label)}`;
 				} else if (isHovered) {
-					label = `${checkbox} ${applyClass("hover", selectedColor(choice.label))}`;
+					label = highlighted
+						? `${checkbox} ${highlightFuzzy(query, choice.label, (ch) =>
+								applyClass("hover", selectedColor(ch)),
+							)}`
+						: `${checkbox} ${applyClass("hover", selectedColor(choice.label))}`;
 				} else if (isCursor) {
-					label = `${checkbox} ${selectedColor(choice.label)}`;
+					label = highlighted
+						? `${checkbox} ${highlightFuzzy(query, choice.label, (ch) => selectedColor(ch))}`
+						: `${checkbox} ${selectedColor(choice.label)}`;
 				} else {
-					label = `${checkbox} ${labelColor(choice.label)}`;
+					label = highlighted
+						? `${checkbox} ${highlightFuzzy(query, choice.label, (ch) => selectedColor(ch))}`
+						: `${checkbox} ${labelColor(choice.label)}`;
 				}
 
 				lines.push(`${pointer}${label}`);
@@ -390,11 +469,11 @@ function interactiveMultiselect<T>(
 					type: "multiselect",
 					bounds: {
 						left: 0,
-						top: 1 + msgRowDelta + 1 + i,
+						top: listTop + 1 + i,
 						width: 999,
 						height: 1,
 					},
-					data: { choiceIndex: idx },
+					data: { choiceIndex: pos },
 				});
 			clickableAreaIds.add(areaId);
 
@@ -403,11 +482,11 @@ function interactiveMultiselect<T>(
 				type: "multiselect",
 				bounds: {
 					left: 0,
-					top: 1 + msgRowDelta + 1 + i,
+					top: listTop + 1 + i,
 					width: 999,
 					height: 1,
 				},
-				data: { choiceIndex: idx },
+				data: { choiceIndex: pos },
 			});
 			hoverableAreaIds.add(`hover-${areaId}`);
 		}
@@ -553,6 +632,14 @@ function interactiveMultiselect<T>(
 					// microtask, no CSI sequence arrived — cancel.
 					if (buf !== "\x1b") return;
 					buf = "";
+					// First Escape clears an active search query.
+					if (searchable && query.length > 0) {
+						query = "";
+						resetFilter();
+						render();
+						return;
+					}
+					onCancel?.();
 					cleanup();
 					if (linesRendered > 0) {
 						stdout.write(`\x1b[${linesRendered}A`);
@@ -597,7 +684,7 @@ function interactiveMultiselect<T>(
 							}
 						}
 					} else if (mouseEvent.type === "press") {
-						if (enableDragReorder && mouseEvent.button === "left") {
+						if (enableDragReorder && !searchable && mouseEvent.button === "left") {
 							const pressedArea = getClickedItem(
 								mouseEvent.x,
 								mouseEvent.y,
@@ -625,6 +712,7 @@ function interactiveMultiselect<T>(
 					} else if (mouseEvent.type === "release") {
 						if (
 							enableDragReorder &&
+							!searchable &&
 							mouseEvent.button === "left" &&
 							dragSource !== null
 						) {
@@ -719,17 +807,19 @@ function interactiveMultiselect<T>(
 					renderNeeded = true;
 				}
 
-				for (const idx of clickedIndices) {
-					cursor = idx;
+				for (const pos of clickedIndices) {
+					cursor = pos;
 					if (cursor < offset) offset = cursor;
 					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 					renderNeeded = true;
 					if (dragJustCommitted) continue;
-					if (checked.has(cursor)) {
+					const target = filtered ? filtered[cursor] : cursor;
+					if (target === undefined) continue;
+					if (checked.has(target)) {
 						if (required && checked.size <= 1) continue;
-						checked.delete(cursor);
+						checked.delete(target);
 					} else {
-						checked.add(cursor);
+						checked.add(target);
 					}
 				}
 
@@ -739,19 +829,70 @@ function interactiveMultiselect<T>(
 				return;
 			}
 
+			// ── Searchable: feed printable characters into the query ──
+			if (searchable) {
+				const lastChar = buf[buf.length - 1];
+				// Tab toggles the row under the cursor — Space is taken
+				// by the search query, so Tab is the keyboard toggle.
+				if (lastChar === "\t") {
+					buf = "";
+					const target = filtered ? filtered[cursor] : cursor;
+					if (target !== undefined && !activeChoices[target].disabled) {
+						if (checked.has(target)) {
+							if (required && checked.size <= 1) {
+								render();
+								return;
+							}
+							checked.delete(target);
+						} else {
+							checked.add(target);
+						}
+					}
+					render();
+					return;
+				}
+				if (lastChar === "\x7f" || lastChar === "\x08") {
+					buf = "";
+					if (query.length > 0) {
+						query = query.slice(0, -1);
+						resetFilter();
+						render();
+					}
+					return;
+				}
+				const printable = text.replace(/[\u0000-\u001f\u007f]/g, "");
+				if (printable) {
+					buf = "";
+					query += printable;
+					resetFilter();
+					render();
+					return;
+				}
+			}
+
 			const lastChar = buf[buf.length - 1];
 
 			if (lastChar === " ") {
 				buf = "";
-				if (!activeChoices[cursor].disabled) {
-					if (checked.has(cursor)) {
+				// While a search query is active, Space types into the
+				// query (space-in-query filtering); with an empty query
+				// it toggles the checkbox as usual.
+				if (searchable && query.length > 0) {
+					query += " ";
+					resetFilter();
+					render();
+					return;
+				}
+				const target = filtered ? filtered[cursor] : cursor;
+				if (target !== undefined && !activeChoices[target].disabled) {
+					if (checked.has(target)) {
 						if (required && checked.size <= 1) {
 							render();
 							return;
 						}
-						checked.delete(cursor);
+						checked.delete(target);
 					} else {
-						checked.add(cursor);
+						checked.add(target);
 					}
 				}
 				render();
@@ -763,6 +904,7 @@ function interactiveMultiselect<T>(
 				}
 				finalize();
 			} else if (lastChar === "\x03") {
+				onCancel?.();
 				cleanup();
 				stdout.write("\n");
 				process.exit(130);

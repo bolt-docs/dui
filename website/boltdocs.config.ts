@@ -11,6 +11,10 @@ export default defineConfig({
 				path: "v0.6.0",
 			},
 			{
+				label: "Next (v0.7.0)",
+				path: "next",
+			},
+			{
 				label: "v0.5.0",
 				path: "v0.5.0",
 			},

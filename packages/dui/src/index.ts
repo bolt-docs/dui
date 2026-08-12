@@ -18,9 +18,13 @@ export {
 	lerp,
 } from "./animation";
 export { gradientPresets, gradient, type GradientStop, type GradientPresetName } from "./gradient";
-export type { AccessibilityInfo } from "./accessibility";
+export type { AccessibilityInfo, AnnounceOptions } from "./accessibility";
 export {
+	announce,
+	clearAnnouncements,
+	flushAnnouncements,
 	getAccessibilityInfo,
+	getAnnouncementQueue,
 	isPlainMode,
 	isReducedMotion,
 	refreshAccessibility,
@@ -78,8 +82,18 @@ export type { KbdOptions, KbdPlatform } from "./kbd";
 export { kbd } from "./kbd";
 export type { TaskItem } from "./list";
 export { bullet, ordered, tasks } from "./list";
-export type { LoggerInstance } from "./logger";
-export { createLogger, debug, error, info, success, warn } from "./logger";
+export type { LoggerInstance, LoggerOptions, LogLevel } from "./logger";
+export {
+	configureLogger,
+	createLogger,
+	debug,
+	error,
+	getEffectiveLogLevel,
+	getLoggerOptions,
+	info,
+	success,
+	warn,
+} from "./logger";
 export {
 	clearClickableAreas,
 	clearHoverableAreas,
@@ -176,13 +190,19 @@ export type { TableColumnOptions, TableOptions } from "./table";
 export { table } from "./table";
 export type {
 	BadgeTheme,
+	BannerTheme,
 	ColorStyle,
 	DuiTheme,
+	FormTheme,
 	KbdTheme,
 	MarkdownTheme,
 	ModalTheme,
+	PaletteTheme,
+	RichTextTheme,
 	SectionTheme,
+	StatusBarTheme,
 	TabsTheme,
+	ToastTheme,
 } from "./theme";
 export { resolveColor, resolveColorSimple } from "./theme";
 export type { DuiThemePreset, PresetName } from "./presets";
@@ -205,8 +225,10 @@ export {
 	padRight,
 	renderLine,
 	renderStatic,
+	splitGraphemes,
 	stripAnsi,
 	terminalWidth,
+	truncateByCells,
 	visibleLength,
 	wrapAnsiWord,
 } from "./utils";
@@ -230,6 +252,44 @@ export {
 } from "./capabilities";
 export type { BatchHandle, BatchOptions } from "./batch";
 export { createBatch, getDefaultBatch, resetDefaultBatch } from "./batch";
+export type { FuzzyResult } from "./fuzzy";
+export { filterFuzzy, fuzzyMatch, highlightFuzzy } from "./fuzzy";
+export type { LinkOptions } from "./link";
+export { hyperlink, link, linkify, supportsHyperlinks } from "./link";
+export { clipboardSupported, copy, copyToClipboard } from "./clipboard";
+export type { BannerOptions, BannerStyle } from "./banner";
+export { banner, bannerLines } from "./banner";
+export type { RichTextOptions } from "./richtext";
+export { richtext, richtextToPlain } from "./richtext";
+export type {
+	ToastCenter,
+	ToastCenterOptions,
+	ToastOptions,
+	ToastType,
+} from "./toast";
+export { createToastCenter, dismissAllToasts, toast } from "./toast";
+export type { StatusBar, StatusBarOptions, StatusBarParts } from "./statusbar";
+export { createStatusBar } from "./statusbar";
+export {
+	enterAltScreen,
+	exitAltScreen,
+	hideCursor,
+	restoreCursor,
+	saveCursor,
+	showCursor,
+	withAltScreen,
+} from "./alt-screen";
+export type { FormField, FormOptions, FormSelectField, FormTextField } from "./form";
+export { form } from "./form";
+export type { PaletteItem, PaletteOptions } from "./palette";
+export { palette } from "./palette";
+export type { MockTty, MockTtyOptions } from "./testing";
+export {
+	createMockTty,
+	snapshotStatic,
+	snapshotWidget,
+	withMockTty,
+} from "./testing";
 export type {
 	JsonNode,
 	JsonNodeType,

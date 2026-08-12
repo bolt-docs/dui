@@ -336,5 +336,40 @@ describe("input", () => {
 
 			expect(stdinSetRawMode).toHaveBeenCalledWith(false);
 		});
+
+		describe("password type", () => {
+			it("returns the real value while rendering bullets", async () => {
+				const spy = vi.spyOn(process.stdout, "write");
+				const promise = input("Secret:", { type: "password" });
+
+				typeChar("h");
+				typeChar("u");
+				typeChar("n");
+				typeChar("t");
+				press("enter");
+
+				await expect(promise).resolves.toBe("hunt");
+
+				const written = spy.mock.calls.map((c) => String(c[0])).join("");
+				// The secret never appears in the rendered output.
+				expect(written).not.toContain("hunt");
+				// Bullets are rendered instead.
+				expect(written).toContain("\u2022\u2022\u2022\u2022");
+			});
+
+			it("masks the default value too", async () => {
+				const spy = vi.spyOn(process.stdout, "write");
+				const promise = input("Secret:", {
+					type: "password",
+					default: "sekret",
+				});
+
+				press("enter");
+
+				await expect(promise).resolves.toBe("sekret");
+				const written = spy.mock.calls.map((c) => String(c[0])).join("");
+				expect(written).not.toContain("sekret");
+			});
+		});
 	});
 });

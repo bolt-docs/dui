@@ -1,0 +1,70 @@
+---
+title: Link
+sidebarPosition: 28
+badge: New
+description: Emisión de hyperlinks OSC 8 — links clickeables en logs y widgets con fallback elegante.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+# `link(url, text?)` — hyperlinks OSC 8
+
+Emite hyperlinks OSC 8 clickeables. DUI ya detecta el soporte de hyperlinks (ver `capabilities`); este módulo es el lado de emisión — envuelve el texto en la secuencia OSC 8 y cae a una forma legible `text (url)` en terminales que no soportan links clickeables, así nunca envías códigos de escape crudos a terminales tontas, log scrapers o salida no-TTY.
+
+```ts
+import { link, linkify } from '@bdocs/dui'
+
+console.log(link('https://example.com', 'Example docs'))
+// → ESC]8;;https://example.com␇Example docsESC]8;;␇   (cuando hay soporte)
+// → "Example docs (https://example.com)"               (fallback)
+
+console.log(linkify('See https://example.com for details'))
+// → "See <link>https://example.com</link> for details"
+```
+
+<TerminalPreview command="node link.js">
+{`\x1b[36mVisita \x1b[0m\x1b[36mhttps://example.com\x1b[0m\x1b[36m para la documentación\x1b[0m`}
+</TerminalPreview>
+
+## API
+
+### `link(url, text?, options?)`
+
+| Campo | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `url` | `string` | — | Destino del link (obligatorio) |
+| `text` | `string` | `url` | Etiqueta visible |
+| `options.fallback` | `"url" \| "both" \| "text"` | `"both"` | Renderizado cuando no hay soporte de hyperlinks |
+
+Modos de fallback:
+
+- `"url"` — renderiza la URL en lugar del texto
+- `"both"` — renderiza `text (url)`
+- `"text"` — renderiza solo el texto
+
+### `linkify(text, options?)`
+
+Envuelve cada URL `http(s)://…` encontrada en `text` (la URL es destino y etiqueta a la vez). En terminales sin soporte el texto queda plano y totalmente legible.
+
+### `hyperlink(url, text?, options?)`
+
+Alias de `link` con un nombre más explícito.
+
+### `supportsHyperlinks()`
+
+`true` cuando la terminal soporta OSC 8 (delega en `getCapabilities().hyperlinks`).
+
+## Uso con widgets
+
+- Líneas de log: `info(link('https://ci.example/run/1', 'Ver run'))`
+- Dentro de líneas de `box()` y links de `richtext()` — `richtext` ya enruta `[label](url)` a través de `link`.
+- Gating por capacidades: comprueba `supportsHyperlinks()` una vez y guarda los links para hosts que lo soporten.
+
+## Slots de tema
+
+Los links toman el color de texto del contexto circundante. Para links coloreados dentro de `richtext()`, usa el slot `richtext.link` (default `cyan`).
+
+## Notas
+
+- La secuencia OSC 8 se escribe en cualquier stream — usa `link()` para strings que van a `stdout`, y `linkify()` para mensajes de forma libre que ya puedan contener URLs.
+- Modo plain: `link()` devuelve igual la etiqueta; solo se descarta el escape de envoltura.

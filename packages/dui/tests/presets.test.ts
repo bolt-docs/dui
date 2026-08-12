@@ -18,6 +18,9 @@ const ALL_PRESETS: PresetName[] = [
 	"solarized",
 	"catppuccin",
 	"gruvbox",
+	"tokyonight",
+	"rose-pine",
+	"ayu",
 ];
 
 describe("presets registry", () => {
@@ -25,7 +28,7 @@ describe("presets registry", () => {
 		resetConfig();
 	});
 
-	it("exports exactly the 5 named palettes", () => {
+	it("exports exactly the 8 named palettes", () => {
 		expect(Object.keys(presets).sort()).toEqual([...ALL_PRESETS].sort());
 	});
 

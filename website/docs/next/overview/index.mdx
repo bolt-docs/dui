@@ -1,0 +1,116 @@
+---
+title: Overview
+sidebarPosition: 1
+description: Terminal UI utilities — boxes, colors, logging, lists, dividers, and more.
+---
+
+import { Terminal, Paintbrush, ListOrdered, Table, MessageSquare, Activity, Cog, Type, PanelTop, SquareDashed, SplitSquareHorizontal, Bot, TrendingUp, Play, Palette, Package, File, BarChart3, GitCompare, QrCode, Image as ImageIcon } from 'lucide-react'
+
+**DUI** — terminal UI toolkit for Node.js CLI apps. ANSI-aware, zero-dependency (just `string-width`), tree-shakeable.
+
+---
+
+## Quick Start
+
+```bash
+pnpm add @bdocs/dui
+```
+
+```ts
+import { configure, info, success, box, bullet } from '@bdocs/dui'
+
+configure({ prefix: 'mytool' })
+
+info('Starting build...')
+success('Build completed!')
+
+console.log(box(['Output ready at dist/'], { title: 'Result', style: 'round' }))
+console.log(bullet(['File A', 'File B', 'File C']))
+```
+
+---
+
+## modules
+
+<Cards cols={2}>
+  <Card title="Logger" icon={<MessageSquare />} href="/docs/next/api/logger">
+    info, warn, error, success, debug with configurable prefix
+  </Card>
+  <Card title="Box" icon={<PanelTop />} href="/docs/next/api/box">
+    Box builder with double, single, and round border styles
+  </Card>
+  <Card title="Lists" icon={<ListOrdered />} href="/docs/next/api/list">
+    Bullet points, numbered lists, and task checklists
+  </Card>
+  <Card title="Divider" icon={<SplitSquareHorizontal />} href="/docs/next/api/divider">
+    Horizontal line separators
+  </Card>
+  <Card title="Colors" icon={<Paintbrush />} href="/docs/next/api/color">
+    Color engine with hex, rgb, rgba, oklch support
+  </Card>
+  <Card title="Utils" icon={<Type />} href="/docs/next/api/utils">
+    ANSI-aware padding, centering, width utilities
+  </Card>
+  <Card title="Prompt" icon={<Activity />} href="/docs/next/api/prompt">
+    Interactive confirm prompts
+  </Card>
+  <Card title="Table" icon={<Table />} href="/docs/next/api/table">
+    Box-drawing character tables
+  </Card>
+  <Card title="Spinner" icon={<SquareDashed />} href="/docs/next/api/spinner">
+    Animated terminal spinners with braille frames
+  </Card>
+  <Card title="Progress" icon={<TrendingUp />} href="/docs/next/api/progress">
+    Animated progress bars with TTY and non-TTY modes
+  </Card>
+  <Card title="Animation" icon={<Play />} href="/docs/next/api/animation">
+    Keyframe animation engine for terminal
+  </Card>
+  <Card title="Theme" icon={<Palette />} href="/docs/next/api/theme">
+    Custom color themes for every DUI component
+  </Card>
+  <Card title="Steps" icon={<Cog />} href="/docs/next/api/steps">
+    Pipeline timeline display
+  </Card>
+  <Card title="AI Guide" icon={<Bot />} href="/docs/next/overview/llm">
+    Copy-paste prompt template for AI assistants
+  </Card>
+  <Card title="AI Agents & Skills" icon={<Bot />} href="/docs/next/overview/ai-agents">
+    Install DUI skill for Claude Code, Cursor, and more
+  </Card>
+</Cards>
+
+---
+
+## Showcase
+
+See all DUI features in action — a live, interactive carousel with 13 widget previews:
+
+<DuiShowcase />
+
+---
+
+## Official plugins
+
+Extend DUI with optional packages. Full guide: [Plugins](/docs/next/plugins).
+
+<Cards cols={2}>
+  <Card title="Markdown" icon={<File />} href="/docs/next/plugins/markdown">
+    Render markdown with colors, tables, and syntax-highlighted code
+  </Card>
+  <Card title="Chart" icon={<BarChart3 />} href="/docs/next/plugins/chart">
+    Bar, column, line, pie, and sparkline charts
+  </Card>
+  <Card title="Image" icon={<ImageIcon />} href="/docs/next/plugins/image">
+    PNG, JPG, and GIF in the terminal (ANSI + Kitty)
+  </Card>
+  <Card title="Diff" icon={<GitCompare />} href="/docs/next/plugins/diff">
+    Unified, side-by-side, and word-level diffs
+  </Card>
+  <Card title="QR Code" icon={<QrCode />} href="/docs/next/plugins/qrcode">
+    Scannable QR codes with colors, width cap, and labels
+  </Card>
+  <Card title="All plugins" icon={<Package />} href="/docs/next/plugins">
+    Plugin index and how to build your own
+  </Card>
+</Cards>

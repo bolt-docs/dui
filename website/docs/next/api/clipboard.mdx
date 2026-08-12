@@ -1,0 +1,56 @@
+---
+title: Clipboard
+sidebarPosition: 29
+badge: New
+description: Write to the system clipboard via OSC 52 from any terminal application.
+---
+
+# `copyToClipboard(text)` — clipboard via OSC 52
+
+Writes to the system clipboard using the OSC 52 terminal sequence (`ESC]52;c;<base64>␇`). Works on kitty, iTerm2, WezTerm, Windows Terminal, and modern xterm derivatives. Terminals that don't support it silently ignore the sequence, so the write is always safe to emit on a TTY — and on non-TTY output it's a clean no-op that returns `false`.
+
+```ts
+import { copyToClipboard } from '@bdocs/dui'
+
+if (copyToClipboard('pnpm add @bdocs/dui')) {
+  console.log('Copied to clipboard!')
+} else {
+  console.log('Clipboard unavailable (non-TTY or unsupported)')
+}
+```
+
+## API
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `copyToClipboard(text, options?)` | `boolean` | Writes the OSC 52 sequence; `true` when written to a TTY stream |
+| `copy(text, options?)` | `boolean` | Alias of `copyToClipboard` |
+| `clipboardSupported()` | `boolean` | `true` when stdout is a TTY (a write can be attempted) |
+
+### Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `stream` | `NodeJS.WriteStream` | `process.stdout` | Stream to write the sequence to |
+
+## Usage patterns
+
+```ts
+import { copyToClipboard, toast } from '@bdocs/dui'
+
+// Copy a command and confirm visually.
+if (copyToClipboard('pnpm deploy')) {
+  toast('Command copied', { type: 'success' })
+}
+
+// Combine with the yank pattern in interactive apps: after a prompt
+// resolves, offer the result on the clipboard.
+const token = await input('Paste token:', { type: 'password' })
+copyToClipboard(token)
+```
+
+## Notes
+
+- `true` means the sequence was *written*, not that the clipboard changed — unsupported terminals ignore it harmlessly.
+- Empty strings return `false`.
+- For OS-level clipboard access beyond terminal support (e.g. spawning `pbcopy`), pair with the [`notify`](/docs/next/plugins/notify) plugin's OS-action capture or a shell helper.

@@ -1143,6 +1143,50 @@ describe("multiselect", () => {
 
 			await expect(promise).resolves.toEqual(["a", "c"]);
 		});
+	});		describe("searchable", () => {
+		const choices = [
+			{ label: "apple", value: "apple", checked: true },
+			{ label: "banana", value: "banana" },
+			{ label: "cherry", value: "cherry" },
+			{ label: "blueberry", value: "blueberry", checked: true },
+		];
+
+		it("filters and toggles the filtered item with tab", async () => {
+			const promise = multiselect("Pick", { choices, searchable: true });
+
+			writeData("ban");
+			writeData("\t"); // tab toggles banana
+			writeData("\r");
+
+			await expect(promise).resolves.toEqual(["apple", "blueberry", "banana"]);
+		});
+
+		it("checked state maps through the filter", async () => {
+			const promise = multiselect("Pick", { choices, searchable: true });
+
+			writeData("bb"); // only blueberry matches two b's
+			writeData("\t"); // uncheck blueberry
+			writeData("\r");
+
+			await expect(promise).resolves.toEqual(["apple"]);
+		});
+
+		it("space types into the query while filtering", async () => {
+			const promise = multiselect("Pick", {
+				choices: [
+					{ label: "build app", value: "app" },
+					{ label: "build lib", value: "lib" },
+					{ label: "test", value: "test" },
+				],
+				searchable: true,
+			});
+
+			writeData("build "); // space-in-query filter
+			writeData("\t"); // tab toggles the top match (build app)
+			writeData("\r");
+
+			await expect(promise).resolves.toEqual(["app"]);
+		});
 	});
 });
 });

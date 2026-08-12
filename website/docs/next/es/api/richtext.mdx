@@ -1,0 +1,77 @@
+---
+title: Rich Text
+sidebarPosition: 31
+badge: New
+description: Renderizador de rich text inline — bold, italic, underline, chips de código, spans coloreados y links OSC 8 desde una mini sintaxis tipo markdown.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+# `richtext(input)` — rich text inline
+
+Convierte una mini sintaxis tipo markdown en texto de terminal con ANSI — reutilizable en cualquier lugar donde se renderice un string plano (salida del logger, líneas de box, secciones, toasts). Los links pasan por `link()`, así que degradan con elegancia en terminales sin soporte de hyperlinks.
+
+```ts
+import { richtext } from '@bdocs/dui'
+
+console.log(richtext('**Build passed** in `2.3s` — see [logs](https://ci.example/run/1)'))
+```
+
+<TerminalPreview command="node richtext.js">
+{`\x1b[1mBuild passed\x1b[0m in \x1b[38;2;150;200;255;48;2;40;44;52m2.3s\x1b[0m — see \x1b[36m\x1b]8;;https://ci.example/run/1\x07logs\x1b]8;;\x07\x1b[0m`}
+</TerminalPreview>
+
+## Sintaxis
+
+| Entrada | Renderiza como |
+| --- | --- |
+| `**bold**` | negrita |
+| `*italic*` | itálica |
+| `_underline_` | subrayado |
+| `~~strike~~` | tachado |
+| `` `code` `` | chip de código (fg + bg) |
+| `[label](url)` | hyperlink OSC 8 |
+| `{red:text}` | color de foreground |
+| `{#ff6600:text}` | color de foreground hex |
+| `\**` `\`` `\*` | carácter literal |
+
+Los estilos anidan: `**bold {red:y con color}**` funciona.
+
+## API
+
+| Función | Devuelve | Notas |
+| --- | --- | --- |
+| `richtext(input, options?)` | `string` | Texto renderizado con ANSI (texto plano en modo plain) |
+| `richtextToPlain(input)` | `string` | Quita todo el markup; los links pasan a `label (url)` |
+
+### Opciones
+
+| Campo | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `colors.bold` | `ColorStyle` | `theme.richtext.bold` | Estilo bold |
+| `colors.italic` | `ColorStyle` | `theme.richtext.italic` | Estilo itálica |
+| `colors.underline` | `ColorStyle` | `theme.richtext.underline` | Estilo subrayado |
+| `colors.strike` | `ColorStyle` | `theme.richtext.strike` | Estilo tachado |
+| `colors.code` | `string \| { fg, bg }` | `{ fg: '#96c8ff', bg: '#282c34' }` | Colores del chip de código |
+| `colors.link` | `ColorStyle` | `cyan` | Color de la etiqueta del link |
+
+## Slots de tema
+
+`richtext.bold`, `richtext.italic`, `richtext.underline`, `richtext.strike`, `richtext.code`, `richtext.link` — los defaults coinciden con la paleta de markdown para que el rich text se sienta nativo junto al plugin [`markdown`](/docs/next/es/plugins/markdown).
+
+## Uso con widgets
+
+```ts
+import { richtext, box, info } from '@bdocs/dui'
+
+info(richtext('**Desplegando** `v1.2.0` a {green:producción}…'))
+
+console.log(box([
+  richtext('Estado: {#22c55e:✓ sano} · [dashboards](https://grafana.example)'),
+], { title: 'Servicio' }))
+```
+
+## Notas
+
+- El modo plain quita el markup y devuelve texto legible — `**bold**` pasa a `bold`, los links conservan `label (url)`.
+- `richtextToPlain` es útil para indexado de búsqueda o log scrapers que necesiten la forma sin estilos.

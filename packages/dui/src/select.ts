@@ -13,6 +13,7 @@ import {
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
+import { filterFuzzy, highlightFuzzy } from "./fuzzy";
 import { applyClass } from "./style";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
@@ -34,6 +35,19 @@ export interface SelectOptions<T = string> {
 	 * for long lists where a single tick feels too granular.
 	 */
 	wheelSensitivity?: number;
+	/**
+	 * When `true`, typing filters the choices with fuzzy matching.
+	 * Matched characters are highlighted, Backspace edits the query,
+	 * and Escape clears it (a second Escape cancels). Off by default
+	 * to keep the legacy key contract.
+	 */
+	searchable?: boolean;
+	/**
+	 * Called once when the prompt is cancelled — Escape (with an empty
+	 * query) or Ctrl+C. Use it to restore terminal state or release
+	 * resources before the promise rejects / the process exits.
+	 */
+	onCancel?: () => void;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
@@ -54,6 +68,8 @@ export async function select<T = string>(
 		pageSize = 10,
 		colors: colorsOverride,
 		wheelSensitivity: wheelSensitivityOption,
+		searchable = false,
+		onCancel,
 	} = options;
 
 	if (!choices.length) {
@@ -71,6 +87,8 @@ export async function select<T = string>(
 		pageSize,
 		colorsOverride,
 		wheelSensitivity,
+		searchable,
+		onCancel,
 	);
 }
 
@@ -110,6 +128,8 @@ function interactiveSelect<T>(
 	pageSize: number,
 	colorsOverride: SelectOptions["colors"],
 	wheelSensitivity: number,
+	searchable: boolean,
+	onCancel: (() => void) | undefined,
 ): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -140,7 +160,9 @@ function interactiveSelect<T>(
 		enableMouse();
 		enableMouseMove();
 
-		const MESSAGE_HELP = "(Use arrow keys or click to select)";
+		const MESSAGE_HELP = searchable
+			? "(Type to filter, arrows to move, enter to select)"
+			: "(Use arrow keys or click to select)";
 
 		let cursor = 0;
 		let hoveredIndex: number | null = null;
@@ -150,24 +172,54 @@ function interactiveSelect<T>(
 		let done = false;
 		let linesRendered = 0;
 		let buf = "";
+		let query = "";
+		let filtered: number[] | null = null;
+
+		function totalCount(): number {
+			return filtered ? filtered.length : choices.length;
+		}
+
+		function itemAt(pos: number): { idx: number; choice: SelectChoice<T> } | undefined {
+			if (filtered) {
+				if (pos < 0 || pos >= filtered.length) return undefined;
+				const idx = filtered[pos];
+				return { idx, choice: choices[idx] };
+			}
+			if (pos < 0 || pos >= choices.length) return undefined;
+			return { idx: pos, choice: choices[pos] };
+		}
+
+		function resetFilter() {
+			filtered = null;
+			if (query) {
+				const hits = filterFuzzy(query, choices, (c) => c.label);
+				filtered = hits ? hits.map((h) => choices.indexOf(h.item)) : [];
+			}
+			cursor = 0;
+			offset = 0;
+			hoveredIndex = null;
+		}
 
 		function clampCursor(pos: number): number {
-			const total = choices.length;
+			const total = totalCount();
+			if (total === 0) return 0;
 			const p = ((pos % total) + total) % total;
-			if (!choices[p].disabled) return p;
+			const item = itemAt(p);
+			if (!item || !item.choice.disabled) return p;
 			const dir = pos > cursor ? 1 : -1;
 			let next = p;
 			for (let i = 0; i < total; i++) {
 				next = (((next + dir) % total) + total) % total;
-				if (!choices[next].disabled) return next;
+				const it = itemAt(next);
+				if (it && !it.choice.disabled) return next;
 			}
 			return cursor;
 		}
 
 		function render() {
 			if (done) return;
-			const effective = Math.min(pageSize, choices.length);
-			offset = Math.max(0, Math.min(offset, choices.length - effective));
+			const effective = Math.min(pageSize, totalCount());
+			offset = Math.max(0, Math.min(offset, totalCount() - effective));
 
 			for (const id of clickableAreaIds) {
 				unregisterClickableArea(id);
@@ -178,30 +230,52 @@ function interactiveSelect<T>(
 			}
 			hoverableAreaIds.clear();
 
-			const visible = choices.slice(offset, offset + effective);
+			const visible = filtered
+				? filtered.slice(offset, offset + effective).map((idx) => ({ idx, choice: choices[idx] }))
+				: choices
+						.slice(offset, offset + effective)
+						.map((choice, i) => ({ idx: offset + i, choice }));
 			const lines: string[] = [];
 
 			const msgLine = `${messageColor(`? ${message}`)} ${colors.dim(MESSAGE_HELP)}`;
 			lines.push(msgLine);
 
+			const filterLine = searchable
+				? `  ${colors.cyan("\u25b8")} ${query}`
+				: "";
+			if (filterLine) lines.push(filterLine);
+
 			const msgRowDelta = Math.floor(visibleLength(msgLine) / terminalWidth());
+			const filterRowCount = filterLine
+				? Math.max(1, Math.ceil(visibleLength(filterLine) / terminalWidth()))
+				: 0;
+			const listTop = 1 + msgRowDelta + filterRowCount;
 
 			for (let i = 0; i < visible.length; i++) {
-				const idx = offset + i;
-				const choice = choices[idx];
-				const isCursor = idx === cursor;
-				const isHovered = idx === hoveredIndex;
+				const pos = offset + i;
+				const { idx, choice } = visible[i];
+				const isCursor = pos === cursor;
+				const isHovered = pos === hoveredIndex;
 				const prefix = isCursor ? `${pointerColor(POINTER)} ` : "  ";
+				const highlighted = filtered && query;
 
 				let label: string;
 				if (choice.disabled) {
 					label = colors.dim(`${choice.label} (disabled)`);
 				} else if (isHovered) {
-					label = applyClass("hover", selectedColor(choice.label));
+					label = highlighted
+						? highlightFuzzy(query, choice.label, (ch) =>
+								applyClass("hover", selectedColor(ch)),
+						)
+						: applyClass("hover", selectedColor(choice.label));
 				} else if (isCursor) {
-					label = selectedColor(choice.label);
+					label = highlighted
+						? highlightFuzzy(query, choice.label, (ch) => selectedColor(ch))
+						: selectedColor(choice.label);
 				} else {
-					label = labelColor(choice.label);
+					label = highlighted
+						? highlightFuzzy(query, choice.label, (ch) => selectedColor(ch))
+						: labelColor(choice.label);
 				}
 
 				lines.push(`${prefix}${label}`);
@@ -212,11 +286,11 @@ function interactiveSelect<T>(
 					type: "select",
 					bounds: {
 						left: 0,
-						top: 1 + msgRowDelta + 1 + i,
+						top: listTop + 1 + i,
 						width: 999,
 						height: 1,
 					},
-					data: { choiceIndex: idx },
+					data: { choiceIndex: pos },
 				});
 				clickableAreaIds.add(areaId);
 
@@ -225,11 +299,11 @@ function interactiveSelect<T>(
 					type: "select",
 					bounds: {
 						left: 0,
-						top: 1 + msgRowDelta + 1 + i,
+						top: listTop + 1 + i,
 						width: 999,
 						height: 1,
 					},
-					data: { choiceIndex: idx },
+					data: { choiceIndex: pos },
 				});
 				hoverableAreaIds.add(`hover-${areaId}`);
 			}
@@ -257,7 +331,7 @@ function interactiveSelect<T>(
 
 		function finalize() {
 			cleanup();
-			const chosen = choices[cursor];
+			const chosen = itemAt(cursor)?.choice ?? choices[0];
 			const finalLine = `${messageColor(`? ${message}`)} ${selectedColor(chosen.label)}\n`;
 			if (linesRendered > 0) {
 				stdout.write(`\x1b[${linesRendered}A`);
@@ -312,6 +386,15 @@ function interactiveSelect<T>(
 					if (done) return;
 					if (buf !== "\x1b") return;
 					buf = "";
+					// First Escape clears an active search query instead of
+					// cancelling; a second Escape (now empty query) cancels.
+					if (searchable && query.length > 0) {
+						query = "";
+						resetFilter();
+						render();
+						return;
+					}
+					onCancel?.();
 					cleanup();
 					if (linesRendered > 0) {
 						stdout.write(`\x1b[${linesRendered}A`);
@@ -351,11 +434,8 @@ function interactiveSelect<T>(
 							clickedArea.data
 						) {
 							const actualIndex = clickedArea.data.choiceIndex as number;
-							if (
-								actualIndex >= 0 &&
-								actualIndex < choices.length &&
-								!choices[actualIndex].disabled
-							) {
+							const clicked = itemAt(actualIndex);
+							if (clicked && !clicked.choice.disabled) {
 								lastEnabledClickIndex = actualIndex;
 							}
 						}
@@ -418,12 +498,36 @@ function interactiveSelect<T>(
 				return;
 			}
 
+			// ── Searchable: feed printable characters into the query ──
+			if (searchable) {
+				const lastChar = buf[buf.length - 1];
+				if (lastChar === "\x7f" || lastChar === "\x08") {
+					buf = "";
+					if (query.length > 0) {
+						query = query.slice(0, -1);
+						resetFilter();
+						render();
+					}
+					return;
+				}
+				const printable = text.replace(/[\u0000-\u001f\u007f]/g, "");
+				if (printable) {
+					buf = "";
+					query += printable;
+					resetFilter();
+					render();
+					return;
+				}
+			}
+
 			const lastChar = buf[buf.length - 1];
 
 			if (lastChar === "\r" || lastChar === "\n") {
 				buf = "";
-				if (!choices[cursor].disabled) finalize();
+				const current = itemAt(cursor);
+				if (current && !current.choice.disabled) finalize();
 			} else if (lastChar === "\x03") {
+				onCancel?.();
 				cleanup();
 				stdout.write("\n");
 				process.exit(130);

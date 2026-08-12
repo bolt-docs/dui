@@ -1,0 +1,103 @@
+---
+title: Form
+sidebarPosition: 26
+badge: New
+description: Formularios de terminal multi-campo — texto, password y select con validación y envío único.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { form } from '@bdocs/dui'
+```
+
+Renderiza un formulario vertical compacto — campos de texto, password y select — navegable con ↑/↓ o Tab, con edición inline y validación por campo. Un Enter en el último campo resuelve con un objeto claveado por el `id` de cada campo.
+
+```ts
+const answers = await form({
+  title: 'Nuevo proyecto',
+  fields: [
+    { id: 'name', label: 'Nombre', type: 'text',
+      validate: (v) => v.trim() ? true : 'El nombre es obligatorio' },
+    { id: 'token', label: 'Token', type: 'password' },
+    { id: 'runtime', label: 'Runtime', type: 'select',
+      choices: [{ label: 'Node', value: 'node' },
+                { label: 'Bun', value: 'bun' }] },
+  ],
+})
+// → { name: 'mi-app', token: 's3cret', runtime: 'bun' }
+```
+
+<TerminalPreview command="node form.js">
+{`\x1b[33m? Nuevo proyecto\x1b[0m \x1b[90m(arrows/tab move, enter to submit, esc to cancel)\x1b[0m
+\x1b[36m◆\x1b[0m \x1b[1mNombre\x1b[0m: [ \x1b[37mmi-app\x1b[0m ]
+  \x1b[90mToken\x1b[0m: [ \x1b[90m••••••\x1b[0m ]
+  \x1b[90mRuntime\x1b[0m: [ \x1b[90mbun\x1b[0m ▾ ]`}
+</TerminalPreview>
+
+## Teclas
+
+| Tecla | Acción |
+| --- | --- |
+| `↑` / `↓` o `Tab` | Moverse entre campos |
+| `←` / `→` | Mover el cursor (texto) o ciclar el campo select |
+| `Enter` | Validar el campo y avanzar; en el último, enviar |
+| `Retroceso` | Borrar antes del cursor (texto) |
+| `Escape` | Cancelar (rechaza) |
+| `Ctrl+C` | Salir con código 130 |
+
+Los errores de validación aparecen bajo el campo activo en el color `form.error`, y el campo conserva el foco hasta validar.
+
+## Tipos de campo
+
+### `text` / `password`
+
+```ts
+{ id: 'token', label: 'Token', type: 'password',
+  placeholder: 'ghp_…',
+  validate: (v) => v.length >= 8 ? true : 'Mínimo 8 caracteres' }
+```
+
+- `default` precarga el valor; `placeholder` muestra una pista tenue mientras está vacío.
+- `validate` devuelve `true` o un mensaje de error; el campo no avanza hasta pasar.
+- Los campos password renderizan `•` y nunca hacen eco del valor real.
+
+### `select`
+
+```ts
+{ id: 'runtime', label: 'Runtime', type: 'select', required: true,
+  choices: [{ label: 'Node', value: 'node' },
+            { label: 'Bun', value: 'bun', disabled: true }] }
+```
+
+- `default` selecciona por valor; si no, gana la primera opción habilitada.
+- `required` rechaza la selección vacía.
+- Con el campo enfocado, `←`/`→` ciclan entre opciones habilitadas.
+
+## Fallback no-TTY
+
+Sin TTY (scripts, CI, pipes) cada campo cae a una pregunta numerada de `readline` — los select imprimen las opciones y leen un número — así la misma llamada funciona en scripts.
+
+## Slots de tema
+
+| Slot | Default | Notas |
+| --- | --- | --- |
+| `form.label` | `bold` | Etiquetas de campo |
+| `form.value` | `white` | Valor dentro de los corchetes |
+| `form.message` | `yellow` | Línea de título |
+| `form.error` | `red` | Errores de validación |
+| `form.pointer` | `cyan` | Puntero `◆` del campo activo |
+
+## Cancelación
+
+Pasa `onCancel` para ejecutar limpieza cuando el form se cancela (Escape
+o Ctrl+C) — restaurar estado de terminal, matar procesos hijos,
+liberar recursos:
+
+```ts
+const answers = await form({
+  title: 'Setup',
+  fields: [...],
+  onCancel: () => cleanupConnections(),
+})
+```

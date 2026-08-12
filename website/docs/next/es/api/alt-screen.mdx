@@ -1,0 +1,66 @@
+---
+title: Alt Screen
+sidebarPosition: 34
+badge: New
+description: Gestión del buffer de pantalla alternativo para TUIs a pantalla completa — entrar, salir y restauración garantizada.
+---
+
+# `withAltScreen(fn)` — TUIs a pantalla completa
+
+Las TUIs a pantalla completa (editores, pickers, pagers) cambian al buffer alternativo de la terminal, pintan sobre él y vuelven a salir para preservar el scrollback y el prompt del shell. Estos helpers envuelven las secuencias crudas (`ESC[?1049h` / `ESC[?1049l`) y garantizan el swap-back y la restauración del cursor incluso si el body lanza un error.
+
+```ts
+import { withAltScreen, RenderSurface } from '@bdocs/dui'
+
+await withAltScreen(async () => {
+  const surface = new RenderSurface()
+  // pinta contenido a pantalla completa...
+  await new Promise((resolve) => setTimeout(resolve, 3000))
+})
+// terminal restaurada al buffer normal
+```
+
+## API
+
+| Función | Devuelve | Notas |
+| --- | --- | --- |
+| `withAltScreen(fn, options?)` | `Promise<T>` | Ejecuta `fn` en el buffer alterno, siempre restaura después (incluso con error) |
+| `enterAltScreen(stream?)` | `boolean` | Cambia al buffer + oculta el cursor; `false` en no-TTY |
+| `exitAltScreen(stream?)` | `boolean` | Vuelve al buffer normal + muestra el cursor; `false` en no-TTY |
+| `hideCursor(stream?)` / `showCursor(stream?)` | — | `ESC[?25l` / `ESC[?25h` |
+| `saveCursor(stream?)` / `restoreCursor(stream?)` | — | `ESC[s` / `ESC[u` |
+
+Todas las funciones aceptan un `stream` opcional (default `process.stdout`).
+
+## Patrones de uso
+
+### Emparejado crudo con RenderSurface
+
+```ts
+import { enterAltScreen, exitAltScreen, RenderSurface } from '@bdocs/dui'
+
+if (enterAltScreen()) {
+  try {
+    const surface = new RenderSurface()
+    // … pinta …
+  } finally {
+    exitAltScreen()
+  }
+}
+```
+
+### Picker interactivo a pantalla completa
+
+```ts
+import { withAltScreen, palette } from '@bdocs/dui'
+
+const result = await withAltScreen(() =>
+  palette('Elige una acción', { items }),
+)
+```
+
+## Notas
+
+- `enterAltScreen`/`exitAltScreen` devuelven `false` (y no escriben nada) en streams no-TTY, así los wrappers seguros para CI pueden saltarse el cambio de pantalla.
+- El guardado/restauración de cursor usa `ESC[s`/`ESC[u` (SCO), más fiable que la secuencia DEC cruda a través de tmux/screen.
+- Combina con `statusbar` para una línea inferior persistente dentro del alt screen.

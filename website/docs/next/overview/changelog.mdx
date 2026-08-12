@@ -1,0 +1,61 @@
+---
+title: Changelog
+sidebarPosition: 5
+onThisPage: false
+description: What ships in DUI, release by release.
+---
+
+Scroll the timeline below to see what's new in the upcoming release and everything that shipped before it. Every item links to the docs page that covers the feature.
+
+<ChangelogTimeline>
+<ChangelogTimelineItem version="v0.7.0" tag="Next" date="next release">
+
+**🆕 New**
+
+- <Badge type="success">new</Badge> **Multi-field forms** — [`form()`](/docs/next/api/form) with text, password (masked) and select fields, per-field validation and one-shot submit.
+- <Badge type="success">new</Badge> **Command palette** — [`palette()`](/docs/next/api/palette) with fuzzy search, descriptions and shortcuts.
+- <Badge type="success">new</Badge> **Fuzzy search** — `fuzzyMatch` / `highlightFuzzy` / `filterFuzzy` engine plus `searchable` mode on [`select`](/docs/next/api/prompt), [`multiselect`](/docs/next/api/prompt) and [`tree`](/docs/next/api/prompt) with highlighted matches ([fuzzy](/docs/next/api/fuzzy)).
+- <Badge type="success">new</Badge> **OSC 8 hyperlinks** — [`link()`](/docs/next/api/link) and `linkify()` with graceful `text (url)` fallback.
+- <Badge type="success">new</Badge> **Clipboard** — [`copyToClipboard()`](/docs/next/api/clipboard) via OSC 52.
+- <Badge type="success">new</Badge> **Password input** — `input({ type: "password" })` masks the value with `•` bullets ([prompt](/docs/next/api/prompt)).
+- <Badge type="success">new</Badge> **ASCII banners** — [`banner()`](/docs/next/api/banner) with an embedded 5×5 block font.
+- <Badge type="success">new</Badge> **Inline rich text** — [`richtext()`](/docs/next/api/richtext) with bold/italic/underline/code/color/link syntax.
+- <Badge type="success">new</Badge> **Toast center** — [`toast()`](/docs/next/api/toast) with stacked, auto-dismissing in-terminal notifications.
+- <Badge type="success">new</Badge> **Status bar** — [`createStatusBar()`](/docs/next/api/statusbar) with left/center/right segments.
+- <Badge type="success">new</Badge> **Alternate screen** — [`withAltScreen()`](/docs/next/api/alt-screen) and cursor helpers for full-screen TUIs.
+- <Badge type="success">new</Badge> **Testing utilities** — mock-TTY streams and `snapshotWidget`/`snapshotStatic` for asserting widget renders ([`testing`](/docs/next/api/testing)).
+- <Badge type="success">new</Badge> **create-dui** — scaffold a CLI pre-wired with DUI via `npx create-dui` or the programmatic `scaffold()` ([`create-dui`](/docs/next/api/create-dui)).
+- <Badge type="success">new</Badge> **Live announcements** — `announce()` queues plain-text lines that screen readers detect ([accessibility](/docs/next/overview/accessibility)).
+
+**✨ Updated**
+
+- <Badge type="info">updated</Badge> **Logger v2** — severity levels with `LOG_LEVEL`/`BOLTDOCS_LOG_LEVEL` filtering, timestamps, plain-text file transport and JSON output via [`configureLogger()`](/docs/next/api/logger).
+- <Badge type="info">updated</Badge> **Lazy tree loading** — `tree` branches can now take `children: async () => [...]` with caching and a `…` loading indicator ([`tree`](/docs/next/api/prompt)).
+- <Badge type="info">updated</Badge> **Image protocols** — Sixel and iTerm2 inline rendering plus automatic tmux DCS passthrough in the image plugin ([plugin-image](/docs/next/plugins/image)).
+- <Badge type="info">updated</Badge> **Graceful cancellation** — `onCancel` hooks on `input`/`select`/`multiselect`/`tree`/`form`/`palette` for terminal-state cleanup.
+- <Badge type="info">updated</Badge> **Emoji/ZWJ widths** — grapheme-aware `splitGraphemes()`, `truncateByCells()` and wrapping that never split a `👨‍👩‍👧`-style sequence ([`utils`](/docs/next/api/utils)).
+- <Badge type="info">updated</Badge> **Theme presets** — tokyonight, rose-pine and ayu join the palette registry ([`presets`](/docs/next/api/presets)).
+
+</ChangelogTimelineItem>
+<ChangelogTimelineItem version="v0.6.0" date="current stable">
+
+- **Interactive prompts v2** — async plugin API with lifecycle observability, wheel scrolling with `wheelSensitivity`, drag-and-drop reordering, and the discriminated `MouseEvent` union ([`prompt`](/docs/next/api/prompt), [`plugin`](/docs/next/api/plugin)).
+- **Native widget set** — [`badge()`](/docs/next/api/badge), [`kbd()`](/docs/next/api/kbd), [`section()`](/docs/next/api/section), [`tabs()`](/docs/next/api/tabs), [`modal()`](/docs/next/api/modal) and [`grid()`](/docs/next/api/grid), plus `thick` / `ascii` / `dashed` / `dotted` border styles.
+- **Preset palettes** — five drop-in themes: dracula, nord, solarized, catppuccin and gruvbox ([`presets`](/docs/next/api/presets)).
+- **Accessibility layer** — every widget honors plain mode, with `NO_COLOR` / `TERM=dumb` / screen-reader detection and the shared `formatActionsPlain()` grammar ([accessibility](/docs/next/overview/accessibility)).
+- **Gradient presets + style system** — `gradientPresets.*` ramps and `defineClass()` / `applyClass()` named styles ([api overview](/docs/next/api)).
+- **Animation API** — pause/resume/seek, numeric keyframe channels, content templates, `direction` and `iterations` ([`animation`](/docs/next/api/animation)).
+- **CSS Color 4 syntax** — space-separated `rgb()` / `hsl()` / `oklch()`, hue units, `none` keywords and percentage alpha ([`color`](/docs/next/api/color)).
+- **Rendering infrastructure** — `RenderSurface`, output batching, pagination, JSON output and capability detection ([api overview](/docs/next/api)).
+- **Chart precision** — explicit `min` / `max` axes, negative data and real `pie()` progress scaling ([plugin-chart](/docs/next/plugins/chart)).
+- **Notify precision** — highest-priority `mergeBatch()` and a debounced, throttled queue ([plugin-notify](/docs/next/plugins/notify)).
+- **Plugin upgrades** — animated QR ([plugin-qrcode](/docs/next/plugins/qrcode)), Kitty graphics with optional `sharp` ([plugin-image](/docs/next/plugins/image)), diff move detection ([plugin-diff](/docs/next/plugins/diff)) and nested markdown tokenizer ([plugin-markdown](/docs/next/plugins/markdown)).
+
+</ChangelogTimelineItem>
+<ChangelogTimelineItem version="v0.5.0" date="previous release">
+
+- **Animation API** — 25 easing presets, `createEasing()`, `createSpring()`, `animateProgress()`, `createTimeline()` and configurable `fps` ([`animation`](/docs/next/api/animation)).
+- **Core widgets** — [`box()`](/docs/next/api/box), [`list()`](/docs/next/api/list), [`divider()`](/docs/next/api/divider), the [`theme()`](/docs/next/api/theme) system, `color`, `logger` and the interactive [`prompt()`](/docs/next/api/prompt) family.
+
+</ChangelogTimelineItem>
+</ChangelogTimeline>

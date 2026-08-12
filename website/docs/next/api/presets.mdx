@@ -1,0 +1,305 @@
+---
+title: "Presets"
+sidebarPosition: 15
+description: Curated theme palettes (dracula, nord, solarized, catppuccin, gruvbox) droppable into configure({ theme: presets.X }) for instant CLI theming.
+---
+
+# Theme presets
+
+Eight curated palettes ship in `@bdocs/dui` so a CLI can theme every
+widget &mdash; `badge`, `modal`, `tabs`, `box`, `section`, `spinner`,
+`progress`, `markdown`, `kbd` &mdash; with **one line** of code:
+
+```ts
+import { configure, presets } from "@bdocs/dui";
+configure({ theme: presets.dracula });
+```
+
+A preset is a `Partial<DuiTheme>` (see [`DuiTheme`](./theme)). Slots
+the preset doesn't set fall back to the built-in defaults, so each
+palette stays focused on the high-impact surfaces rather than
+spelling out every leaf.
+
+```ts
+import { presets, type PresetName } from "@bdocs/dui";
+
+const theme: PresetName = "catppuccin";
+configure({ theme: presets[theme] });
+```
+
+The `PresetName` union means misspelled palettes surface at compile
+time, so a typo like `presets.draclua` is caught by `tsc --noEmit`
+before reaching CI.
+
+## Available palettes
+
+1. [`dracula`](#dracula) &mdash; [draculatheme.com](https://draculatheme.com).
+2. [`nord`](#nord) &mdash; [nordtheme.com](https://www.nordtheme.com).
+3. [`solarized`](#solarized) &mdash; [ethanschoonover.com/solarized](http://ethanschoonover.com/solarized).
+4. [`catppuccin`](#catppuccin-mocha) &mdash; [catppuccin.com](https://catppuccin.com). Mocha variant.
+5. [`gruvbox`](#gruvbox) &mdash; [github.com/morhetz/gruvbox](https://github.com/morhetz/gruvbox). Dark.
+6. [`tokyonight`](#tokyo-night) &mdash; [github.com/folke/tokyonight.nvim](https://github.com/folke/tokyonight.nvim). Storm variant.
+7. [`rose-pine`](#rose-pine) &mdash; [rosepinetheme.com](https://rosepinetheme.com).
+8. [`ayu`](#ayu) &mdash; [github.com/ayu-theme/ayu-colors](https://github.com/ayu-theme/ayu-colors). Dark.
+
+The registry is exported as `Readonly<Record<PresetName, DuiThemePreset>>`
+and the underlying object is `Object.freeze`d so a caller's accidental
+mutation doesn't leak across consumers.
+
+## How cascade works
+
+The presets ride the same `configure({ theme })` pipeline as a
+hand-rolled `DuiTheme`. Three layers compose, in order of priority:
+
+1. **User overrides** &mdash; whatever you pass inline wins:
+   ```ts
+   configure({
+     theme: {
+       ...presets.dracula,
+       error: "#ff00ff", // lock this single slot
+     },
+   });
+   ```
+2. **Preset palette** &mdash; the value at `presets.X.<slot>`.
+3. **Built-in defaults** &mdash; the hardcoded `map[slot]` inside
+   `resolveColor` (`packages/dui/src/theme.ts`), applied last.
+
+Per-slot fallback also kicks in: if `box.title` isn't set on a preset
+but the global `title` IS, `box.title` reuses `title`.
+
+## Dracula
+
+Background `#282a36`, foreground `#f8f8f2`, accent `#bd93f9`
+(purple).
+
+| Slot | Hex | SGR bytes | Maps to |
+| --- | --- | --- | --- |
+| `accent` | `#bd93f9` | `189 / 147 / 249` | Tabs underline, modal border, box arrow |
+| `success` | `#50fa7b` | `80 / 250 / 123` | Badge.success bg, spinner.success fg |
+| `error` | `#ff5555` | `255 / 85 / 85` | Badge.error bg, spinner.fail fg |
+| `warning` | `#f1fa8c` | `241 / 250 / 140` | Badge.warning bg, spinner.warn fg |
+| `info` | `#8be9fd` | `139 / 233 / 253` | Badge.info bg, spinner.info fg |
+| `muted` | `#6272a4` | `98 / 114 / 164` | Comments, secondary text |
+| `box.border` | `#6272a4` | — | Outer frame |
+| `modal.border` | `#bd93f9` | — | Modal frame accent |
+
+## Nord
+
+Cool blues + frost palette. Polar night `#2e3440`, snow storm
+`#d8dee9`, frost blues `#5e81ac` / `#81a1c1` / `#88c0d0`.
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#5e81ac` | Box arrow, tabs underline |
+| `success` | `#a3be8c` | Badge.success bg, spinner.success |
+| `error` | `#bf616a` | Aurora red |
+| `warning` | `#ebcb8b` | Aurora yellow |
+| `info` | `#88c0d0` | Frost cyan |
+| `muted` | `#4c566a` | Comments |
+| `modal.border` | `#5e81ac` | Frost blue frame |
+
+## Solarized
+
+Ethan Schoonover's dark palette. Background `#002b36`, foreground
+`#839496`, accent `#6c71c6` (violet).
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#6c71c6` | Tabs underline, modal border |
+| `success` | `#859900` | Solar green |
+| `error` | `#dc322f` | Solar red |
+| `warning` | `#b58900` | Solar yellow |
+| `info` | `#268bd2` | Solar blue |
+| `muted` | `#586e75` | Base01 |
+| `markdown.heading1..6` | Semantic rainbow | Code-inline bg `#073642` |
+
+## Catppuccin Mocha
+
+Pastel-friendly palette from the Catppuccin org. Base `#1e1e2e`,
+text `#cdd6f4`, accent `#cba6f7` (mauve).
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#cba6f7` | Tabs underline, modal border, badge neutral |
+| `success` | `#a6e3a1` | Pastel green |
+| `error` | `#f38ba8` | Pastel red |
+| `warning` | `#f9e2af` | Pastel yellow |
+| `info` | `#89b4fa` | Pastel blue |
+| `muted` | `#6c7280` | Sub-text |
+| `markdown.heading1..6` | Pastel rainbow | Code-inline bg `#313244` |
+
+The registry ships Mocha as the default Catppuccin variant. To
+register a Frappé/Latte/Macchiato variant, append to
+`packages/dui/src/presets.ts` &mdash; see [Adding your own
+preset](#adding-your-own-preset).
+
+## Gruvbox
+
+Retro groove dark palette. Background `#282828`, foreground
+`#ebdbb2`, accent `#b16286` (purple).
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#b16286` | Tabs underline, modal border |
+| `success` | `#98971a` | Olive green |
+| `error` | `#cc241d` | Bright red |
+| `warning` | `#d79921` | Bright yellow |
+| `info` | `#458588` | Faded blue |
+| `muted` | `#928374` | Gray |
+| `markdown.heading1..6` | Warm rainbow | Code-inline bg `#3c3836` |
+
+## Tokyo Night
+
+Editor-focused palette (Storm variant). Background `#24283b`, foreground
+`#c0caf5`, accent `#bb9af7` (magenta).
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#bb9af7` | Tabs underline, modal border, box value |
+| `success` | `#9ece6a` | Green |
+| `error` | `#f7768e` | Red |
+| `warning` | `#e0af68` | Yellow |
+| `info` | `#7aa2f7` | Blue |
+| `muted` | `#565f89` | Comments |
+| `markdown.heading1..6` | Semantic rainbow | Code-inline bg `#24283b` |
+
+## Rose Pine
+
+Soothing, low-contrast palette. Base `#191724`, text `#e0def4`, accent
+`#c4a7e7` (iris).
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#c4a7e7` | Tabs underline, modal border |
+| `success` | `#31748f` | Pine |
+| `error` | `#eb6f92` | Love |
+| `warning` | `#f6c177` | Gold |
+| `info` | `#9ccfd8` | Foam |
+| `muted` | `#6e6a86` | Muted |
+| `markdown.heading1..6` | Rosé rainbow | Code-inline bg `#1f1d2e` |
+
+## Ayu
+
+Warm dark palette. Background `#0b0e14`, foreground `#bfbdb6`, accent
+`#d2a6ff` (purple).
+
+| Slot | Hex | Maps to |
+| --- | --- | --- |
+| `accent` | `#d2a6ff` | Tabs underline, modal border |
+| `success` | `#a6cc70` | Green |
+| `error` | `#ff3333` | Bright red |
+| `warning` | `#ffb454` | Yellow |
+| `info` | `#59c2ff` | Blue |
+| `muted` | `#5c6773` | Comment |
+| `markdown.heading1..6` | Warm rainbow | Code-inline bg `#151922` |
+
+## Cascade in widget output
+
+Once applied, every widget picks up the palette through
+`resolveColor`:
+
+```ts
+configure({ theme: presets.dracula });
+const out = badge({ label: "PASS", status: "success" });
+// out contains `\u001b[48;2;80;250;123m` (Dracula success bg)
+```
+
+The 24-bit RGB SGR opens with `\u001b[48;2;<r>;<g>;<b>m` so a
+consumer can grep for the preset's hex by inspecting the raw paint.
+
+## Force plain-text output
+
+`plain: true` is **orthogonal** to presets. Pass it alongside a
+palette to keep the diagnostic theme introspection working while
+collapsing every render path into the multi-line `prefix:` text
+fallback — useful for screen-reader users on Linux, CI log
+scrapers, or any host that lacks ANSI-capable rendering:
+
+```ts
+configure({ theme: presets.dracula, plain: true });
+```
+
+The Dracula palette is still resolved into the theme slot map (so
+`getConfig().theme` shows the intended palette), but every widget
+emits text-only output. See the full accessibility reference in
+[Accessibility](/docs/next/overview/accessibility) for the NO_COLOR /
+TERM=dumb / screen-reader heuristics.
+
+## Adding your own preset
+
+Append a new entry to `packages/dui/src/presets.ts`:
+
+```ts
+import type { DuiThemePreset } from "@bdocs/dui";
+
+const myPreset: DuiThemePreset = {
+  success: "#...your hex...",
+  error: "#...your hex...",
+  /* ... */
+};
+
+Object.assign(presets, { myPreset });
+// Or extend PresetName and the read-only Record literal up top so
+// the change is type-checked from both sides.
+```
+
+If the preset name is added in step 1 (`type PresetName = "..."`),
+the registry surfaces a compile error wherever a misspelled palette
+is referenced &mdash; so the prescription is usually:
+1. add `"myPreset"` to `PresetName`,
+2. add the palette const + entry in the `Readonly<Record>` literal.
+
+A new palette automatically rides the same `markRawTheme`,
+`resolveColor`, and `configure` pipeline. No separate registration
+step. Vitest cascade coverage in `tests/presets.test.ts` exercises
+both the registry shape and the per-palette widget paint.
+
+## Override a single slot
+
+Don't want to override *everything* the preset sets? Pick a slot:
+
+```ts
+// override the success color *only* while keeping the rest of Gruvbox
+configure({
+  theme: {
+    ...presets.gruvbox,
+    success: "#b4dc54",
+  },
+});
+```
+
+Or via the per-call `colors:` argument on the widget itself:
+
+```ts
+badge({ label: "DRAFT", status: "neutral", colors: { bg: "#bd93f9" } });
+```
+
+## Run on a single widget type
+
+If only a subset of widgets should follow the preset (e.g. a single
+modal dialog inside an otherwise-default CLI), scope the theme
+pass through `box({ colors })`:
+
+```ts
+modal({
+  title: "Confirm",
+  content: "Are you sure?",
+  buttons: [
+    { label: "Cancel" },
+    { label: "Delete", primary: true },
+  ],
+  colors: {
+    border: presets.dracula.accent as string,
+    buttonPrimary: {
+      fg: "#f8f8f2",
+      bg: presets.dracula.accent as string,
+    } as never,
+  },
+});
+```
+
+## Files
+
+- `packages/dui/src/presets.ts` &mdash; registry + per-palette constants.
+- `packages/dui/tests/presets.test.ts` &mdash; cascade coverage.
+- `examples/20-presets/index.ts` &mdash; side-by-side demo of all five palettes against the same widget composition.

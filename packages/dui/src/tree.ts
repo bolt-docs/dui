@@ -13,6 +13,7 @@ import {
 	unregisterClickableArea,
 	unregisterHoverableArea,
 } from "./mouse";
+import { filterFuzzy, highlightFuzzy } from "./fuzzy";
 import { applyClass } from "./style";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
@@ -38,8 +39,22 @@ export interface TreeNode<T = string> {
 	/**
 	 * Child nodes. If present and non-empty, this node is treated as a
 	 * branch (collapsible/expandable). Omit or set to empty for leaves.
+	 *
+	 * To load children lazily, pass a **function** returning a promise
+	 * of nodes: the first time the branch is expanded the loader runs
+	 * once (the result is cached), the row shows a `…` spinner while it
+	 * loads, and subsequent expand/collapse toggles are instant.
+	 *
+	 * ```ts
+	 * const fs = await tree("Pick a file", {
+	 *   tree: [{
+	 *     label: "src",
+	 *     children: async () => (await listDir("src")).map(...),
+	 *   }],
+	 * })
+	 * ```
 	 */
-	children?: TreeNode<T>[];
+	children?: TreeNode<T>[] | (() => Promise<TreeNode<T>[]>);
 }
 
 /**
@@ -61,6 +76,20 @@ export interface TreeOptions<T = string> {
 	 * Fractional values are floored; use integer values only.
 	 */
 	wheelSensitivity?: number;
+	/**
+	 * When `true`, typing filters the visible nodes with fuzzy
+	 * matching against their labels. Non-matching subtrees collapse
+	 * out of view; matched nodes keep their original depth indent.
+	 * Backspace edits the query and Escape clears it (a second
+	 * Escape cancels).
+	 */
+	searchable?: boolean;
+	/**
+	 * Called once when the prompt is cancelled — Escape (with an empty
+	 * query) or Ctrl+C. Use it to restore terminal state or release
+	 * resources before the promise rejects / the process exits.
+	 */
+	onCancel?: () => void;
 	colors?: {
 		pointer?: ColorStyle;
 		selected?: ColorStyle;
@@ -85,7 +114,30 @@ interface FlatItem<T> {
 	node: TreeNode<T>;
 }
 
-const MESSAGE_HELP = "(Use arrow keys, space to toggle, or click)";
+/** A branch when it has array children or a lazy loader. */
+function isBranchNode<T>(node: TreeNode<T>): boolean {
+	if (typeof node.children === "function") return true;
+	return !!node.children?.length;
+}
+
+/**
+ * Resolve a node's children — for lazy nodes this returns the cached
+ * result (or `[]` while the loader is still in flight).
+ */
+function getChildren<T>(
+	node: TreeNode<T>,
+	cache: Map<TreeNode<T>, TreeNode<T>[]>,
+): TreeNode<T>[] {
+	if (typeof node.children === "function") {
+		return cache.get(node) ?? [];
+	}
+	return node.children ?? [];
+}
+
+const MESSAGE_HELP =
+	"(Use arrow keys, space to toggle, or click)";
+const MESSAGE_HELP_SEARCH =
+	"(Type to filter, arrows to move, enter to select)";
 
 /**
  * Interactive tree navigation prompt.
@@ -127,6 +179,8 @@ export async function tree<T = string>(
 		initialExpanded = false,
 		colors: colorsOverride,
 		wheelSensitivity: wheelSensitivityOption,
+		searchable = false,
+		onCancel,
 	} = options;
 
 	if (!treeData.length) {
@@ -145,17 +199,20 @@ export async function tree<T = string>(
 		initialExpanded,
 		colorsOverride,
 		wheelSensitivity,
+		searchable,
+		onCancel,
 	);
 }
 
 function getFlat<T>(
 	nodes: TreeNode<T>[],
 	expanded: Set<TreeNode<T>>,
+	lazyCache: Map<TreeNode<T>, TreeNode<T>[]>,
 	depth = 0,
 ): FlatItem<T>[] {
 	const result: FlatItem<T>[] = [];
 	for (const node of nodes) {
-		const isBranch = !!node.children?.length;
+		const isBranch = isBranchNode(node);
 		const exp = expanded.has(node);
 		result.push({
 			label: node.label,
@@ -167,7 +224,7 @@ function getFlat<T>(
 			node,
 		});
 		if (isBranch && exp) {
-			result.push(...getFlat(node.children!, expanded, depth + 1));
+			result.push(...getFlat(getChildren(node, lazyCache), expanded, lazyCache, depth + 1));
 		}
 	}
 	return result;
@@ -179,12 +236,14 @@ function initExpanded<T>(
 	initialExpanded: boolean,
 ) {
 	for (const node of nodes) {
-		if (node.children?.length) {
-			const expand =
-				initialExpanded ||
-				(node.expanded === undefined ? false : node.expanded);
-			if (expand) expanded.add(node);
-			initExpanded(node.children, expanded, initialExpanded);
+		if (!isBranchNode(node)) continue;
+		const expand =
+			initialExpanded ||
+			(node.expanded === undefined ? false : node.expanded);
+		if (expand) expanded.add(node);
+		// Lazy nodes have no static children to walk eagerly.
+		if (typeof node.children !== "function") {
+			initExpanded(node.children ?? [], expanded, initialExpanded);
 		}
 	}
 }
@@ -194,7 +253,9 @@ function getAllLeaves<T>(
 ): { label: string; value?: T; disabled?: boolean }[] {
 	const result: { label: string; value?: T; disabled?: boolean }[] = [];
 	for (const node of nodes) {
-		if (node.children?.length) {
+		// Lazy branches can't be walked synchronously — in the non-TTY
+		// fallback they surface as plain entries (their `value`, if any).
+		if (Array.isArray(node.children) && node.children.length) {
 			result.push(...getAllLeaves(node.children));
 		} else {
 			result.push({
@@ -245,6 +306,8 @@ function interactiveTree<T>(
 	initialExpanded: boolean,
 	colorsOverride: TreeOptions["colors"],
 	wheelSensitivity: number,
+	searchable: boolean,
+	onCancel: (() => void) | undefined,
 ): Promise<T | undefined> {
 	return new Promise<T | undefined>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -283,6 +346,21 @@ function interactiveTree<T>(
 		const expanded = new Set<TreeNode<T>>();
 		initExpanded(treeData, expanded, initialExpanded);
 
+		// Lazy-loading state: resolved children per node (cached after the
+		// first load) and the set of nodes whose loader is in flight.
+		const lazyCache = new Map<TreeNode<T>, TreeNode<T>[]>();
+		const loadingNodes = new Set<TreeNode<T>>();
+
+		// Start loading any lazy branch that was initially expanded (via
+		// `initialExpanded` or an explicit `expanded: true` on the node).
+		// Deferred to a microtask so the setup below (flat, render, …)
+		// completes before the loader's first synchronous render.
+		for (const node of expanded) {
+			if (typeof node.children === "function") {
+				Promise.resolve().then(() => void loadNode(node));
+			}
+		}
+
 		const clickableAreaIds = new Set<string>();
 		const hoverableAreaIds = new Set<string>();
 
@@ -293,9 +371,69 @@ function interactiveTree<T>(
 		let done = false;
 		let linesRendered = 0;
 		let buf = "";
+		let query = "";
+		let filteredPositions: number[] | null = null;
 
 		function getCurrentFlat(): FlatItem<T>[] {
-			return getFlat(treeData, expanded);
+			return getFlat(treeData, expanded, lazyCache);
+		}
+
+		async function loadNode(node: TreeNode<T>) {
+			if (lazyCache.has(node) || loadingNodes.has(node)) return;
+			const loader = node.children;
+			if (typeof loader !== "function") return;
+			loadingNodes.add(node);
+			render();
+			try {
+				const loaded = await loader();
+				lazyCache.set(node, loaded ?? []);
+			} finally {
+				loadingNodes.delete(node);
+				if (!done) {
+					rebuildFlat();
+					render();
+				}
+			}
+		}
+
+		function expandNode(item: FlatItem<T>) {
+			expanded.add(item.node);
+			rebuildFlat();
+			render();
+			// Kick off the lazy loader (if any) after the row is drawn so
+			// the `…` indicator shows while children stream in.
+			if (typeof item.node.children === "function") {
+				void loadNode(item.node);
+			}
+		}
+
+		function collapseNode(item: FlatItem<T>) {
+			expanded.delete(item.node);
+			rebuildFlat();
+			render();
+		}
+
+		function totalCount(): number {
+			return filteredPositions ? filteredPositions.length : flat.length;
+		}
+
+		function itemAt(pos: number): FlatItem<T> | undefined {
+			if (filteredPositions) {
+				if (pos < 0 || pos >= filteredPositions.length) return undefined;
+				return flat[filteredPositions[pos]];
+			}
+			return flat[pos];
+		}
+
+		function resetFilter() {
+			filteredPositions = null;
+			if (query) {
+				const hits = filterFuzzy(query, flat, (f) => f.label);
+				filteredPositions = hits ? hits.map((h) => flat.indexOf(h.item)) : [];
+			}
+			cursor = 0;
+			offset = 0;
+			hoveredIndex = null;
 		}
 
 		function rebuildFlat(fromNode?: TreeNode<T>) {
@@ -304,18 +442,19 @@ function interactiveTree<T>(
 				const idx = flat.findIndex((f) => f.node === fromNode);
 				if (idx >= 0) {
 					cursor = idx;
-					return;
+				} else if (cursor >= flat.length && flat.length > 0) {
+					cursor = flat.length - 1;
 				}
-			}
-			if (cursor >= flat.length && flat.length > 0) {
+			} else if (cursor >= flat.length && flat.length > 0) {
 				cursor = flat.length - 1;
 			}
+			resetFilter();
 		}
 
 		function render() {
 			if (done) return;
-			const effective = Math.min(pageSize, flat.length);
-			offset = Math.max(0, Math.min(offset, flat.length - effective));
+			const effective = Math.min(pageSize, totalCount());
+			offset = Math.max(0, Math.min(offset, totalCount() - effective));
 
 			for (const id of clickableAreaIds) {
 				unregisterClickableArea(id);
@@ -326,51 +465,75 @@ function interactiveTree<T>(
 			}
 			hoverableAreaIds.clear();
 
-			const visible = flat.slice(offset, offset + effective);
+			const visible = filteredPositions
+				? filteredPositions.slice(offset, offset + effective).map((pos) => ({ pos, item: flat[pos] }))
+				: flat.slice(offset, offset + effective).map((item, i) => ({ pos: offset + i, item }));
 			const lines: string[] = [];
 
-			const msgLine = `${messageColor(`? ${message}`)} ${colors.dim(MESSAGE_HELP)}`;
+			const msgLine = `${messageColor(`? ${message}`)} ${colors.dim(
+				searchable ? MESSAGE_HELP_SEARCH : MESSAGE_HELP,
+			)}`;
 			lines.push(msgLine);
 
+			const filterLine = searchable
+				? `  ${colors.cyan("\u25b8")} ${query}`
+				: "";
+			if (filterLine) lines.push(filterLine);
+
 			const msgRowDelta = Math.floor(visibleLength(msgLine) / terminalWidth());
+			const filterRowCount = filterLine
+				? Math.max(1, Math.ceil(visibleLength(filterLine) / terminalWidth()))
+				: 0;
+			const listTop = 1 + msgRowDelta + filterRowCount;
 
 			for (let i = 0; i < visible.length; i++) {
-				const item = visible[i];
-				const idx = i + offset;
-				const isCursor = idx === cursor;
-				const isHovered = idx === hoveredIndex;
+				const { pos, item } = visible[i];
+				const isCursor = pos === cursor;
+				const isHovered = pos === hoveredIndex;
 				const indent = "  ".repeat(item.depth);
 				const pointer = isCursor ? `${pointerColor(POINTER)} ` : "  ";
 
 				let indicator: string;
 				if (item.isBranch) {
-					indicator = item.expanded
-						? `${branchColor(EXPANDED)} `
-						: `${branchColor(COLLAPSED)} `;
+					const isLoading = item.expanded && loadingNodes.has(item.node);
+					indicator = isLoading
+						? `${colors.dim("…")} `
+						: item.expanded
+							? `${branchColor(EXPANDED)} `
+							: `${branchColor(COLLAPSED)} `;
 				} else {
 					indicator = "  ";
 				}
 
+				const highlighted = filteredPositions && query;
 				let label: string;
 				if (item.disabled) {
 					label = colors.dim(`${indicator}${item.label} (disabled)`);
 				} else if (isHovered) {
-					label = `${indicator}${applyClass("hover", selectedColor(item.label))}`;
+					label = highlighted
+						? `${indicator}${highlightFuzzy(query, item.label, (ch) =>
+								applyClass("hover", selectedColor(ch)),
+							)}`
+						: `${indicator}${applyClass("hover", selectedColor(item.label))}`;
 				} else if (isCursor) {
-					label = `${indicator}${selectedColor(item.label)}`;
+					label = highlighted
+						? `${indicator}${highlightFuzzy(query, item.label, (ch) => selectedColor(ch))}`
+						: `${indicator}${selectedColor(item.label)}`;
 				} else {
-					label = `${indicator}${labelColor(item.label)}`;
+					label = highlighted
+						? `${indicator}${highlightFuzzy(query, item.label, (ch) => selectedColor(ch))}`
+						: `${indicator}${labelColor(item.label)}`;
 				}
 
 				lines.push(`${indent}${pointer}${label}`);
 
 				const areaId = `tree-${i}`;
-				const row = 1 + msgRowDelta + 1 + i;
+				const row = listTop + 1 + i;
 				registerClickableArea({
 					id: areaId,
 					type: "tree",
 					bounds: { left: 0, top: row, width: 999, height: 1 },
-					data: { flatIndex: idx },
+					data: { flatIndex: pos },
 				});
 				clickableAreaIds.add(areaId);
 
@@ -378,7 +541,7 @@ function interactiveTree<T>(
 					id: `hover-${areaId}`,
 					type: "tree",
 					bounds: { left: 0, top: row, width: 999, height: 1 },
-					data: { flatIndex: idx },
+					data: { flatIndex: pos },
 				});
 				hoverableAreaIds.add(`hover-${areaId}`);
 			}
@@ -406,7 +569,7 @@ function interactiveTree<T>(
 
 		function finalize() {
 			cleanup();
-			const item = flat[cursor];
+			const item = itemAt(cursor) ?? flat[0];
 			const finalLine = `${messageColor(`? ${message}`)} ${selectedColor(item.label)}\n`;
 			if (linesRendered > 0) {
 				stdout.write(`\x1b[${linesRendered}A`);
@@ -447,7 +610,7 @@ function interactiveTree<T>(
 			if (buf.includes("\x1b[B")) {
 				buf = "";
 				hoveredIndex = null;
-				if (cursor < flat.length - 1) {
+				if (cursor < totalCount() - 1) {
 					cursor++;
 					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 				}
@@ -456,20 +619,18 @@ function interactiveTree<T>(
 			}
 			if (buf.includes("\x1b[C")) {
 				buf = "";
-				const item = flat[cursor];
+				const item = itemAt(cursor);
 				if (item && item.isBranch && !item.disabled && !item.expanded) {
-					expanded.add(item.node);
-					rebuildFlat();
+					expandNode(item);
 				}
 				render();
 				return;
 			}
 			if (buf.includes("\x1b[D")) {
 				buf = "";
-				const item = flat[cursor];
+				const item = itemAt(cursor);
 				if (item && item.isBranch && !item.disabled && item.expanded) {
-					expanded.delete(item.node);
-					rebuildFlat(item.node);
+					collapseNode(item);
 				} else if (item && item.depth > 0) {
 					let ancestor: FlatItem<T> | undefined;
 					for (let i = cursor - 1; i >= 0; i--) {
@@ -501,6 +662,14 @@ function interactiveTree<T>(
 					if (done) return;
 					if (buf !== "\x1b") return;
 					buf = "";
+					// First Escape clears an active search query.
+					if (searchable && query.length > 0) {
+						query = "";
+						resetFilter();
+						render();
+						return;
+					}
+					onCancel?.();
 					cleanup();
 					if (linesRendered > 0) {
 						stdout.write(`\x1b[${linesRendered}A`);
@@ -563,7 +732,7 @@ function interactiveTree<T>(
 							cursor--;
 							if (cursor < offset) offset = cursor;
 						} else {
-							if (cursor >= flat.length - 1) break;
+							if (cursor >= totalCount() - 1) break;
 							cursor++;
 							if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 						}
@@ -579,15 +748,13 @@ function interactiveTree<T>(
 					if (!clickedArea || clickedArea.type !== "tree" || !clickedArea.data)
 						continue;
 					const flatIndex = clickedArea.data.flatIndex as number;
-					if (flatIndex < 0 || flatIndex >= flat.length) continue;
-					const item = flat[flatIndex];
-					if (item.disabled) continue;
+					if (flatIndex < 0 || flatIndex >= totalCount()) continue;
+					const item = itemAt(flatIndex);
+					if (!item || item.disabled) continue;
 					cursor = flatIndex;
 					if (item.isBranch) {
-						if (item.expanded) expanded.delete(item.node);
-						else expanded.add(item.node);
-						rebuildFlat();
-						render();
+						if (item.expanded) collapseNode(item);
+						else expandNode(item);
 					} else {
 						lastLeafClicked = flatIndex;
 					}
@@ -603,35 +770,48 @@ function interactiveTree<T>(
 				return;
 			}
 
+			// ── Searchable: feed printable characters into the query ──
+			if (searchable) {
+				const lastChar = buf[buf.length - 1];
+				if (lastChar === "\x7f" || lastChar === "\x08") {
+					buf = "";
+					if (query.length > 0) {
+						query = query.slice(0, -1);
+						resetFilter();
+						render();
+					}
+					return;
+				}
+				const printable = text.replace(/[\u0000-\u001f\u007f]/g, "");
+				if (printable) {
+					buf = "";
+					query += printable;
+					resetFilter();
+					render();
+					return;
+				}
+			}
+
 			const lastChar = buf[buf.length - 1];
 
 			if (lastChar === " ") {
 				buf = "";
-				const item = flat[cursor];
+				const item = itemAt(cursor);
 				if (item && item.isBranch && !item.disabled) {
-					if (item.expanded) {
-						expanded.delete(item.node);
-					} else {
-						expanded.add(item.node);
-					}
-					rebuildFlat();
-					render();
+					if (item.expanded) collapseNode(item);
+					else expandNode(item);
 				}
 			} else if (lastChar === "\r" || lastChar === "\n") {
 				buf = "";
-				const item = flat[cursor];
+				const item = itemAt(cursor);
 				if (item && !item.isBranch && !item.disabled) {
 					finalize();
 				} else if (item && item.isBranch && !item.disabled) {
-					if (item.expanded) {
-						expanded.delete(item.node);
-					} else {
-						expanded.add(item.node);
-					}
-					rebuildFlat();
-					render();
+					if (item.expanded) collapseNode(item);
+					else expandNode(item);
 				}
 			} else if (lastChar === "\x03") {
+				onCancel?.();
 				cleanup();
 				stdout.write("\n");
 				// Standard Unix convention: 128 + SIGINT(2) = 130.

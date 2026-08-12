@@ -29,7 +29,10 @@ export type PresetName =
 	| "nord"
 	| "solarized"
 	| "catppuccin"
-	| "gruvbox";
+	| "gruvbox"
+	| "tokyonight"
+	| "rose-pine"
+	| "ayu";
 
 /**
  * A preset is `Partial<DuiTheme>` — every property is optional so
@@ -413,6 +416,233 @@ const gruvbox: DuiThemePreset = {
 	},
 };
 
+// ---------------------------------------------------------------------------
+// Tokyo Night (Storm) — https://github.com/folke/tokyonight.nvim. Base
+// #1a1b26/#24283b, fg #c0caf5, comment #565f89. Accents: red #f7768e,
+// green #9ece6a, yellow #e0af68, blue #7aa2f7, magenta #bb9af7, cyan
+// #7dcfff, orange #ff9e64.
+// ---------------------------------------------------------------------------
+const tokyonight: DuiThemePreset = {
+	success: "#9ece6a",
+	error: "#f7768e",
+	warning: "#e0af68",
+	info: "#7aa2f7",
+	muted: "#565f89",
+	accent: "#bb9af7",
+
+	box: {
+		border: "#565f89",
+		title: "bold",
+		arrow: "#9ece6a",
+		url: "#7dcfff",
+		hint: "#565f89",
+		label: "#c0caf5",
+		value: "#bb9af7",
+	},
+
+	spinner: {
+		frame: "#7dcfff",
+		success: "#9ece6a",
+		fail: "#f7768e",
+		warn: "#e0af68",
+		info: "#7aa2f7",
+	},
+
+	progress: { bar: "#7aa2f7" },
+
+	modal: {
+		border: "#bb9af7",
+		title: "bold",
+		buttonPrimary: { fg: "#1a1b26", bg: "#bb9af7" },
+		buttonSecondary: "#565f89",
+	},
+
+	tabs: {
+		active: { fg: "#bb9af7", bg: "#24283b" },
+		inactive: "#565f89",
+		border: "#565f89",
+	},
+
+	badge: {
+		info: { fg: "#1a1b26", bg: "#7aa2f7" },
+		success: { fg: "#1a1b26", bg: "#9ece6a" },
+		warning: { fg: "#1a1b26", bg: "#e0af68" },
+		error: { fg: "#1a1b26", bg: "#f7768e" },
+		neutral: { fg: "#c0caf5", bg: "#565f89" },
+	},
+
+	kbd: { text: "#c0caf5", border: "#565f89" },
+
+	section: { title: "bold", line: "#565f89" },
+
+	markdown: {
+		heading1: "#f7768e",
+		heading2: "#ff9e64",
+		heading3: "#e0af68",
+		heading4: "#9ece6a",
+		heading5: "#7aa2f7",
+		heading6: "#bb9af7",
+		codeBorder: "#414868",
+		codeLang: "#565f89",
+		codeInline: { fg: "#7dcfff", bg: "#24283b" },
+		linkText: "#7dcfff",
+		linkUrl: "#565f89",
+		quoteBar: "#bb9af7",
+		quoteText: "#565f89",
+	},
+};
+
+// ---------------------------------------------------------------------------
+// Rosé Pine — https://rosepinetheme.com. Base #191724, surface
+// #1f1d2e, muted #6e6a86, subtle #908caa, text #e0def4, love #eb6f92,
+// gold #f6c177, rose #ebbcba, pine #31748f, foam #9ccfd8, iris
+// #c4a7e7, highlight #403d52.
+// ---------------------------------------------------------------------------
+const rosePine: DuiThemePreset = {
+	success: "#31748f",
+	error: "#eb6f92",
+	warning: "#f6c177",
+	info: "#9ccfd8",
+	muted: "#6e6a86",
+	accent: "#c4a7e7",
+
+	box: {
+		border: "#6e6a86",
+		title: "bold",
+		arrow: "#9ccfd8",
+		url: "#9ccfd8",
+		hint: "#6e6a86",
+		label: "#e0def4",
+		value: "#c4a7e7",
+	},
+
+	spinner: {
+		frame: "#c4a7e7",
+		success: "#31748f",
+		fail: "#eb6f92",
+		warn: "#f6c177",
+		info: "#9ccfd8",
+	},
+
+	progress: { bar: "#c4a7e7" },
+
+	modal: {
+		border: "#c4a7e7",
+		title: "bold",
+		buttonPrimary: { fg: "#191724", bg: "#c4a7e7" },
+		buttonSecondary: "#6e6a86",
+	},
+
+	tabs: {
+		active: { fg: "#c4a7e7", bg: "#1f1d2e" },
+		inactive: "#6e6a86",
+		border: "#6e6a86",
+	},
+
+	badge: {
+		info: { fg: "#191724", bg: "#9ccfd8" },
+		success: { fg: "#e0def4", bg: "#31748f" },
+		warning: { fg: "#191724", bg: "#f6c177" },
+		error: { fg: "#191724", bg: "#eb6f92" },
+		neutral: { fg: "#e0def4", bg: "#6e6a86" },
+	},
+
+	kbd: { text: "#e0def4", border: "#6e6a86" },
+
+	section: { title: "bold", line: "#6e6a86" },
+
+	markdown: {
+		heading1: "#eb6f92",
+		heading2: "#f6c177",
+		heading3: "#ebbcba",
+		heading4: "#31748f",
+		heading5: "#9ccfd8",
+		heading6: "#c4a7e7",
+		codeBorder: "#403d52",
+		codeLang: "#908caa",
+		codeInline: { fg: "#9ccfd8", bg: "#1f1d2e" },
+		linkText: "#9ccfd8",
+		linkUrl: "#908caa",
+		quoteBar: "#c4a7e7",
+		quoteText: "#908caa",
+	},
+};
+
+// ---------------------------------------------------------------------------
+// Ayu (dark) — https://github.com/ayu-theme/ayu-colors. Base #0b0e14,
+// fg #bfbdb6, comment #5c6773, red #ff3333, orange #f29718, yellow
+// #ffb454, green #a6cc70, cyan #95e6cb, blue #59c2ff, purple #d2a6ff.
+// ---------------------------------------------------------------------------
+const ayu: DuiThemePreset = {
+	success: "#a6cc70",
+	error: "#ff3333",
+	warning: "#ffb454",
+	info: "#59c2ff",
+	muted: "#5c6773",
+	accent: "#d2a6ff",
+
+	box: {
+		border: "#5c6773",
+		title: "bold",
+		arrow: "#a6cc70",
+		url: "#95e6cb",
+		hint: "#5c6773",
+		label: "#bfbdb6",
+		value: "#d2a6ff",
+	},
+
+	spinner: {
+		frame: "#95e6cb",
+		success: "#a6cc70",
+		fail: "#ff3333",
+		warn: "#ffb454",
+		info: "#59c2ff",
+	},
+
+	progress: { bar: "#59c2ff" },
+
+	modal: {
+		border: "#d2a6ff",
+		title: "bold",
+		buttonPrimary: { fg: "#0b0e14", bg: "#d2a6ff" },
+		buttonSecondary: "#5c6773",
+	},
+
+	tabs: {
+		active: { fg: "#d2a6ff", bg: "#0b0e14" },
+		inactive: "#5c6773",
+		border: "#5c6773",
+	},
+
+	badge: {
+		info: { fg: "#0b0e14", bg: "#59c2ff" },
+		success: { fg: "#0b0e14", bg: "#a6cc70" },
+		warning: { fg: "#0b0e14", bg: "#ffb454" },
+		error: { fg: "#f2f2f2", bg: "#ff3333" },
+		neutral: { fg: "#bfbdb6", bg: "#5c6773" },
+	},
+
+	kbd: { text: "#bfbdb6", border: "#5c6773" },
+
+	section: { title: "bold", line: "#5c6773" },
+
+	markdown: {
+		heading1: "#ff3333",
+		heading2: "#f29718",
+		heading3: "#ffb454",
+		heading4: "#a6cc70",
+		heading5: "#59c2ff",
+		heading6: "#d2a6ff",
+		codeBorder: "#151922",
+		codeLang: "#5c6773",
+		codeInline: { fg: "#95e6cb", bg: "#151922" },
+		linkText: "#95e6cb",
+		linkUrl: "#5c6773",
+		quoteBar: "#d2a6ff",
+		quoteText: "#5c6773",
+	},
+};
+
 /**
  * Resolved preset registry — frozen so consumers can't accidentally
  * mutate the shared palette definitions.
@@ -423,6 +653,9 @@ export const presets: Readonly<Record<PresetName, DuiThemePreset>> = Object.free
 	solarized,
 	catppuccin,
 	gruvbox,
+	tokyonight,
+	"rose-pine": rosePine,
+	ayu,
 });
 
 /**

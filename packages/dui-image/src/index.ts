@@ -31,3 +31,13 @@ export {
 	renderImage,
 	renderKitty,
 } from "./render";
+// ── Sixel / iTerm2 / tmux passthrough ──────────────────────────
+export {
+	isTmux,
+	tmuxPassthrough,
+	pixelsToSixel,
+	wrapSixel,
+	renderSixel,
+	renderIterm2,
+} from "./protocols";
+export type { SixelRenderOptions, Iterm2RenderOptions } from "./protocols";

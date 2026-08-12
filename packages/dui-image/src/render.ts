@@ -9,6 +9,11 @@
 import { terminalWidth } from "@bdocs/dui";
 import { type AnsiImageOptions, pixelsToAnsi } from "./ansi";
 import { detectTerminal } from "./detect";
+import {
+	renderIterm2,
+	renderSixel,
+	tmuxPassthrough,
+} from "./protocols";
 import { loadResizedPixels, resolveDimensions } from "./utils";
 
 // Lazily load sharp so the package works without the native binary
@@ -27,10 +32,20 @@ async function getSharp(): Promise<typeof import("sharp") | null> {
 }
 
 export interface ImageRenderOptions extends AnsiImageOptions {
-	/** Output format. Default `"auto"` — Kitty when available, ANSI otherwise. */
-	format?: "ansi" | "kitty" | "auto";
+	/**
+	 * Output format. Default `"auto"` — best available (Kitty, then
+	 * Sixel, then iTerm2, then ANSI half-blocks).
+	 */
+	format?: "ansi" | "kitty" | "sixel" | "iterm2" | "auto";
 	/** Whether to auto-detect and use the best available format (default: true). */
 	autoFormat?: boolean;
+	/**
+	 * When running inside tmux, wrap the protocol payload in a DCS
+	 * passthrough so the terminal emulator still receives it
+	 * (default: true). Disable if your tmux config forwards sequences
+	 * another way or you're emitting to a non-tmux-aware pipeline.
+	 */
+	tmuxPassthrough?: boolean;
 	/**
 	 * Kitty‑specific: placement column (0‑based). When set, the image
 	 * is placed at an absolute screen position instead of inline.
@@ -83,15 +98,19 @@ export async function renderImage(
 		placementY,
 		placementId,
 		compression,
+		tmuxPassthrough: useTmux = true,
 		...ansiOpts
 	} = options;
 
-	const useKitty =
-		format === "kitty" ||
-		(format === "auto" && autoFormat && detectTerminal().kitty);
+	const caps = detectTerminal();
+	const wrapForTmux = (data: string) =>
+		useTmux && format !== "ansi" ? tmuxPassthrough(data) : data;
 
-	if (useKitty) {
-		return renderKitty(imagePath, {
+	const wants = (name: ImageRenderOptions["format"]): boolean =>
+		format === name || (format === "auto" && autoFormat && caps[name as "kitty"]);
+
+	if (wants("kitty")) {
+		const out = await renderKitty(imagePath, {
 			width: ansiOpts.width,
 			height: ansiOpts.height,
 			placementX,
@@ -99,6 +118,23 @@ export async function renderImage(
 			placementId,
 			compression,
 		});
+		return wrapForTmux(out);
+	}
+
+	if (wants("sixel")) {
+		try {
+			return wrapForTmux(await renderSixel(imagePath, ansiOpts));
+		} catch {
+			return renderAnsi(imagePath, ansiOpts);
+		}
+	}
+
+	if (wants("iterm2")) {
+		try {
+			return wrapForTmux(await renderIterm2(imagePath, ansiOpts));
+		} catch {
+			return renderAnsi(imagePath, ansiOpts);
+		}
 	}
 
 	// ANSI half-block fallback (safe for all terminals)

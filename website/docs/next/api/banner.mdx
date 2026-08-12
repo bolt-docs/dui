@@ -1,0 +1,71 @@
+---
+title: Banner
+sidebarPosition: 30
+badge: New
+description: ASCII-art banners from an embedded 5×5 block font, with colors, custom fills, and plain-mode fallback.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# `banner(text)` — ASCII-art banners
+
+Renders text as large block letters using an embedded 5×5 pixel font — perfect for splash screens, section headers, and build success screens. Colors come from the `banner.text` theme slot or an explicit color, and plain mode swaps the fill to ASCII `#` with no ANSI.
+
+```ts
+import { banner } from '@bdocs/dui'
+
+console.log(banner('CI', { fill: '#', color: 'green' }))
+```
+
+<TerminalPreview command="node banner.js">
+{`\x1b[1m██  ██   ██
+██  ██  ████
+██  ██   ██
+██  ██   ██
+██  ██   ██\x1b[0m`}
+</TerminalPreview>
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `fill` | `string` | `"█"` | Cell fill character (plain mode forces `#`) |
+| `color` | `ColorStyle` | `theme.banner.text` | Foreground for the whole banner |
+| `gap` | `string` | `"  "` | Separator between glyphs |
+| `double` | `boolean` | `true` | Paint each font cell as 2 columns (square aspect) |
+
+## API
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `banner(text, options?)` | `string` | 5 rows joined with newlines |
+| `bannerLines(text, options?)` | `string[]` | The 5 rows as an array (embed in other layouts) |
+
+## Glyphs
+
+Covers `A–Z`, `0–9`, and common punctuation (`- _ ! ? : . , / + = * @`). Unknown characters render as a blank glyph.
+
+```ts
+import { banner } from '@bdocs/dui'
+
+// Build-success screen
+console.log(banner('DONE', { color: 'green' }))
+console.log(banner('FAIL', { color: 'red' }))
+```
+
+## Theme slots
+
+| Slot | Default | Notes |
+| --- | --- | --- |
+| `banner.text` | `bold` | Whole-banner color |
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({ theme: { banner: { text: 'cyan' } } })
+```
+
+## Notes
+
+- Plain mode (screen readers, `NO_COLOR`, `TERM=dumb`) renders the banner with `#` fill and no color so log scrapers still see the text.
+- The 5×5 font is embedded — no network or external assets.

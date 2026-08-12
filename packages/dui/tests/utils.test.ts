@@ -3,7 +3,9 @@ import {
 	fitWidth,
 	padCenter,
 	padRight,
+	splitGraphemes,
 	stripAnsi,
+	truncateByCells,
 	visibleLength,
 	wrapAnsiWord,
 } from "../src/index";
@@ -70,5 +72,40 @@ describe("utils", () => {
 		expect(wrapped[1]).toContain("this");
 		expect(wrapped[1]).toContain("\x1b[0m");
 		expect(wrapped[2]).toContain("\x1b[31mis\x1b[0m");
+	});
+});
+
+describe("grapheme-aware width handling", () => {
+	it("splitGraphemes keeps ZWJ emoji as one unit", () => {
+		const family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"; // 👨‍👩‍👧
+		expect(Array.from(family).length).toBe(5); // 5 codepoints
+		expect(splitGraphemes(family)).toEqual([family]); // 1 grapheme
+	});
+
+	it("splitGraphemes keeps combining marks attached", () => {
+		expect(splitGraphemes("e\u0301x")).toEqual(["e\u0301", "x"]);
+	});
+
+	it("visibleLength treats ZWJ sequences as width 2", () => {
+		const family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}";
+		expect(visibleLength(family)).toBe(2);
+	});
+
+	it("truncateByCells never splits a ZWJ sequence", () => {
+		const family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}";
+		const truncated = truncateByCells(`${family} tail`, 3);
+		expect(truncated).toBe(`${family}…`);
+	});
+
+	it("wrapAnsiWord wraps long ZWJ content without splitting", () => {
+		const family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}";
+		const wrapped = wrapAnsiWord(`${family}${family}${family}${family}`, 8);
+		// Every produced line contains whole graphemes only.
+		for (const line of wrapped) {
+			const graphemes = splitGraphemes(stripAnsi(line));
+			for (const g of graphemes) {
+				expect(g === family || /^\s*$/.test(g)).toBe(true);
+			}
+		}
 	});
 });

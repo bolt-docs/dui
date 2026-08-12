@@ -1,0 +1,87 @@
+---
+title: Kbd
+sidebarPosition: 20
+description: Keyboard shortcut hint primitive with per-platform glyph mapping.
+---
+
+import LiveDemo from '../../../components/LiveDemo'
+
+# `kbd(opts)` — shortcut hint
+
+## Live demo
+
+<LiveDemo
+  title="kbd"
+  command="node kbd-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui kbd --platform=mac\x1b[0m",
+    "",
+    "  \x1b[90m╭─ Keyboard Shortcuts (macOS) ─────────────╮\x1b[0m",
+    "  \x1b[90m│\x1b[0m                                            \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Find file    \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255mP\x1b[0m                        \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Save         \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255mS\x1b[0m                        \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Copy         \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255mC\x1b[0m                        \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Paste        \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255mV\x1b[0m                        \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Undo         \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255mZ\x1b[0m                        \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Search       \x1b[38;2;100;200;255m⌘\x1b[0m \x1b[38;2;100;200;255m⇧\x1b[0m \x1b[38;2;100;200;255mF\x1b[0m                      \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m                                            \x1b[90m│\x1b[0m",
+    "  \x1b[90m╰────────────────────────────────────────────╯\x1b[0m",
+    "",
+    "  \x1b[1m$ dui kbd --platform=win\x1b[0m",
+    "",
+    "  \x1b[90m╭─ Keyboard Shortcuts (Windows) ───────────╮\x1b[0m",
+    "  \x1b[90m│\x1b[0m                                            \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Find file    \x1b[38;2;100;200;255mCtrl\x1b[0m \x1b[38;2;100;200;255mP\x1b[0m                    \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Save         \x1b[38;2;100;200;255mCtrl\x1b[0m \x1b[38;2;100;200;255mS\x1b[0m                    \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Copy         \x1b[38;2;100;200;255mCtrl\x1b[0m \x1b[38;2;100;200;255mC\x1b[0m                    \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Paste        \x1b[38;2;100;200;255mCtrl\x1b[0m \x1b[38;2;100;200;255mV\x1b[0m                    \x1b[90m│\x1b[0m",
+    "  \x1b[90m│\x1b[0m  Undo         \x1b[38;2;100;200;255mCtrl\x1b[0m \x1b[38;2;100;200;255mZ\x1b[0m                    \x1b[90m│\x1b[0m",
+    "  \x1b[90m╰────────────────────────────────────────────╯\x1b[0m",
+  ]}
+  columns={54}
+  rows={19}
+  typewriterMs={5}
+  autoRun
+/>
+
+Renders an array of key tokens normalized for the active platform via the `PLATFORM_KEY_MAP` table. By default reads `process.platform` automatically (`darwin` → `"mac"`, `win32` → `"win"`, anything else → `"linux"`). Pass `platform: "mac" | "win" | "linux"` to override for tests, docs, or cross-platform hint bars.
+
+```ts
+import { kbd } from "@bdocs/dui";
+
+console.log(`Find file  ${kbd({ keys: ["Cmd", "P"] })}`);  // "⌘ P" on macOS
+console.log(`Quit       ${kbd({ keys: ["Cmd", "Q"], platform: "win" })}`); // "Ctrl Q"
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `keys` | `string \| string[]` | — | Key labels. String shorthand = single-key hint. |
+| `separator` | `string` | `" "` | Token separator. |
+| `platform` | `"mac" \| "win" \| "linux" \| "auto"` | `"auto"` | Force a platform (tests/docs), or detect from `process.platform`. |
+| `colors.text` | `ColorStyle` | `theme.kbd.text` | Glyph color override. |
+| `colors.border` | `ColorStyle` | `theme.kbd.border` | Reserved for the future boxed-key variant. |
+
+## Token mapping
+
+The platform map covers the most common key tokens. Unknown tokens pass through verbatim so consumers can write their own brand-specific labels (`"F12"`, `"Ω"`).
+
+```ts
+PLATFORM_KEY_MAP.mac.Cmd     // "⌘"
+PLATFORM_KEY_MAP.mac.Option  // "⌥"
+PLATFORM_KEY_MAP.mac.Shift   // "⇧"
+PLATFORM_KEY_MAP.mac.Ctrl    // "⌃"
+PLATFORM_KEY_MAP.mac.Esc     // "⎋"
+PLATFORM_KEY_MAP.win.Cmd     // "Ctrl"
+PLATFORM_KEY_MAP.win.Option  // "Alt"
+PLATFORM_KEY_MAP.win.Esc     // "Esc"
+```
+
+## When to use
+
+- Window-footer hint bars (e.g. line below an editor viewport).
+- Inline legend text in README renders / docs sites.
+- Test packs where you want to read `kbd({ platform: "mac" })` deterministically regardless of host OS.
+
+The reserved `kbd.border` slot is wired up so that consumers can already register a future boxed-key variant via theme overrides without a code change.

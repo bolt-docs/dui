@@ -1,0 +1,77 @@
+---
+title: Rich Text
+sidebarPosition: 31
+badge: New
+description: Inline rich-text renderer — bold, italic, underline, code chips, colored spans, and OSC 8 links from a tiny markdown-like syntax.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# `richtext(input)` — inline rich text
+
+Turns a small markdown-like syntax into ANSI-colored terminal text — reusable anywhere a plain string is rendered (logger output, box lines, sections, toasts). Links route through `link()`, so they degrade gracefully on terminals without hyperlink support.
+
+```ts
+import { richtext } from '@bdocs/dui'
+
+console.log(richtext('**Build passed** in `2.3s` — see [logs](https://ci.example/run/1)'))
+```
+
+<TerminalPreview command="node richtext.js">
+{`\x1b[1mBuild passed\x1b[0m in \x1b[38;2;150;200;255;48;2;40;44;52m2.3s\x1b[0m — see \x1b[36m\x1b]8;;https://ci.example/run/1\x07logs\x1b]8;;\x07\x1b[0m`}
+</TerminalPreview>
+
+## Syntax
+
+| Input | Renders as |
+| --- | --- |
+| `**bold**` | bold |
+| `*italic*` | italic |
+| `_underline_` | underline |
+| `~~strike~~` | strikethrough |
+| `` `code` `` | code chip (fg + bg) |
+| `[label](url)` | OSC 8 hyperlink |
+| `{red:text}` | foreground color |
+| `{#ff6600:text}` | hex foreground color |
+| `\**` `\`` `\*` | literal character |
+
+Styles nest: `**bold {red:and colored}**` works.
+
+## API
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `richtext(input, options?)` | `string` | ANSI-rendered text (plain text in plain mode) |
+| `richtextToPlain(input)` | `string` | Strips all markup; links become `label (url)` |
+
+### Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `colors.bold` | `ColorStyle` | `theme.richtext.bold` | Bold style |
+| `colors.italic` | `ColorStyle` | `theme.richtext.italic` | Italic style |
+| `colors.underline` | `ColorStyle` | `theme.richtext.underline` | Underline style |
+| `colors.strike` | `ColorStyle` | `theme.richtext.strike` | Strikethrough style |
+| `colors.code` | `string \| { fg, bg }` | `{ fg: '#96c8ff', bg: '#282c34' }` | Code chip colors |
+| `colors.link` | `ColorStyle` | `cyan` | Link label color |
+
+## Theme slots
+
+`richtext.bold`, `richtext.italic`, `richtext.underline`, `richtext.strike`, `richtext.code`, `richtext.link` — defaults match the markdown palette so rich text feels native next to the [`markdown`](/docs/next/plugins/markdown) plugin.
+
+## Usage with widgets
+
+```ts
+import { richtext, box, info } from '@bdocs/dui'
+
+info(richtext('**Deploying** `v1.2.0` to {green:production}…'))
+
+console.log(box([
+  richtext('Status: {#22c55e:✓ healthy} · [dashboards](https://grafana.example)'),
+], { title: 'Service' }))
+```
+
+## Notes
+
+- Plain mode strips the markup and returns readable text — `**bold**` becomes `bold`, links keep `label (url)`.
+- `richtextToPlain` is handy for search indexing or log scrapers that need the un-styled form.

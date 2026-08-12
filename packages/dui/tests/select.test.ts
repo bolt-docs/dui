@@ -558,15 +558,87 @@ describe("select", () => {
 				writeData("\x1b");
 				await expect(promise).rejects.toThrow("Cancelled");
 			});
-		});
+		});			describe("searchable", () => {
+				const choices = [
+					{ label: "apple", value: "apple" },
+					{ label: "banana", value: "banana" },
+					{ label: "cherry", value: "cherry" },
+					{ label: "blueberry", value: "blueberry" },
+				];
 
-		describe("wheelSensitivity", () => {
-			// 0,1,2,3,4,5,6 — six fully-enabled rows. The default
-			// sensitivity=1 was already covered by other wheel tests
-			// (each tick = one row). Here we exercise the
-			// multi-row-per-tick code path and the defensive
-			// coercion of `< 1` to 1.
-			const items = ["a", "b", "c", "d", "e", "f", "g"];
+				it("filters choices as you type and selects the match", async () => {
+					const promise = select("Pick", { choices, searchable: true });
+
+					writeData("ban");
+					writeData("\r");
+
+					await expect(promise).resolves.toBe("banana");
+				});
+
+				it("fuzzy-matches across the list", async () => {
+					const promise = select("Pick", { choices, searchable: true });
+
+					writeData("bb"); // only blueberry has two b's
+					writeData("\r");
+
+					await expect(promise).resolves.toBe("blueberry");
+				});
+
+				it("backspace edits the query", async () => {
+					const promise = select("Pick", { choices, searchable: true });
+
+					writeData("ban");
+					writeData("\x7f"); // "ba"
+					writeData("\r");
+
+					await expect(promise).resolves.toBe("banana");
+				});
+
+				it("escape clears the query before cancelling", async () => {
+					const promise = select("Pick", { choices, searchable: true });
+
+					writeData("app");
+					writeData("\x1b"); // clears query
+					await Promise.resolve(); // let the debounce microtask run
+					writeData("\x1b"); // cancels
+
+					await expect(promise).rejects.toThrow("Cancelled");
+				});
+
+				it("navigates the filtered list with arrow keys", async () => {
+					const promise = select("Pick", { choices, searchable: true });
+
+					writeData("b"); // banana + blueberry
+					writeData("\x1b[B"); // move to blueberry
+					writeData("\r");
+
+					await expect(promise).resolves.toBe("blueberry");
+				});
+
+				it("renders highlighted matches", async () => {
+					const spy = vi.spyOn(process.stdout, "write");
+					const promise = select("Pick", { choices, searchable: true });
+
+					writeData("cher");
+
+					const written = spy.mock.calls.map((c) => String(c[0])).join("");
+					// Matched characters wrapped in the cyan select color.
+					expect(written).toContain("\x1b[36m");
+
+					writeData("\x1b");
+					await Promise.resolve();
+					writeData("\x1b");
+					await expect(promise).rejects.toThrow("Cancelled");
+				});
+			});
+
+			describe("wheelSensitivity", () => {
+				// 0,1,2,3,4,5,6 — six fully-enabled rows. The default
+				// sensitivity=1 was already covered by other wheel tests
+				// (each tick = one row). Here we exercise the
+				// multi-row-per-tick code path and the defensive
+				// coercion of `< 1` to 1.
+				const items = ["a", "b", "c", "d", "e", "f", "g"];
 
 			it("wheelSensitivity: 3 advances the cursor 3 rows per single wheel tick", async () => {
 				const promise = select("Pick", {

@@ -1,0 +1,56 @@
+---
+title: Clipboard
+sidebarPosition: 29
+badge: New
+description: Escribir al portapapeles del sistema vía OSC 52 desde cualquier aplicación de terminal.
+---
+
+# `copyToClipboard(text)` — portapapeles vía OSC 52
+
+Escribe al portapapeles del sistema usando la secuencia OSC 52 (`ESC]52;c;<base64>␇`). Funciona en kitty, iTerm2, WezTerm, Windows Terminal y derivados modernos de xterm. Las terminales que no lo soportan ignoran la secuencia silenciosamente, así que el write siempre es seguro en un TTY — y en salida no-TTY es un no-op limpio que devuelve `false`.
+
+```ts
+import { copyToClipboard } from '@bdocs/dui'
+
+if (copyToClipboard('pnpm add @bdocs/dui')) {
+  console.log('¡Copiado al portapapeles!')
+} else {
+  console.log('Portapapeles no disponible (no-TTY o sin soporte)')
+}
+```
+
+## API
+
+| Función | Devuelve | Notas |
+| --- | --- | --- |
+| `copyToClipboard(text, options?)` | `boolean` | Escribe la secuencia OSC 52; `true` cuando se escribió en un stream TTY |
+| `copy(text, options?)` | `boolean` | Alias de `copyToClipboard` |
+| `clipboardSupported()` | `boolean` | `true` cuando stdout es un TTY (se puede intentar el write) |
+
+### Opciones
+
+| Campo | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `stream` | `NodeJS.WriteStream` | `process.stdout` | Stream al que escribir la secuencia |
+
+## Patrones de uso
+
+```ts
+import { copyToClipboard, toast } from '@bdocs/dui'
+
+// Copia un comando y confirma visualmente.
+if (copyToClipboard('pnpm deploy')) {
+  toast('Comando copiado', { type: 'success' })
+}
+
+// Combina con el patrón yank en apps interactivas: después de que un
+// prompt resuelva, ofrece el resultado en el portapapeles.
+const token = await input('Pega el token:', { type: 'password' })
+copyToClipboard(token)
+```
+
+## Notas
+
+- `true` significa que la secuencia se *escribió*, no que el portapapeles cambió — las terminales sin soporte la ignoran sin daño.
+- Strings vacíos devuelven `false`.
+- Para acceso al portapapeles a nivel de OS más allá del soporte de terminal (ej. lanzar `pbcopy`), combínalo con la captura de acciones de OS del plugin `notify` (ver la [versión en inglés](/docs/next/plugins/notify)) o un helper de shell.

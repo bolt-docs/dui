@@ -207,6 +207,81 @@ export interface SectionTheme {
 	line?: ColorStyle;
 }
 
+/**
+ * Theme slots for the `banner()` ASCII-art generator.
+ *
+ * - `text` colors the whole banner block (default: bold).
+ */
+export interface BannerTheme {
+	text?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `richtext()` inline renderer.
+ *
+ * - `bold` / `italic` / `underline` / `strike` map to the matching
+ *   text styles.
+ * - `code` colors inline-code chips — a compound `{ fg, bg }` pair
+ *   matching the markdown palette (pass a plain string for fg-only).
+ * - `link` colors the label inside OSC 8 hyperlinks.
+ */
+export interface RichTextTheme {
+	bold?: ColorStyle;
+	italic?: ColorStyle;
+	underline?: ColorStyle;
+	strike?: ColorStyle;
+	code?: { fg: string; bg: string } | string;
+	link?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `toast()` notification center — one per severity.
+ */
+export interface ToastTheme {
+	info?: ColorStyle;
+	success?: ColorStyle;
+	warning?: ColorStyle;
+	error?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `createStatusBar()` persistent status line.
+ *
+ * - `left` colors the left segment (default: green).
+ * - `center` colors the middle segment (default: gray).
+ * - `right` colors the right segment (default: gray).
+ */
+export interface StatusBarTheme {
+	left?: ColorStyle;
+	center?: ColorStyle;
+	right?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `form()` multi-field widget.
+ */
+export interface FormTheme {
+	label?: ColorStyle;
+	value?: ColorStyle;
+	message?: ColorStyle;
+	error?: ColorStyle;
+	pointer?: ColorStyle;
+}
+
+/**
+ * Theme slots for the `palette()` command palette.
+ *
+ * - `match` colors the fuzzy-matched characters (default: cyan).
+ * - `description` / `shortcut` color the auxiliary column text.
+ */
+export interface PaletteTheme {
+	message?: ColorStyle;
+	label?: ColorStyle;
+	match?: ColorStyle;
+	description?: ColorStyle;
+	shortcut?: ColorStyle;
+}
+
 export interface DuiTheme {
 	success?: ColorStyle;
 	error?: ColorStyle;
@@ -233,6 +308,12 @@ export interface DuiTheme {
 	badge?: BadgeTheme;
 	kbd?: KbdTheme;
 	section?: SectionTheme;
+	banner?: BannerTheme;
+	richtext?: RichTextTheme;
+	toast?: ToastTheme;
+	statusbar?: StatusBarTheme;
+	form?: FormTheme;
+	palette?: PaletteTheme;
 }
 
 type ColorFn = (s: string) => string;
@@ -428,6 +509,32 @@ function getDefaultFn(slot: string): DefaultSpec {
 		// surrounding dashes fade into the screen on dense layouts.
 		"section.title": "bold",
 		"section.line": "gray",
+		// v0.7.0 widget set — banner, richtext, toast, statusbar,
+		// form, palette.
+		"banner.text": "bold",
+		"richtext.bold": "bold",
+		"richtext.italic": "italic",
+		"richtext.underline": "underline",
+		"richtext.strike": "strikethrough",
+		"richtext.code": { fg: "#96c8ff", bg: "#282c34" },
+		"richtext.link": "cyan",
+		"toast.info": "blue",
+		"toast.success": "green",
+		"toast.warning": "yellow",
+		"toast.error": "red",
+		"statusbar.left": "green",
+		"statusbar.center": "gray",
+		"statusbar.right": "gray",
+		"form.label": "bold",
+		"form.value": "white",
+		"form.message": "yellow",
+		"form.error": "red",
+		"form.pointer": "cyan",
+		"palette.message": "yellow",
+		"palette.label": "white",
+		"palette.match": "cyan",
+		"palette.description": "gray",
+		"palette.shortcut": "gray",
 	};
 
 	const value = map[slot];

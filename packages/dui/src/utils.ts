@@ -11,6 +11,49 @@ export function visibleLength(s: string): number {
 	return stringWidth(s);
 }
 
+// Shared grapheme segmenter — built lazily so environments without
+// `Intl.Segmenter` (very old Node) still work via the codepoint
+// fallback. `Intl.Segmenter` treats ZWJ sequences (👨‍👩‍👧) and
+// combining marks as a single grapheme, so width computations and
+// truncation never split an emoji family or an accented letter in
+// half.
+let cachedSegmenter:
+	| Intl.Segmenter
+	| ((text: string) => Iterable<{ segment: string }>)
+	| undefined;
+
+/**
+ * Split `text` into user-perceived characters (grapheme clusters).
+ *
+ * Unlike `Array.from` (which splits by Unicode **codepoint**), this
+ * keeps ZWJ emoji sequences (`👨‍👩‍👧`), combining marks (`é`), and
+ * regional-indicator flags as single units — so a width-based loop
+ * never slices through the middle of one and produces broken output.
+ *
+ * ```ts
+ * splitGraphemes("👨‍👩‍👧")        // → ["👨‍👩‍👧"]   (one unit, Array.from gives 5)
+ * splitGraphemes("áb")        // → ["á", "b"]
+ * splitGraphemes("hello")        // → ["h", "e", "l", "l", "o"]
+ * ```
+ */
+export function splitGraphemes(text: string): string[] {
+	if (cachedSegmenter === undefined) {
+		cachedSegmenter =
+			typeof Intl !== "undefined" && "Segmenter" in Intl
+				? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+				: (t: string) => {
+						// Fallback: iterate codepoints (surrogate-aware).
+						const out: string[] = [];
+						for (const ch of t) out.push(ch);
+						return out.map((segment) => ({ segment }));
+					};
+	}
+	if (typeof cachedSegmenter === "function") {
+		return Array.from(cachedSegmenter(text)).map((s) => s.segment);
+	}
+	return Array.from(cachedSegmenter.segment(text), (s) => s.segment);
+}
+
 /**
  * Cell-aware truncation. The native `String#slice` indexes by UTF‑16 code
  * units, so a CJK ideograph (`visibleLength = 2`) is sliced as a single
@@ -32,7 +75,7 @@ export function truncateByCells(s: string, maxCells: number): string {
 	if (visibleLength(s) <= maxCells) return s;
 	if (maxCells <= 0) return "";
 	const target = Math.max(0, maxCells - 1); // 1 cell for the ellipsis
-	const chars = Array.from(s); // iterator walks codepoints, surrogate‑aware
+	const chars = splitGraphemes(s); // grapheme-aware, keeps ZWJ/combining intact
 	let accum = "";
 	let used = 0;
 	for (const ch of chars) {
@@ -44,6 +87,7 @@ export function truncateByCells(s: string, maxCells: number): string {
 	}
 	return accum + "\u2026";
 }
+
 
 export function padCenter(s: string, w: number): string {
 	const len = visibleLength(s);
@@ -146,15 +190,13 @@ export function tokenizeAnsi(text: string): Token[] {
 				}
 				tokens.push({ type: "space", value: spaces, width: spacesWidth });
 			} else {
-				let charStr = char;
-				const code = text.charCodeAt(i);
-				if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
-					charStr += text[i + 1];
-					i++;
-				}
-				currentWord += charStr;
-				currentWordWidth += visibleLength(charStr);
-				i++;
+				// Consume a full grapheme cluster (surrogate pairs, ZWJ
+				// emoji, combining marks) as one unit so width tracking
+				// never splits a character in half.
+				const grapheme = splitGraphemes(text.slice(i))[0];
+				currentWord += grapheme;
+				currentWordWidth += visibleLength(grapheme);
+				i += grapheme.length;
 			}
 		}
 	}
@@ -231,14 +273,7 @@ export function wrapAnsiWord(text: string, maxWidth: number): string[] {
 					startNewLine();
 				}
 
-				let i = 0;
-				while (i < token.value.length) {
-					let charStr = token.value[i];
-					const code = token.value.charCodeAt(i);
-					if (code >= 0xd800 && code <= 0xdbff && i + 1 < token.value.length) {
-						charStr += token.value[i + 1];
-						i++;
-					}
+				for (const charStr of splitGraphemes(token.value)) {
 					const charWidth = visibleLength(charStr);
 
 					if (currentWidth + charWidth > maxWidth) {
@@ -246,7 +281,6 @@ export function wrapAnsiWord(text: string, maxWidth: number): string[] {
 					}
 					currentLine += charStr;
 					currentWidth += charWidth;
-					i++;
 				}
 			}
 		}

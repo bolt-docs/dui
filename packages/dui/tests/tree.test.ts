@@ -563,5 +563,52 @@ describe("tree", () => {
 				await expect(promise).resolves.toBe("a");
 			});
 		});
+
+		describe("searchable", () => {
+			it("filters the flattened tree and selects the match", async () => {
+				const promise = tree("Pick", {
+					tree: SAMPLE_TREE,
+					initialExpanded: true,
+					searchable: true,
+				});
+
+				writeData("ban");
+				writeData("\r");
+
+				await expect(promise).resolves.toBe("banana");
+			});
+
+			it("filters branches by their own labels", async () => {
+				const promise = tree("Pick", {
+					tree: SAMPLE_TREE,
+					initialExpanded: true,
+					searchable: true,
+				});
+
+				writeData("fru"); // matches the Fruits branch
+				writeData("\r"); // enter on the branch → toggle (no leaf select)
+				writeData("\r"); // enter again → collapses it back
+				// The promise stays open; navigate to a leaf and pick it.
+				writeData("\x1b");
+				await Promise.resolve();
+				writeData("\x1b");
+				await expect(promise).rejects.toThrow("Cancelled");
+			});
+
+			it("backspace edits the query and escape clears it", async () => {
+				const promise = tree("Pick", {
+					tree: SAMPLE_TREE,
+					initialExpanded: true,
+					searchable: true,
+				});
+
+				writeData("col");
+				writeData("\x7f\x7f\x7f"); // clear query
+				writeData("\x1b");
+				await Promise.resolve();
+				writeData("\x1b");
+				await expect(promise).rejects.toThrow("Cancelled");
+			});
+		});
 	});
 });

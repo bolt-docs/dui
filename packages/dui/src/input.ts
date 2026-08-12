@@ -9,6 +9,19 @@ export interface InputOptions {
 	default?: string;
 	placeholder?: string;
 	validate?: (value: string) => string | true;
+	/**
+	 * When `"password"`, the typed value is masked with `•` bullets
+	 * (the returned value is the real text). The value is never
+	 * echoed. Defaults to `"text"`.
+	 */
+	type?: "text" | "password";
+	/**
+	 * Called once when the prompt is cancelled — Escape or Ctrl+C.
+	 * Use it to restore terminal state, kill child processes, or
+	 * release resources before the promise settles. Runs synchronously
+	 * just before the cancel path completes.
+	 */
+	onCancel?: () => void;
 	colors?: {
 		message?: ColorStyle;
 		value?: ColorStyle;
@@ -25,8 +38,11 @@ export async function input(
 		default: defaultValue,
 		placeholder,
 		validate,
+		type: inputType = "text",
+		onCancel,
 		colors: colorsOverride,
 	} = options ?? {};
+	const isPassword = inputType === "password";
 
 	if (!process.stdin.isTTY || !process.stdout.isTTY) {
 		const rl = readline.createInterface({
@@ -57,6 +73,8 @@ export async function input(
 		defaultValue,
 		placeholder,
 		validate,
+		isPassword,
+		onCancel,
 		colorsOverride,
 	);
 }
@@ -66,6 +84,8 @@ function interactiveInput(
 	defaultValue: string | undefined,
 	placeholder: string | undefined,
 	validate: ((value: string) => string | true) | undefined,
+	isPassword: boolean,
+	onCancel: (() => void) | undefined,
 	colorsOverride: InputOptions["colors"],
 ): Promise<string> {
 	return new Promise<string>((resolve, reject) => {
@@ -114,8 +134,9 @@ function interactiveInput(
 		function render() {
 			if (done) return;
 			const promptLine = `${messageColor(`? ${message}`)}`;
-			const displayValue = buf
-				? valueColor(buf)
+			const visible = isPassword ? "\u2022".repeat(buf.length) : buf;
+			const displayValue = visible
+				? valueColor(visible)
 				: placeholder
 					? placeholderColor(colors.dim(placeholder))
 					: "";
@@ -163,7 +184,8 @@ function interactiveInput(
 		function finalize() {
 			validateBuf();
 			cleanup();
-			const finalLine = `${messageColor(`? ${message}`)} ${valueColor(buf)}\n`;
+			const finalVisible = isPassword ? "\u2022".repeat(buf.length) : buf;
+			const finalLine = `${messageColor(`? ${message}`)} ${valueColor(finalVisible)}\n`;
 			// Same `linesRendered`-based cursor positioning as render() —
 			// `\x1b[u` is unreliable on tmux/screen/embedded terminals.
 			if (linesRendered > 0) {
@@ -190,6 +212,7 @@ function interactiveInput(
 				}
 				finalize();
 			} else if (key.name === "escape") {
+				onCancel?.();
 				cleanup();
 				// Same `linesRendered`-based cursor positioning as render().
 				if (linesRendered > 0) {
@@ -201,6 +224,7 @@ function interactiveInput(
 				readline.clearScreenDown(stdout);
 				reject(new Error("Cancelled"));
 			} else if (key.name === "c" && key.ctrl) {
+				onCancel?.();
 				cleanup();
 				stdout.write("\n");
 				// Standard Unix convention: 128 + SIGINT(2) = 130.

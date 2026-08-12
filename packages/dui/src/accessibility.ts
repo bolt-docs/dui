@@ -248,3 +248,100 @@ export function isReducedMotion(
 	const info = getAccessibilityInfo();
 	return info.reducedMotion;
 }
+
+// ---------------------------------------------------------------------------
+// Live announcements
+// ---------------------------------------------------------------------------
+// A tiny "live region" for screen readers. Interactive widgets repaint
+// in place with cursor escapes, which screen readers cannot detect — a
+// user tabbing through a spinner or waiting on a progress bar hears
+// nothing. `announce()` emits a plain, un-styled line that screen
+// readers DO pick up, and queues bursts so rapid state changes
+// coalesce into ordered announcements instead of a flood.
+
+/** Options for a single `announce()` call. */
+export interface AnnounceOptions {
+	/** Stream to write the announcement to (default `process.stdout`). */
+	stream?: NodeJS.WriteStream;
+	/**
+	 * Override the prefix (default `"[announcement]"`). Set to `""`
+	 * for bare text — handy when the message is already self-describing.
+	 */
+	prefix?: string;
+	/**
+	 * When `true`, the message bypasses the queue and is written
+	 * immediately. Useful for urgent state changes (errors, completion).
+	 */
+	immediate?: boolean;
+}
+
+interface QueuedAnnouncement {
+	message: string;
+	prefix: string;
+	stream: NodeJS.WriteStream;
+}
+
+const announcementQueue: QueuedAnnouncement[] = [];
+let flushScheduled = false;
+
+/**
+ * Write out every queued announcement, in order. Returns how many
+ * lines were written. Safe to call directly (tests, shutdown hooks);
+ * normally `announce()` handles flushing on the next microtask.
+ */
+export function flushAnnouncements(stream?: NodeJS.WriteStream): number {
+	const pending = announcementQueue.splice(0);
+	for (const entry of pending) {
+		const target = stream ?? entry.stream;
+		target.write(`${entry.prefix} ${entry.message}\n`);
+	}
+	return pending.length;
+}
+
+/** Read the pending announcement queue without flushing it. */
+export function getAnnouncementQueue(): string[] {
+	return announcementQueue.map((e) => e.message);
+}
+
+/** Drop any pending announcements without writing them. */
+
+export function clearAnnouncements(): void {
+	announcementQueue.length = 0;
+}
+
+/**
+ * Announce a state change as a plain text line that screen readers
+ * can detect. Queued messages are flushed in order on the next
+ * microtask, so a burst of updates becomes a small ordered stream
+ * rather than hundreds of repaints.
+ *
+ * ```ts
+ * import { announce } from "@bdocs/dui"
+ *
+ * const bar = createProgressBar({ width: 30 })
+ * bar.start(10)
+ * for (let i = 1; i <= 10; i++) {
+ *   await step()
+ *   bar.update(i)
+ *   announce(`Step ${i} of 10 complete`)
+ * }
+ * bar.stop("done")
+ * ```
+ */
+export function announce(message: string, options: AnnounceOptions = {}): void {
+	if (!message?.trim()) return;
+	const stream = options.stream ?? process.stdout;
+	const prefix = options.prefix ?? "[announcement]";
+	if (options.immediate) {
+		stream.write(`${prefix} ${message}\n`);
+		return;
+	}
+	announcementQueue.push({ message, prefix, stream });
+	if (!flushScheduled) {
+		flushScheduled = true;
+		queueMicrotask(() => {
+			flushScheduled = false;
+			if (announcementQueue.length > 0) flushAnnouncements();
+		});
+	}
+}

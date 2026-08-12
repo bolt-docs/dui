@@ -1,0 +1,274 @@
+---
+title: "Plugin-notify"
+sidebarPosition: 7
+description: Cross-platform desktop notifications and inline TUI toasts for @bdocs/dui.
+---
+
+# `@dui-toolkit/plugin-notify`
+
+<InteractiveNotifyDemo />
+
+---
+
+## Overview
+
+Cross-platform desktop notifications and inline TUI toasts. Auto-routes
+between four backends so a single line of code lights up the right
+notification surface on every host:
+
+- **OS spawn** — `osascript` (macOS) / `notify-send` (Linux, X11/Wayland) / `powershell.exe` (Windows).
+- **OSC escape** — Kitty (`\x1b]99;…`) / iTerm2 (`\x1b]9;…`) / WezTerm / foot / Ghostty (`\x1b]777;notify;…`).
+- **Inline TUI toast** — `box({ style: "round" })` rendered to stderr via the existing `@bdocs/dui` widget palette, with `box` + `badge` + `section`. Auto-dismisses after `ttl`.
+- **Bell** — silent fallback that rings `BEL` for `error` and `warning` only. Used in CI / non-TTY / disconnected environments.
+
+```ts
+import { notify } from "@dui-toolkit/plugin-notify";
+
+// Severity shorthands:
+await notify.success("Build complete");
+await notify.error("Failed: 3 errors");
+await notify.warning("Tests flaky");
+
+// Full shape:
+await notify({
+  title: "Tests passed",
+  body: "247 tests in 12.3s",
+  level: "success",
+  ttl: 5000,
+  sound: false,
+});
+```
+
+## Install
+
+```bash
+pnpm add @dui-toolkit/plugin-notify
+```
+
+## Plugin registration
+
+```ts
+import { usePluginAsync } from "@bdocs/dui";
+import { notifyPlugin } from "@dui-toolkit/plugin-notify";
+
+await usePluginAsync(notifyPlugin);
+```
+
+The plugin registers **20 theme slots** (5 levels × 4 sub-slots: `border`, `bg`, `fg`, `icon`), the `notify` renderer, and the `notify` render-hook channel.
+
+## API
+
+### `notify(opts)`
+
+| Option | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `title` | `string` | depends on level | Headline rendered in the OS notification title slot. |
+| `body` | `string` | `""` | Multi-line accepted. Long bodies in inline TUI toast are wrapped via `wrapAnsiWord`. |
+| `level` | `"success" \| "info" \| "warning" \| "error" \| "neutral"` | `"info"` | Cascades to `badge({ status })` color, Linux `notify-send -u` urgency, and the bell trigger (auto on `error`/`warning`). |
+| `ttl` | `number` | `5000` | Auto-dismiss window in milliseconds. OS / OSC paths ignore it (the host notification center handles dismissal). Inline TUI cursor-erases the rendered box after `ttl`. |
+| `sound` | `boolean` | auto on `error`/`warning` | Emit `BEL` regardless of backend. |
+| `force` | `"os" \| "osc" \| "terminal" \| "bell" \| "auto"` | `"auto"` | Skip auto-detection. Tests pin `force: "bell"` so they're deterministic in CI. |
+| `icon` | `string` | — | Path or single-glyph (passed to macOS subtitle / Linux `-i`). Used as visual divider on the terminal toast. |
+| `actions` | `Array<{ id, label }>` | — | Renders a footer of `[ [K]eybind label ]` chips on the inline toast (first char of `label` becomes the keyboard shortcut). Pressing the matching key while the toast is alive resolves `result.action` with the chip's `id` and fires `notify.subscribe` with `{ id, backend, action }`. **OS-level click capture is live on Linux + Windows** — `notify-send -A id:label ... -w` writes the chosen action id to stdout (Linux, libnotify ≥ 0.7.9); the Windows MessageBox `DialogResult` (`OK` / `Cancel` / `Yes` / `No`) maps by position. macOS cannot capture click events through AppleScript — `result.action` resolves to `undefined` on darwin; pin `force: "terminal"` if you need click-to-action parity on a Mac. |
+
+Returns `Promise<NotifyResult>` where:
+
+```ts
+interface NotifyResult {
+  id: string;        // e.g. "kty:e8e4…", "tmn:2f8a…", "bl:1a72…"
+  backend: NotifyBackend;
+  dismissed: Promise<void>; // resolves on TTL expiry or backend close
+}
+```
+
+### `notify.subscribe(handler)` &mdash; observe lifecycle events
+
+```ts
+import { notify } from "@dui-toolkit/plugin-notify";
+
+const off = notify.subscribe((event) => {
+  console.log(
+    `notification ${event.id} closed via ${event.backend}` +
+      (event.action ? ` (action: ${event.action})` : "")
+  );
+});
+
+const r = await notify.success("Build complete");
+await r.dismissed; // → handler fires here for every backend
+
+off();
+```
+
+`notify.subscribe(handler)` returns an **unsubscribe** function. The handler is invoked with `{ id, backend, action? }` whenever a fired notification's `dismissed` promise resolves &mdash; TTL expiry for the inline toast, immediate close for OS / OSC / bell. When the terminal backend captures a matching action keypress, `event.action` carries the chip's `id`; on TTL expiry it's `undefined`.
+
+### Terminal toast action keypress capture (v0.1.0 fine-tuning)
+
+The terminal backend hijacks `process.stdin` raw-mode while the toast is alive, so users can press the chip's first letter to fire the action:
+
+```ts
+const r = await notify.error("Build failed: 3 errors", {
+  title: "bolt-docs/dui",
+  actions: [
+    { id: "open-logs", label: "Open logs" },   // press "o" → r.action === "open-logs"
+    { id: "rerun",     label: "Re-run CI" },   // press "r" → r.action === "rerun"
+  ],
+  ttl: 30_000, // give the user time to choose
+});
+const action = await r.action;   // "open-logs" | "rerun" | undefined (TTL)
+if (action === "rerun") {
+  await runCiAgain();
+}
+```
+
+Captured on stderr-only output, so it never collides with concurrent `select` / `multiselect` flow (auto-skips if `process.stdin.listenerCount("data") > 0` or `process.stdin.isTTY === false`). Escape sequences (`\x1b[A`, alt+key, function keys) are ignored; `Ctrl-C` is honoured as a chip-fallback abort. `process.once("exit")` restores stdin if the host CLI dies mid-toast.
+
+## Fine-tuning tips
+
+### Action collision on the first letter
+
+If two action labels share the first letter (e.g. `[Open logs]` + `[Open in editor]`), the second emit triggers `process.emitWarning("DUINotifyActionCollision", ...)`. The first declared action wins. Surface unique letters (`[Logs] [Edit]`) or fall back to numbered chips: `{ id: "logs", label: "1. Logs" }`.
+
+### `force: "bell"` for tests
+
+Pin `force: "bell"` in vitest so CI auto-detection doesn't shift the chosen surface between runs and CI hosts. Bell path is `pure POSIX` and emits no stderr writes outside the trailing newline.
+
+### Profile your four backend IDs
+
+`NotifyResult.id` is `<backend-code>:<uuid>`. Profile by code prefix:
+- `bl:` — bell (silent / CI)
+- `tmn:` — terminal toast (in-TTY)
+- `osx:` — macOS osascript
+- `nse:` — linux notify-send
+- `ps:` — Windows PowerShell MessageBox
+- `kty:` / `itm:` / `osc:` — OSC 99 / 9 / 777 escape (Kitty / iTerm2 / WezTerm et al)
+
+### Render hook priority
+
+`registerRenderHook("notify", …)` runs at `priority: "first"`, so consumer pre-hooks (e.g. a global "fired-event analytics" counter) execute before any future plugin-decorated middleware.
+
+### Severity shorthands
+
+`notify.success(text, opts?)`, `notify.info(...)`, `.warning(...)`, `.error(...)`, `.neutral(...)`. The shorthand stamps `level`; everything else flows through the same `notify()` dispatcher.
+
+## Backend selection algorithm
+
+`chooseBackend()` runs once per call, before the dispatcher:
+
+1. `force` (if `!== "auto"`) → wins.
+2. **CI detection** — `process.env.CI === "true"` / `GITHUB_ACTIONS` / `TF_BUILD` / `BUILDKITE` / no TTY → `bell`.
+3. **darwin / win32** → `os` (always). Linux requires `DISPLAY` or `WAYLAND_DISPLAY` for `notify-send`.
+4. **OSC detection** — `KITTY_PID` / `TERM=xterm-kitty` / `ITERM_SESSION_ID` / `WEZTERM_EXECUTABLE` / `TERM_PROGRAM=ghostty` / `TERM=foot` → `osc`.
+5. **TTY stderr present** → `terminal`.
+6. **otherwise** → `bell`.
+
+The router never throws — a missing `notify-send` on Linux silently falls back to `osc` / `terminal` / `bell` in that order.
+
+## Theme slots
+
+The plugin registers these slots via `registerThemeSlot`:
+
+| Slot | Default | Cascades to |
+| --- | --- | --- |
+| `notify.success.border` / `.bg` / `.fg` / `.icon` | `#22c55e` / `{fg:#0a1f10,bg:#0a1f10}` / `#a0e6a0` / `✓` | Inline toast box border, badge bg / fg, terminal chip label. |
+| `notify.info.{border,bg,fg,icon}` | `#64c8ff` / `#a0d8ff` / `ⓘ` (analogous) | Same. |
+| `notify.warning.{border,bg,fg,icon}` | `#ffdc50` / `#ffe488` / `⚠` | Same. |
+| `notify.error.{border,bg,fg,icon}` | `#f86464` / `#ffb0b0` / `✖` | Same. |
+| `notify.neutral.{border,bg,fg,icon}` | `#888888` / `#cccccc` / `·` | Same. |
+
+Override per-call via `configure({ theme: { notify: { error: { border: "#ff00ff" } } } })`. Default `ttl` if `opts.ttl` is unset is `5000` and lives in `terminalNotify()` itself, not in the theme slot system.
+
+## Render hook
+
+The plugin registers a `notify` render-hook channel with `priority: "first"` so consumer code stays in control:
+
+```ts
+api.registerRenderHook("notify", async (input, ctx) => {
+  // Mutate / decorate before fire:
+  const opts = JSON.parse(input);
+  return JSON.stringify(await notify({ ...opts, title: ctx.title ?? opts.title }));
+});
+```
+
+The standard `runRenderHookAsync("notify", payload)` runs all hooks in priority order and resolves with the last result.
+
+## Examples
+
+### Long-running CLI task
+
+```ts
+import { notify } from "@dui-toolkit/plugin-notify";
+
+const start = Date.now();
+try {
+  await build();
+  await notify.success(`Build complete`, {
+    body: `${Date.now() - start}ms`,
+  });
+} catch (err) {
+  await notify.error(err instanceof Error ? err.message : String(err), {
+    title: "Build failed",
+    sound: true,
+  });
+  throw err;
+}
+```
+
+### CI failure escalation
+
+```ts
+await notify.error("CI failed for PR #1421", {
+  title: "bolt-docs/dui",
+  body: "Vitest surfaced 3 failing tests.",
+  actions: [
+    { id: "open-logs", label: "Open logs" },
+    { id: "rerun",     label: "Re-run CI"   },
+  ],
+});
+```
+
+The action tokens are visible inside the inline TUI toast (`[ Open logs ] [ Re-run CI ]`). On OS-level desktops, the action IDs are captured when the user clicks the corresponding native chip — see [Platform action capture](#platform-action-capture) below for the per-OS parity matrix.
+
+## Platform action capture
+
+| Platform | Capture path | `result.action` resolves to | Notes |
+| --- | --- | --- | --- |
+| **Linux** | `notify-send -A id:label ... -w` (libnotify ≥ 0.7.9) | the `id` whose `-A` pair the user clicked | `-w` blocks the proc until the toast is dismissed or an action fires; the chosen action id lands on stdout. Missing `notify-send` falls back to `osc` → `terminal` → `bell`. |
+| **Windows** | `[System.Windows.Forms.MessageBox]::Show(...)` via PowerShell | `actions[0].id` (OK / Yes) / `actions[N-1].id` (No) / `undefined` (Cancel) | Button style is picked from action count: `0 → OK`, `1 → OKCancel`, `2+ → YesNo`. Calls work over PowerShell executable (no shell-mode). |
+| **macOS** | _none_ | `undefined` | AppleScript cannot subscribe to click events on `display notification` (Apple removed the AppleScript Studio notification bridge years ago). AppleScript still delivers the toast visually, but `result.action` is always `undefined`. To get click → action on macOS, pass `{ force: "terminal" }` to render the inline toast + use the keyboard-chip flow instead. |
+| **OSC** (Kitty / iTerm2 / WezTerm / foot / Ghostty) | _none_ | `undefined` | OSC 99 / 9 / 777 are write-only one-shot escape sequences — there is no reply channel from the terminal emulator back to the caller. Use the terminal backend for click → action capture here too. |
+| **Bell** | n/a | `undefined` | Bell has no UI surface; `dismissed` resolves immediately. |
+
+When the host can't deliver click-action parity, the inline TUI toast (and its keyboard-chip capture) is the cross-platform fallback — it works even on a CI runner with no notification daemon, because it paints to stderr and reads `process.stdin` raw-mode while the toast is alive.
+
+## Force for tests
+
+```ts
+await notify.info("unit-test-fixture", { force: "bell" });
+expect(result.backend).toBe("bell");
+```
+
+Always pin `force: "bell"` for vitest — CI auto-detects typically route to `bell` anyway, but pinning makes the result reproducible across macOS / Linux / Windows host CI runners.
+
+## Accessibility
+
+The plugin reads `@bdocs/dui`'s accessibility heuristics at every level:
+
+- **Auto-detect** — `NO_COLOR=1`, `TERM=dumb`, non-TTY stdout, screen-reader presence (brltty / VoiceOver / NVDA / JAWS), and `PREFERS_REDUCED_MOTION=1` are all checked lazily on the first call.
+- **Per-call opt-in** — `notify({ ..., plain: true })` forces the multi-line `prefix:` text path regardless of host env.
+- **Global opt-in** — `configure({ plain: true })` from `@bdocs/dui` flips every widget + every notify call into the text fallback.
+
+When accessibility plain-mode wins, the dispatcher routes every `notify()` call through the bell backend's text path even if `force: "os"` / `"osc"` / `"terminal"` was set. No `notify-send` / `osascript` / `powershell.exe` spawn happens; no OSC 99 / 9 / 777 escape is written; the `\x07` bell is suppressed. The result backend tag still reflects what would have been chosen otherwise so test logs stay traceable.
+
+Output format:
+
+```text
+notify.error: CI failed for PR #1421
+
+  body: Vitest surfaced 3 failing tests.
+
+actions:
+  [open-logs] Open logs
+  [rerun] Re-run CI
+```
+
+Full heuristic reference + the `AccessibilityInfo` shape lives at [Accessibility](../overview/accessibility).

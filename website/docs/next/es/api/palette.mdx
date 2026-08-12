@@ -1,0 +1,83 @@
+---
+title: Palette
+sidebarPosition: 27
+badge: New
+description: Command palette con búsqueda fuzzy — el selector de acciones estilo VS Code / Raycast para la terminal.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+# `palette(message, opts)` — command palette
+
+El selector de acciones estilo VS Code / Raycast: una línea de búsqueda arriba, una lista de acciones filtrada con fuzzy abajo, navegación con flechas y Enter para ejecutar. Escribir `gb` encuentra "Go to Browser" con las coincidencias resaltadas.
+
+```ts
+import { palette } from '@bdocs/dui'
+
+const action = await palette('Ejecutar comando', {
+  items: [
+    { label: 'Desplegar a producción', value: 'deploy',
+      description: 'git push + release', shortcut: 'd' },
+    { label: 'Ejecutar tests', value: 'test',
+      keywords: ['vitest', 'unit'], shortcut: 't' },
+  ],
+})
+```
+
+<TerminalPreview command="node palette.js">
+{`\x1b[33m? Ejecutar comando\x1b[0m
+  \x1b[36m▸\x1b[0m \x1b[90mEscribe para buscar…\x1b[0m
+  \x1b[36m◆\x1b[0m \x1b[37mDesplegar a producción\x1b[0m \x1b[90m— git push + release\x1b[0m \x1b[90md\x1b[0m
+  \x1b[90m  Ejecutar tests — vitest, unit\x1b[0m \x1b[90mt\x1b[0m`}
+</TerminalPreview>
+
+## Teclas
+
+| Tecla | Acción |
+| --- | --- |
+| Escribir | Filtro fuzzy por etiqueta **y** keywords |
+| `↑` / `↓` | Mover el cursor |
+| `Enter` | Ejecutar la acción seleccionada (resuelve con su `value`) |
+| `Retroceso` | Editar la búsqueda |
+| `Escape` | Limpiar la búsqueda; un segundo Escape cancela |
+| `Ctrl+C` | Salir con código 130 |
+
+## Items
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `label` | `string` | Nombre de la acción (obligatorio) |
+| `value` | `T` | Se resuelve al seleccionar (obligatorio) |
+| `description` | `string` | Detalle tenue tras la etiqueta |
+| `keywords` | `string[]` | Términos extra para el match fuzzy (alias, acrónimos) |
+| `shortcut` | `string` | Hint de tecla alineado a la derecha (ej. `"⌘K"`) |
+| `disabled` | `boolean` | No seleccionable |
+
+## Opciones
+
+| Campo | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `items` | `PaletteItem<T>[]` | — | Acciones a elegir (obligatorio) |
+| `pageSize` | `number` | `8` | Filas visibles antes de hacer scroll |
+| `placeholder` | `string` | `"Type to search…"` | Hint tenue en la línea de búsqueda |
+| `onCancel` | `() => void` | — | Se llama una vez al cancelar (Escape con query vacía, o Ctrl+C) |
+| `colors.*` | `ColorStyle` | slots del tema | Overrides de color por parte |
+
+## Slots de tema
+
+| Slot | Default | Notas |
+| --- | --- | --- |
+| `palette.message` | `yellow` | Línea del prompt |
+| `palette.label` | `white` | Etiquetas (incluida la fila seleccionada) |
+| `palette.match` | `cyan` | Caracteres que coinciden con el fuzzy |
+| `palette.description` | `gray` | Descripciones |
+| `palette.shortcut` | `gray` | Hints de tecla |
+
+## Fallback no-TTY
+
+Imprime una lista numerada y lee un número, así los scripts pueden manejar la palette vía pipes.
+
+## Notas
+
+- El matching usa el motor fuzzy compartido documentado en [`fuzzy`](/docs/next/es/api/fuzzy) — el mismo matcher que impulsa `searchable` en `select`, `multiselect` y `tree`.
+- La promesa **rechaza** al cancelar (`Escape` con búsqueda vacía), igual que `select`/`input` — envuélvela en `try/catch` o usa `await ... .catch(() => undefined)`.

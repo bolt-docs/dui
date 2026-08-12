@@ -1,0 +1,70 @@
+---
+title: Link
+sidebarPosition: 28
+badge: New
+description: OSC 8 hyperlink emission — clickable links in logs and widgets with graceful fallback.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# `link(url, text?)` — OSC 8 hyperlinks
+
+Emits clickable OSC 8 hyperlinks. DUI already detects hyperlink support (see `capabilities`); this module is the emission side — it wraps text in the OSC 8 sequence and falls back to a readable `text (url)` form on terminals that don't support clickable links, so you never ship raw escape codes to dumb terminals, log scrapers, or non-TTY output.
+
+```ts
+import { link, linkify } from '@bdocs/dui'
+
+console.log(link('https://example.com', 'Example docs'))
+// → ESC]8;;https://example.com␇Example docsESC]8;;␇   (when supported)
+// → "Example docs (https://example.com)"               (fallback)
+
+console.log(linkify('See https://example.com for details'))
+// → "See <link>https://example.com</link> for details"
+```
+
+<TerminalPreview command="node link.js">
+{`\x1b[36mVisit \x1b[0m\x1b[36mhttps://example.com\x1b[0m\x1b[36m for the docs\x1b[0m`}
+</TerminalPreview>
+
+## API
+
+### `link(url, text?, options?)`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `url` | `string` | — | Link target (required) |
+| `text` | `string` | `url` | Visible label |
+| `options.fallback` | `"url" \| "both" \| "text"` | `"both"` | Rendering when hyperlinks are unsupported |
+
+Fallback modes:
+
+- `"url"` — render the URL instead of the text
+- `"both"` — render `text (url)`
+- `"text"` — render only the text
+
+### `linkify(text, options?)`
+
+Wraps every `http(s)://…` URL found in `text` (the URL is both target and label). On unsupported terminals the text stays plain and fully readable.
+
+### `hyperlink(url, text?, options?)`
+
+Alias of `link` with a more explicit name.
+
+### `supportsHyperlinks()`
+
+`true` when the terminal supports OSC 8 (delegates to `getCapabilities().hyperlinks`).
+
+## Usage with widgets
+
+- Log lines: `info(link('https://ci.example/run/1', 'View run'))`
+- Inside `box()` lines and `richtext()` links — `richtext` already routes `[label](url)` through `link`.
+- Terminal-capability gating: check `supportsHyperlinks()` once and keep links for supported hosts.
+
+## Theme slots
+
+Links themselves take the text color of the surrounding context. For colored links inside `richtext()`, use the `richtext.link` slot (default `cyan`).
+
+## Notes
+
+- The OSC 8 sequence is written for any stream — use `link()` for strings that land in `stdout`, and `linkify()` for free-form messages that may already contain URLs.
+- Plain mode: `link()` still returns the label; only the wrapping escape is dropped.
