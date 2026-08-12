@@ -7,17 +7,6 @@
  * (via the `banner.text` theme slot or an explicit color), letter
  * spacing, and an automatic plain-mode fallback (ASCII `#` fill, no
  * ANSI) for dumb terminals, log scrapers, and screen readers.
- *
- * @example
- * ```ts
- * import { banner } from "@bdocs/dui"
- *
- * console.log(banner("DUI"))
- * // ██▄  ▄███  ██▄
- * // ... (5 rows of double-width block art)
- *
- * console.log(banner("CI", { fill: "#", color: "green" }))
- * ```
  */
 
 import { isPlainMode } from "./accessibility";
@@ -28,25 +17,13 @@ import { resolveColor } from "./theme";
 export type BannerStyle = "block";
 
 export interface BannerOptions {
-	/**
-	 * Character used to paint filled cells. Defaults to `█`.
-	 * In plain mode this is forced to `#` (ASCII).
-	 */
+	/** Character used to paint filled cells. Defaults to `█`; forced to `#` in plain mode. */
 	fill?: string;
-	/**
-	 * Foreground color for the whole banner. Falls back to the
-	 * `banner.text` theme slot (default: bold).
-	 */
+	/** Foreground color for the whole banner. Falls back to the `banner.text` theme slot (default: bold). */
 	color?: ColorStyle;
-	/**
-	 * Separator between glyphs. Defaults to two spaces.
-	 */
+	/** Separator between glyphs. Defaults to two spaces. */
 	gap?: string;
-	/**
-	 * Paint each font cell as 2 columns (default `true`). The 5×5
-	 * font reads as square when each cell is doubled; pass `false`
-	 * for a narrow variant.
-	 */
+	/** Paint each font cell as 2 columns (default `true`) so the 5×5 font reads square. Pass `false` for a narrow variant. */
 	double?: boolean;
 }
 
@@ -59,10 +36,12 @@ export interface BannerOptions {
  * ```
  */
 export function banner(text: string, options?: BannerOptions): string {
-	const fill = options?.fill ?? "█";
+	const plain = isPlainMode();
+	const fill = plain ? "#" : (options?.fill ?? "█");
 	const gap = options?.gap ?? "  ";
 	const double = options?.double ?? true;
-	const plain = isPlainMode();
+
+	if (text === "") return "";
 
 	const theme = getConfig().theme;
 	const colorFn = resolveColor(
@@ -79,22 +58,22 @@ export function banner(text: string, options?: BannerOptions): string {
 				const cells = glyph[row];
 				return cells
 					.split("")
-					.map((c) => (c === "#" ? fill.repeat(double ? 2 : 1) : (double ? "  " : " ")))
+					.map((c) =>
+						c === "#" ? fill.repeat(double ? 2 : 1) : double ? "  " : " ",
+					)
 					.join("");
 			})
 			.join(gap);
 		rows.push(line);
 	}
 
-	const out = rows.join("\n");
+	const out = rows.map((row) => row.trimEnd()).join("\n");
 	if (plain) return out;
 	return colorFn(out);
 }
 
 /**
- * Render `text` as block art and return the 5 rows as an array
- * (no trailing color reset per row — the whole banner is one styled
- * block). Useful for embedding inside other layouts.
+ * Render `text` as block art and return the rows as an array.
  */
 export function bannerLines(text: string, options?: BannerOptions): string[] {
 	const whole = banner(text, options);
