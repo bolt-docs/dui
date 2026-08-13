@@ -257,7 +257,7 @@ export { filterFuzzy, fuzzyMatch, highlightFuzzy } from "./fuzzy";
 export type { LinkOptions } from "./link";
 export { hyperlink, link, linkify, supportsHyperlinks } from "./link";
 export { clipboardSupported, copy, copyToClipboard } from "./clipboard";
-export type { BannerOptions, BannerStyle } from "./banner";
+export type { BannerLayout, BannerOptions, BannerStyle } from "./banner";
 export { banner, bannerLines } from "./banner";
 export type { RichTextOptions } from "./richtext";
 export { richtext, richtextToPlain } from "./richtext";

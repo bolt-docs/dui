@@ -2,14 +2,14 @@
 title: Banner
 sidebarPosition: 30
 badge: New
-description: Banners de arte ASCII desde una fuente 5×5 embebida, con colores, fills personalizados y fallback plain.
+description: Banners de arte ASCII desde una fuente figlet ANSI Shadow embebida, con colores, fills personalizados y fallback plain.
 ---
 
 import TerminalPreview from '../../../../components/TerminalPreview'
 
 # `banner(text)` — banners de arte ASCII
 
-Renderiza texto como letras grandes usando una fuente de píxeles 5×5 embebida — perfecto para splash screens, headers de sección y pantallas de build exitoso. Los colores vienen del slot `banner.text` del tema o de un color explícito, y el modo plain cambia el fill a `#` ASCII sin ANSI.
+Renderiza texto en el clásico estilo figlet con sombra pesada — el look que ves en READMEs y herramientas CLI para splash screens, headers de sección y pantallas de build exitoso. Las letras hacen kerning exactamente como el figlet real (glifos pegados con el espaciado interno de la propia fuente). Los colores vienen del slot `banner.text` del tema o de un color explícito, y el modo plain cambia los glifos a `#` ASCII sin ANSI.
 
 ```ts
 import { banner } from '@bdocs/dui'
@@ -18,32 +18,55 @@ console.log(banner('CI', { fill: '#', color: 'green' }))
 ```
 
 <TerminalPreview command="node banner.js">
-{`\x1b[32m  ######    ##########
-##      ##      ##
-##              ##
-##      ##      ##
-  ######    ##########\x1b[39m`}
+{`\x1b[32m ##########
+###########
+###     ###
+###     ###
+###########
+\x20##########\x1b[39m`}
 </TerminalPreview>
 
 ## Opciones
 
 | Campo | Tipo | Default | Notas |
 | --- | --- | --- | --- |
-| `fill` | `string` | `"█"` | Carácter de relleno de celda (el modo plain fuerza `#`) |
+| `fill` | `string` | glifos nativos | Pinta cada celda no vacía con este carácter (el modo plain fuerza `#`) |
 | `color` | `ColorStyle` | `theme.banner.text` | Foreground de todo el banner |
-| `gap` | `string` | `"  "` | Separador entre glifos |
-| `double` | `boolean` | `true` | Pinta cada celda de fuente como 2 columnas (aspecto cuadrado) |
+| `gap` | `string` | `""` | Separador extra entre glifos (el espaciado interno de la fuente hace el kerning; ignorado en el layout `smush`) |
+| `double` | `boolean` | `false` | Variante sólida con cada celda duplicada |
+| `layout` | `"flush" \| "smush"` | `"flush"` | Une los glifos lado a lado, o los superpone como el universal smushing de figlet |
+
+## Layouts
+
+- **`flush`** (default) — los glifos van lado a lado con el padding interno de la propia fuente, así las letras hacen kerning exactamente como el figlet real.
+- **`smush`** — los glifos se deslizan a la izquierda hasta que su tinta choca; el glifo posterior gana en la colisión, y los espacios entre palabras se colapsan al ancho de hardblank de la fuente. Es el *universal smushing* de figlet — `banner('HOLA', { layout: 'smush' })` es byte a byte idéntico al output del `figlet` real.
+
+```ts
+import { banner } from '@bdocs/dui'
+
+// Glifos superpuestos estilo figlet
+console.log(banner('CI', { layout: 'smush' }))
+```
+
+<TerminalPreview command="node banner.js">
+{`\x1b[1;37m ████████╗
+██╔════██║
+██║    ██║
+██║    ██║
+╚████████║
+\x20╚═════╚═╝\x1b[22;39m`}
+</TerminalPreview>
 
 ## API
 
 | Función | Devuelve | Notas |
 | --- | --- | --- |
-| `banner(text, options?)` | `string` | 5 filas unidas con saltos de línea |
-| `bannerLines(text, options?)` | `string[]` | Las 5 filas como array (embebe en otros layouts) |
+| `banner(text, options?)` | `string` | Filas unidas con saltos de línea (6 por glifo, 7 con acentos) |
+| `bannerLines(text, options?)` | `string[]` | Las filas como array (embebe en otros layouts) |
 
 ## Glifos
 
-Cubre `A–Z`, `0–9` y puntuación común (`- _ ! ? : . , / + = * @`). Los caracteres desconocidos se renderizan como un glifo en blanco.
+Cubre todo el ASCII imprimible — `A–Z`, `a–z` (reusan las formas mayúsculas, como es estándar en las fuentes figlet), `0–9` y puntuación — más las vocales acentuadas en español (`á é í ó ú ñ Á É Í Ó Ú Ñ`), `Ü ü`, y las marcas tipográficas `¿ ¡ € — –`. Los acentos y la diéresis quedan centrados sobre su letra. Los caracteres desconocidos se renderizan como un glifo en blanco.
 
 ```ts
 import { banner } from '@bdocs/dui'
@@ -68,4 +91,4 @@ configure({ theme: { banner: { text: 'cyan' } } })
 ## Notas
 
 - El modo plain (screen readers, `NO_COLOR`, `TERM=dumb`) renderiza el banner con fill `#` y sin color para que los log scrapers sigan viendo el texto.
-- La fuente 5×5 está embebida — sin red ni assets externos.
+- La fuente ANSI Shadow está embebida — sin red ni assets externos.

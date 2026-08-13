@@ -2,14 +2,14 @@
 title: Banner
 sidebarPosition: 30
 badge: New
-description: ASCII-art banners from an embedded 5×5 block font, with colors, custom fills, and plain-mode fallback.
+description: ASCII-art banners from an embedded ANSI Shadow figlet font, with colors, custom fills, and plain-mode fallback.
 ---
 
 import TerminalPreview from '../../../components/TerminalPreview'
 
 # `banner(text)` — ASCII-art banners
 
-Renders text as large block letters using an embedded 5×5 pixel font — perfect for splash screens, section headers, and build success screens. Colors come from the `banner.text` theme slot or an explicit color, and plain mode swaps the fill to ASCII `#` with no ANSI.
+Renders text in the classic heavy-shadow figlet style — the look used across READMEs and CLI tools for splash screens, section headers, and build success screens. Letters kern exactly like real figlet (flush glyphs with the font's own internal spacing). Colors come from the `banner.text` theme slot or an explicit color, and plain mode swaps the glyphs to ASCII `#` with no ANSI.
 
 ```ts
 import { banner } from '@bdocs/dui'
@@ -18,32 +18,55 @@ console.log(banner('CI', { fill: '#', color: 'green' }))
 ```
 
 <TerminalPreview command="node banner.js">
-{`\x1b[32m  ######    ##########
-##      ##      ##
-##              ##
-##      ##      ##
-  ######    ##########\x1b[39m`}
+{`\x1b[32m ##########
+###########
+###     ###
+###     ###
+###########
+\x20##########\x1b[39m`}
 </TerminalPreview>
 
 ## Options
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `fill` | `string` | `"█"` | Cell fill character (plain mode forces `#`) |
+| `fill` | `string` | native glyphs | Paint every non-space cell with this character (plain mode forces `#`) |
 | `color` | `ColorStyle` | `theme.banner.text` | Foreground for the whole banner |
-| `gap` | `string` | `"  "` | Separator between glyphs |
-| `double` | `boolean` | `true` | Paint each font cell as 2 columns (square aspect) |
+| `gap` | `string` | `""` | Extra separator between glyphs (the font's internal spacing handles kerning; ignored in `smush` layout) |
+| `double` | `boolean` | `false` | Solid variant with each cell doubled |
+| `layout` | `"flush" \| "smush"` | `"flush"` | Join glyphs side by side, or overlap them like figlet's universal smushing |
+
+## Layouts
+
+- **`flush`** (default) — glyphs sit side by side using the font's own internal padding, so letters kern exactly like real figlet.
+- **`smush`** — glyphs slide left until their ink collides; the later glyph wins on collision, and spaces between words collapse to the font's hardblank width. This is figlet's *universal smushing* — `banner('HOLA', { layout: 'smush' })` is byte-identical to the real `figlet` output.
+
+```ts
+import { banner } from '@bdocs/dui'
+
+// Figlet-style overlapping glyphs
+console.log(banner('CI', { layout: 'smush' }))
+```
+
+<TerminalPreview command="node banner.js">
+{`\x1b[1;37m ████████╗
+██╔════██║
+██║    ██║
+██║    ██║
+╚████████║
+\x20╚═════╚═╝\x1b[22;39m`}
+</TerminalPreview>
 
 ## API
 
 | Function | Returns | Notes |
 | --- | --- | --- |
-| `banner(text, options?)` | `string` | 5 rows joined with newlines |
-| `bannerLines(text, options?)` | `string[]` | The 5 rows as an array (embed in other layouts) |
+| `banner(text, options?)` | `string` | Rows joined with newlines (6 per glyph, 7 with accents) |
+| `bannerLines(text, options?)` | `string[]` | The rows as an array (embed in other layouts) |
 
 ## Glyphs
 
-Covers `A–Z`, `0–9`, and common punctuation (`- _ ! ? : . , / + = * @`). Unknown characters render as a blank glyph.
+Covers all printable ASCII — `A–Z`, `a–z` (reusing the uppercase shapes, as is standard for figlet fonts), `0–9`, and punctuation — plus Spanish accented vowels (`á é í ó ú ñ Á É Í Ó Ú Ñ`), `Ü ü`, and the typographic marks `¿ ¡ € — –`. Accent marks and umlauts sit centered above their letters. Unknown characters render as a blank glyph.
 
 ```ts
 import { banner } from '@bdocs/dui'
@@ -68,4 +91,4 @@ configure({ theme: { banner: { text: 'cyan' } } })
 ## Notes
 
 - Plain mode (screen readers, `NO_COLOR`, `TERM=dumb`) renders the banner with `#` fill and no color so log scrapers still see the text.
-- The 5×5 font is embedded — no network or external assets.
+- The ANSI Shadow font is embedded — no network or external assets.
