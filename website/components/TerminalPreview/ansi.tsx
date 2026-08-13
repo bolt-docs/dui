@@ -293,4 +293,44 @@ export function ansiToReact(text: string): React.ReactNode[] {
 	return nodes;
 }
 
+/**
+ * Split already-tokenized ANSI text into per-line token arrays. Style state
+ * is carried across `\n`, so a code emitted on one line keeps applying on
+ * the following lines until a reset code appears.
+ */
+function splitTokensByLine(tokens: AnsiToken[]): AnsiToken[][] {
+	const lines: AnsiToken[][] = [];
+	let current: AnsiToken[] = [];
+	for (const t of tokens) {
+		const parts = t.text.split("\n");
+		for (let i = 0; i < parts.length; i++) {
+			if (i > 0) {
+				lines.push(current);
+				current = [];
+			}
+			if (parts[i]) current.push({ text: parts[i], styles: t.styles });
+		}
+	}
+	lines.push(current);
+	return lines;
+}
+
+/**
+ * Tokenize a whole multi-line string once and return one React node array
+ * per line, preserving ANSI state across newlines. Use this instead of
+ * calling {@link ansiToReact} per line when the string may carry codes at
+ * the start that must style every line (e.g. `\x1b[32mline1\nline2\x1b[39m`).
+ */
+export function ansiToReactLines(text: string): React.ReactNode[][] {
+	return splitTokensByLine(tokenizeAnsi(text)).map((tokens, li) => {
+		const nodes: React.ReactNode[] = [];
+		for (let ti = 0; ti < tokens.length; ti++) {
+			nodes.push(
+				...renderToken(tokens[ti].text, toCSS(tokens[ti].styles), `${li}-${ti}`),
+			);
+		}
+		return nodes;
+	});
+}
+
 export { AnimatedProgressBar };

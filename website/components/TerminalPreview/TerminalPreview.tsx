@@ -1,4 +1,4 @@
-import { AnimatedProgressBar, ansiToReact, FG_COLORS, BRIGHT_FG_COLORS } from "./ansi";
+import { AnimatedProgressBar, ansiToReact, ansiToReactLines, FG_COLORS, BRIGHT_FG_COLORS } from "./ansi";
 import { TERMINAL_COLORS } from "./constants";
 
 export { AnimatedProgressBar };
@@ -79,6 +79,11 @@ export default function TerminalPreview({
 	className = "",
 }: TerminalPreviewProps) {
 	let contentLines: string[] = [];
+	// Pre-tokenized per-line nodes for a single multi-line string child:
+	// tokenized once so ANSI state carries across lines, instead of
+	// re-tokenizing each line from scratch (which would drop styles that
+	// only appear at the start of the string).
+	let lineNodes: React.ReactNode[][] | null = null;
 
 	if (lines) {
 		contentLines = lines;
@@ -87,6 +92,7 @@ export default function TerminalPreview({
 		if (raw.startsWith("\n")) raw = raw.slice(1);
 		if (raw.endsWith("\n")) raw = raw.slice(0, -1);
 		contentLines = raw.split("\n");
+		lineNodes = ansiToReactLines(raw);
 	}
 
 	return (
@@ -130,7 +136,7 @@ export default function TerminalPreview({
 						}
 						return (
 							<div key={idx} className="min-h-[1.25em]">
-								{ansiToReact(line)}
+								{lineNodes ? lineNodes[idx] ?? [] : ansiToReact(line)}
 							</div>
 						);
 					})}
