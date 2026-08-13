@@ -44,17 +44,17 @@ console.log(banner('CI', { fill: '#', color: 'green' }))
 ```ts
 import { banner } from '@bdocs/dui'
 
-// Glifos superpuestos estilo figlet
-console.log(banner('CI', { layout: 'smush' }))
+// Glifos superpuestos estilo figlet, blanco para temas oscuros
+console.log(banner('CI', { layout: 'smush', color: 'white' }))
 ```
 
 <TerminalPreview command="node banner.js">
-{`\x1b[1;37m ████████╗
+{`\x1b[37m ████████╗
 ██╔════██║
 ██║    ██║
 ██║    ██║
 ╚████████║
-\x20╚═════╚═╝\x1b[22;39m`}
+\x20╚═════╚═╝\x1b[39m`}
 </TerminalPreview>
 
 ## API
