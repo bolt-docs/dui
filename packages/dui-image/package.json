@@ -40,7 +40,7 @@
 	"type": "module",
 	"dependencies": {
 		"@bdocs/dui": "workspace:*",
-		"sharp": "^0.34.1"
+		"sharp": "^0.35.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",

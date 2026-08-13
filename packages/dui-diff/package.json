@@ -38,7 +38,7 @@
 	"type": "module",
 	"dependencies": {
 		"@bdocs/dui": "workspace:*",
-		"diff": "^7.0.0"
+		"diff": "^8.0.3"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",
