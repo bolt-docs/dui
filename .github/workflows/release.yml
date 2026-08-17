@@ -39,12 +39,12 @@ jobs:
         run: pnpm test
 
       # Fail fast with a clear auth error instead of the generic
-      # "Publish command exited with code 1" when the npm token is
-      # missing, expired, or scoped to an account without publish rights.
+      # "Publish command exited with code 1" when TOKEN_NPM is missing,
+      # expired, or scoped to an account without publish rights.
       - name: Verify npm auth
         run: npm whoami
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.TOKEN_NPM }}
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
@@ -53,5 +53,5 @@ jobs:
           publish: pnpm release
           version: pnpm version-packages
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          NPM_TOKEN: ${{ secrets.TOKEN_NPM }}
