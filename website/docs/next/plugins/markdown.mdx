@@ -9,7 +9,7 @@ import PackageManager from '../../../components/PackageManager'
 <PackageManager pkg="@dui-toolkit/plugin-markdown" />
 
 ```ts
-import { md, mdRender, mdSyntax } from '@dui-toolkit/plugin-markdown'
+import { md, mdRender, mdSyntax, mdInteractive, collectChecklist } from '@dui-toolkit/plugin-markdown'
 ```
 
 `@dui-toolkit/plugin-markdown` renders Markdown to ANSI-colored terminal output, with
@@ -19,7 +19,7 @@ result caching).
 ## md
 
 ```ts
-md(text: string): Promise<string>
+md(text: string, options?: MdRenderOptions): Promise<string>
 ```
 
 Parses and renders markdown, returning a string with ANSI escape sequences.
@@ -28,6 +28,22 @@ Parses and renders markdown, returning a string with ANSI escape sequences.
 const output = await md('# Hello **world**')
 console.log(output)
 ```
+
+### Options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `width` | `number` | terminal | Cap the render width in columns — code blocks, tables and paragraphs wrap / truncate to it |
+| `focusItem` | `number` | — | Internal: paints the `❯` pointer on a checklist row (used by `mdInteractive`) |
+
+```ts
+// Fit a document into a narrow pane
+const output = await md('# Wide tables', { width: 40 })
+```
+
+Since **v2**, table cells render inline markdown — `**bold**`, `` `code` ``, and
+`[links](url)` inside a `| cell |` are styled instead of printed as raw source
+(headers stay bold on top).
 
 ## mdRender
 
@@ -158,6 +174,74 @@ function hello(): void {
 `
 
 console.log(await md(markdown))
+```
+
+## mdInteractive — interactive checklists (v2)
+
+```ts
+mdInteractive(text: string, options?: MdInteractiveOptions): Promise<MdInteractiveResult>
+```
+
+Renders the document and lets the user **toggle checkboxes** with the keyboard —
+useful for task lists, release checklists, or any agent UI that needs a human to
+confirm steps. Returns the updated markdown source, the flattened item list, and the
+rendered output.
+
+```ts
+import { mdInteractive } from '@dui-toolkit/plugin-markdown'
+
+const r = await mdInteractive(`# Release
+
+- [ ] build passes
+- [x] tests green
+- [ ] push tag
+`)
+
+if (r.changed) {
+  console.log(r.text)     // markdown with the toggled checkboxes
+  console.log(r.output)   // rendered output
+}
+```
+
+### Keymap
+
+| Key | Action |
+|---|---|
+| `j` / `↓` | Move focus to the next checkbox |
+| `k` / `↑` | Move focus to the previous checkbox |
+| `space` / `Enter` | Toggle the focused checkbox |
+| `q` / `Esc` | Finish with the current state |
+| `Ctrl+C` | Cancel — no changes (`cancelled: true`) |
+
+The focused row is marked with a `❯` pointer and inverse video. Without a TTY (or
+with `disable: true`) it renders statically and returns the original state.
+
+### Return shape
+
+`MdInteractiveResult`:
+
+| Field | Type | Description |
+|---|---|---|
+| `output` | `string` | Rendered markdown with the current checkbox states |
+| `items` | `ChecklistItem[]` | Flattened `{ checked, label, line }` items in document order |
+| `text` | `string` | Source text with the toggled checkboxes |
+| `changed` | `boolean` | `true` when at least one box differs from the input |
+| `cancelled` | `boolean` | `true` when the user pressed `Ctrl+C` |
+
+### collectChecklist
+
+```ts
+collectChecklist(text: string): ChecklistItem[]
+```
+
+Pure helper that flattens every `[ ]` / `[x]` item with its source line index —
+handy when you want to inspect or pre-apply a checklist without the interactive loop:
+
+```ts
+import { collectChecklist } from '@dui-toolkit/plugin-markdown'
+
+const items = collectChecklist('- [ ] todo\n- [x] done')
+// [{ checked: false, label: 'todo', line: 0 }, { checked: true, label: 'done', line: 1 }]
 ```
 
 ## Plugin integration

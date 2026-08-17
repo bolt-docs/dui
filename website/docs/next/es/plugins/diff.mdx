@@ -10,7 +10,7 @@ import TerminalPreview from '../../../../components/TerminalPreview'
 <PackageManager pkg="@dui-toolkit/plugin-diff" />
 
 ```ts
-import { diff, diffSideBySide, diffFiles, diffWords, diffStat } from '@dui-toolkit/plugin-diff'
+import { diff, diffSideBySide, diffFiles, diffWords, diffStat, reviewDiff, applyDiff } from '@dui-toolkit/plugin-diff'
 ```
 
 `@dui-toolkit/plugin-diff` renderiza diffs de texto directamente en la terminal — unificados,
@@ -300,6 +300,131 @@ console.log(r.output)
   Usa `node:fs/promises` internamente — sin dependencias nativas. Los symlinks no se
   siguen; los archivos binarios se omiten silenciosamente.
 </Callout>
+
+---
+
+## reviewDiff — revisión interactiva de hunks (v2)
+
+```ts
+reviewDiff(oldStr: string, newStr: string, options?: ReviewDiffOptions): Promise<DiffReviewResult>
+```
+
+Recorre un diff **hunk por hunk** y te deja decidir qué cambios conservar — el mismo
+flujo que `git add -p`. En una TTY renderiza un hunk enfocado a la vez con una línea
+de estado en vivo; el resultado te dice exactamente qué hunks se aplicaron y te da el
+contenido y el patch resultantes.
+
+```ts
+import { reviewDiff } from '@dui-toolkit/plugin-diff'
+
+const r = await reviewDiff(oldContent, newContent, { filename: 'src/app.ts' })
+
+if (r.changed) {
+  console.log(r.patch)   // patch unificado de los hunks seleccionados
+  console.log(r.output)  // contenido tras aplicar la selección
+}
+```
+
+### Keymap
+
+| Tecla | Acción |
+|---|---|
+| `j` / `↓` | Siguiente hunk |
+| `k` / `↑` | Hunk anterior |
+| `a` / `y` | Aplica el hunk actual y pasa al siguiente |
+| `d` / `n` | Descarta el hunk actual y pasa al siguiente |
+| `A` | Aplica **todos** los hunks restantes y termina |
+| `D` | Descarta **todos** los hunks restantes y termina |
+| `?` | Alterna la línea de ayuda |
+| `q` / `Esc` / `Enter` | Termina con las selecciones actuales |
+| `Ctrl+C` | Cancela — no se aplica nada (`cancelled: true`) |
+
+<TerminalPreview command="node review.js">
+{`\x1b[1;37m  src/app.ts — review 1/2\x1b[22;39m
+\x1b[90m  3 additions, 2 deletions · 0 applied, 2 skipped\x1b[22;39m
+
+\x1b[36m  hunk 1  · skip\x1b[39m
+\x1b[90m    const ret = await api.get('/users')\x1b[22;39m
+\x1b[90m    if (ret.ok) {\x1b[22;39m
+\x1b[31m  -   return ret.data\x1b[39m
+\x1b[32m  +   return ret.data ?? []\x1b[39m
+\x1b[90m    }\x1b[22;39m
+
+\x1b[90m  j/k navigate, a/d decide, q quit, ? help\x1b[22;39m`}
+</TerminalPreview>
+
+### Modo no interactivo
+
+Sin TTY (CI, pipes, tests) — o con `disable: true` — `reviewDiff` salta el picker y
+retorna de inmediato. Por defecto **no se aplica nada** (solo review); pasá
+`defaultApply: true` para aceptar todos los hunks:
+
+```ts
+// Pipeline de CI: acepta todo sin interacción
+const r = await reviewDiff(old, new, { defaultApply: true })
+
+// Fuerza un resultado solo-review incluso en TTY
+const r = await reviewDiff(old, new, { disable: true })
+```
+
+### Estructura del retorno
+
+`DiffReviewResult`:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `review` | `DiffReview` | Hunks parseados + stats agregadas |
+| `applied` | `boolean[]` | Decisión por hunk (`true` = aplicar) |
+| `patch` | `string` | Patch unificado de solo los hunks seleccionados |
+| `output` | `string` | Contenido tras aplicar la selección |
+| `additions` / `deletions` | `number` | Stats de solo los hunks seleccionados |
+| `changed` | `boolean` | `true` cuando al menos un hunk se aplicó |
+| `cancelled` | `boolean` | `true` cuando el usuario presionó `Ctrl+C` |
+
+`DiffHunk` trae `oldStart`, `oldLines`, `newStart`, `newLines`, `additions` /
+`deletions` por hunk, las `lines` crudas (`" x"`, `"-x"`, `"+x"`) y el `content`
+sin prefijo.
+
+### Bloques de construcción
+
+`reviewDiff` está construido sobre helpers puros que podés componer vos mismo:
+
+```ts
+import { parseDiff, applyHunks, serializeHunks } from '@dui-toolkit/plugin-diff'
+
+const review = parseDiff(oldStr, newStr)
+// review.hunks → DiffHunk[] · review.additions / review.deletions
+
+// Aplica solo el primer y el tercer hunk
+const output = applyHunks(oldStr, review.hunks, [true, false, true])
+
+// Serializa la selección de vuelta a un patch unificado
+const patch = serializeHunks(review.hunks, [true, false, true])
+```
+
+`applyHunks` delega en el battle-tested `applyPatch()` de jsdiff para que los offsets
+entre hunks no contiguos queden correctos, con un fallback de merge manual
+determinístico. `serializeHunk(hunk)` renderiza un solo hunk; los rangos con conteo
+cero usan la convención propia de `formatPatch` de jsdiff (`0,0`) para que los patches
+hagan round-trip exacto.
+
+### Aplicar al working tree
+
+```ts
+import { applyDiff } from '@dui-toolkit/plugin-diff'
+
+const result = await applyDiff([
+  { path: 'src/a.ts', oldContent: a, newContent: b },
+  { path: 'src/b.ts', oldContent: c, newContent: d },
+])
+
+console.log(result.changedFiles) // archivos realmente escritos
+console.log(result.skippedFiles) // sin cambios o cancelados
+```
+
+Cada entrada pasa por `reviewDiff` (interactivo en TTY), y solo los archivos cambiados
+se escriben de vuelta con `node:fs`. Pasá `{ dryRun: true }` para calcular el resultado
+sin tocar el disco, o inyectá un `writeFile` custom para tests.
 
 ---
 

@@ -9,7 +9,7 @@ import PackageManager from '../../../../components/PackageManager'
 <PackageManager pkg="@dui-toolkit/plugin-markdown" />
 
 ```ts
-import { md, mdRender, mdSyntax } from '@dui-toolkit/plugin-markdown'
+import { md, mdRender, mdSyntax, mdInteractive, collectChecklist } from '@dui-toolkit/plugin-markdown'
 ```
 
 `@dui-toolkit/plugin-markdown` renderiza Markdown a terminal con colores ANSI y resaltado
@@ -19,7 +19,7 @@ de resultados).
 ## md
 
 ```ts
-md(text: string): Promise<string>
+md(text: string, options?: MdRenderOptions): Promise<string>
 ```
 
 Parsea y renderiza markdown, retornando un string con secuencias ANSI.
@@ -28,6 +28,22 @@ Parsea y renderiza markdown, retornando un string con secuencias ANSI.
 const output = await md('# Hola **mundo**')
 console.log(output)
 ```
+
+### Opciones
+
+| Campo | Tipo | Default | Descripción |
+|---|---|---|---|
+| `width` | `number` | terminal | Capa el ancho de render en columnas — bloques de código, tablas y párrafos se ajustan / truncan a él |
+| `focusItem` | `number` | — | Interno: pinta el puntero `❯` en una fila de checklist (lo usa `mdInteractive`) |
+
+```ts
+// Ajusta un documento a un panel angosto
+const output = await md('# Tablas anchas', { width: 40 })
+```
+
+Desde **v2**, las celdas de tabla renderizan markdown inline — `**negrita**`, `` `código` ``
+y `[enlaces](url)` dentro de una `| celda |` se estilizan en vez de imprimirse como
+source crudo (los encabezados siguen en bold).
 
 ## mdRender
 
@@ -115,6 +131,74 @@ function hello(): void {
 `
 
 console.log(await md(markdown))
+```
+
+## mdInteractive — checklists interactivas (v2)
+
+```ts
+mdInteractive(text: string, options?: MdInteractiveOptions): Promise<MdInteractiveResult>
+```
+
+Renderiza el documento y deja que el usuario **alterne checkboxes** con el teclado —
+ideal para listas de tareas, checklists de release o cualquier UI de agente que
+necesite que un humano confirme pasos. Retorna el source de markdown actualizado, la
+lista plana de items y el render resultante.
+
+```ts
+import { mdInteractive } from '@dui-toolkit/plugin-markdown'
+
+const r = await mdInteractive(`# Release
+
+- [ ] build pasa
+- [x] tests verdes
+- [ ] push del tag
+`)
+
+if (r.changed) {
+  console.log(r.text)     // markdown con los checkboxes alternados
+  console.log(r.output)   // render resultante
+}
+```
+
+### Keymap
+
+| Tecla | Acción |
+|---|---|
+| `j` / `↓` | Mueve el foco al siguiente checkbox |
+| `k` / `↑` | Mueve el foco al checkbox anterior |
+| `space` / `Enter` | Alterna el checkbox enfocado |
+| `q` / `Esc` | Termina con el estado actual |
+| `Ctrl+C` | Cancela — sin cambios (`cancelled: true`) |
+
+La fila enfocada se marca con un puntero `❯` y video inverso. Sin TTY (o con
+`disable: true`) renderiza estáticamente y retorna el estado original.
+
+### Estructura del retorno
+
+`MdInteractiveResult`:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `output` | `string` | Markdown renderizado con los estados actuales |
+| `items` | `ChecklistItem[]` | Items planos `{ checked, label, line }` en orden de documento |
+| `text` | `string` | Source con los checkboxes alternados |
+| `changed` | `boolean` | `true` cuando al menos un box difiere del input |
+| `cancelled` | `boolean` | `true` cuando el usuario presionó `Ctrl+C` |
+
+### collectChecklist
+
+```ts
+collectChecklist(text: string): ChecklistItem[]
+```
+
+Helper puro que aplana cada item `[ ]` / `[x]` con su índice de línea fuente — útil
+para inspeccionar o pre-aplicar una checklist sin el loop interactivo:
+
+```ts
+import { collectChecklist } from '@dui-toolkit/plugin-markdown'
+
+const items = collectChecklist('- [ ] todo\n- [x] hecho')
+// [{ checked: false, label: 'todo', line: 0 }, { checked: true, label: 'hecho', line: 1 }]
 ```
 
 ## Integración con plugins
