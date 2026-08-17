@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createToastCenter } from "../src/index";
+import { createToastCenter, visibleLength } from "../src/index";
 
 function ttyStream(rows = 24): NodeJS.WriteStream {
 	const stream = new PassThrough() as unknown as NodeJS.WriteStream;
@@ -79,5 +79,36 @@ describe("toast", () => {
 		expect(last).toContain("2");
 		expect(last).toContain("3");
 		expect(last).not.toContain("1");
+	});
+
+	it("draws a box whose top, body and bottom rows are the same width", () => {
+		vi.useFakeTimers();
+		vi.stubEnv("NO_COLOR", "");
+		const stream = ttyStream(24);
+		const write = vi.spyOn(stream, "write");
+		const center = createToastCenter({ stream, ttl: 5000 });
+		center.toast("Hello world", { type: "info", title: "CI" });
+		center.dismissAll();
+		const written = write.mock.calls.map((c) => String(c[0])).join("");
+		const strip = (s: string) =>
+			s.replace(
+				/[\u001b\u009b](?:\[[0-9;:<=>?]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)|[@-Z\\-_])/g,
+				"",
+			);
+		// The three visible box rows (cursor moves and clear codes
+		// produce no box characters).
+		const rows = written
+			.split("\n")
+			.map(strip)
+			.filter((l) => /[\u250c\u2514]/.test(l));
+		expect(rows).toHaveLength(2);
+		const body = written
+			.split("\n")
+			.map(strip)
+			.find((l) => l.startsWith("\u2502"));
+		expect(body).toBeDefined();
+		const widths = [visibleLength(rows[0]), visibleLength(body!), visibleLength(rows[1])];
+		expect(widths[0]).toBe(widths[1]);
+		expect(widths[1]).toBe(widths[2]);
 	});
 });

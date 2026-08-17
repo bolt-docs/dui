@@ -156,7 +156,11 @@ export function createToastCenter(options?: ToastCenterOptions): ToastCenter {
 			Math.max(visibleLength(item.message), item.title ? item.title.length : 0),
 		);
 		const total = innerWidth + 4;
-		const top = `\u250c\u2500 ${header}${"\u2500".repeat(Math.max(0, total - headerLen - 2))}\u2510`;
+		// The top row must match the body/bottom width (`total`): the
+		// template already contributes the leading `┌─ `, and the
+		// header keeps its own trailing space, so the dash run has to
+		// account for both to avoid an overhanging border.
+		const top = `\u250c\u2500 ${header}${"\u2500".repeat(Math.max(0, total - headerLen - 4))}\u2510`;
 		const body = `\u2502 ${fitWidth(item.message, innerWidth)} \u2502`;
 		const bottom = `\u2514${"\u2500".repeat(total - 2)}\u2518`;
 		return [top, body, bottom];

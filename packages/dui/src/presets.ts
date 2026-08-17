@@ -256,7 +256,8 @@ const solarized: DuiThemePreset = {
 		heading3: "#b58900",
 		heading4: "#859900",
 		heading5: "#268bd2",
-		heading6: "#6c71c4",
+		heading6: "#6c71c6",
+
 		codeBorder: "#586e75",
 		codeLang: "#93a1a1",
 		codeInline: { fg: "#2aa198", bg: "#073642" },

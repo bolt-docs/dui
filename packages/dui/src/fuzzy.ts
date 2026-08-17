@@ -12,7 +12,7 @@
  * ```ts
  * import { fuzzyMatch, highlightFuzzy } from "@bdocs/dui"
  *
- * fuzzyMatch("fb", "file-browser") // → { score: 12, indices: [0, 5] }
+ * fuzzyMatch("fb", "file-browser") // → { score: 3, indices: [0, 5] }
  * fuzzyMatch("xyz", "hello")       // → null
  *
  * highlightFuzzy("fb", "file-browser", (s) => `\u001b[1m${s}\u001b[0m`)
@@ -41,7 +41,7 @@ export interface FuzzyResult {
  *
  * @example
  * ```ts
- * fuzzyMatch("fb", "file-browser") // → { score: 12, indices: [0, 5] }
+ * fuzzyMatch("fb", "file-browser") // → { score: 3, indices: [0, 5] }
  * fuzzyMatch("br", "file-browser") // → { score: 13, indices: [5, 6] }
  * fuzzyMatch("xyz", "hello")       // → null
  * ```

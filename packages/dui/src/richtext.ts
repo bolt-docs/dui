@@ -38,7 +38,7 @@ import { isPlainMode } from "./accessibility";
 import { getConfig } from "./config";
 import { applyStyle } from "./color";
 import { link as osc8Link } from "./link";
-import type { ColorStyle } from "./theme";
+import { resolveColor, type ColorStyle } from "./theme";
 
 export interface RichTextOptions {
 	colors?: {
@@ -305,11 +305,16 @@ function renderNode(node: Node, options: RichTextOptions | undefined, plain: boo
 				return inner === node.url ? inner : `${inner} (${node.url})`;
 			}
 			// Preserve inner styling inside the OSC 8 wrap: link() wraps
-			// the already-styled label.
-			const linkColor =
-				options?.colors?.link ?? getConfig().theme?.richtext?.link ?? "cyan";
-			const colored = applyStyle(inner, linkColor as string, undefined, []);
-			return osc8Link(node.url, colored);
+			// the already-styled label. Go through resolveColor so the
+			// `richtext.link` theme slot supports every ColorStyle form
+			// (named color, hex, `{ fg, bg }` object) instead of being
+			// force-cast to a plain string.
+			const linkColor = resolveColor(
+				"richtext.link",
+				getConfig().theme,
+				options?.colors?.link,
+			).apply;
+			return osc8Link(node.url, linkColor(inner));
 		}
 	}
 }
