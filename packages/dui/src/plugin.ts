@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { ColorInput } from "./color";
 import { colors } from "./color";
 import type { DuiConfig } from "./config";
@@ -18,7 +19,12 @@ import {
 	visibleLength,
 } from "./utils";
 
-export const DUI_VERSION = "0.7.0-next.0";
+// DUI_VERSION is read from package.json at runtime — the single source of
+// truth that changesets bumps on every release — so the advertised runtime
+// version can never drift from the published package version.
+export const DUI_VERSION: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 export interface RenderContext {
 	width?: number;

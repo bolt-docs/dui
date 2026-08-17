@@ -1,7 +1,15 @@
+import { readFileSync } from "node:fs";
 import type { DuiPlugin } from "@bdocs/dui";
 import { diff } from "./core";
 import { SLOTS } from "./theme";
 import type { DiffOptions } from "./types";
+
+// Version is read from package.json at runtime — the single source of
+// truth that changesets bumps on every release — so the advertised
+// plugin version can never drift from the published package version.
+const pkgVersion: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 const DEFAULTS: Record<keyof typeof SLOTS, string> = {
 	add: "#22c55e",
@@ -19,7 +27,7 @@ const DEFAULTS: Record<keyof typeof SLOTS, string> = {
 
 export const diffPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-diff",
-	version: "0.3.0",
+	version: pkgVersion,
 	description:
 		"Unified and side-by-side diff renderer with themable add/del/hunk colors, gutter and per-line stats.",
 	tags: ["renderer", "diff", "text", "vcs"],

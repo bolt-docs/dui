@@ -1,5 +1,13 @@
+import { readFileSync } from "node:fs";
 import type { DuiPlugin } from "@bdocs/dui";
 import { md } from "./renderer";
+
+// Version is read from package.json at runtime — the single source of
+// truth that changesets bumps on every release — so the advertised
+// plugin version can never drift from the published package version.
+const pkgVersion: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 	"markdown.heading1": "#ff6e6e",
@@ -25,7 +33,7 @@ const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 
 export const markdownPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-markdown",
-	version: "0.3.0",
+	version: pkgVersion,
 	description:
 		"Inline markdown renderer with themable headings, code blocks, lists, quotes and tables for DUI's terminal output.",
 	tags: ["renderer", "markdown", "text", "content"],

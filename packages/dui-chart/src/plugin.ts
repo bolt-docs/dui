@@ -1,14 +1,22 @@
+import { readFileSync } from "node:fs";
 import type { DuiPlugin } from "@bdocs/dui";
 import { bar } from "./bar";
 import { line } from "./line";
 import { pie } from "./pie";
 import { sparkline } from "./sparkline";
 
+// Version is read from package.json at runtime — the single source of
+// truth that changesets bumps on every release — so the advertised
+// plugin version can never drift from the published package version.
+const pkgVersion: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
+
 const PALETTE = ["#00d4aa", "#ff8c42", "#6c5ce7", "#f72c5b", "#00b4d8"];
 
 export const chartPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-chart",
-	version: "0.4.0",
+	version: pkgVersion,
 	description:
 		"Bar, line, pie and sparkline renderers with a themable color palette for quick terminal visualizations.",
 	tags: ["renderer", "chart", "visualization", "data"],

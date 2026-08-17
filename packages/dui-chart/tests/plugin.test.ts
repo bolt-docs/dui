@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
 	configure,
 	getConfig,
@@ -9,6 +10,15 @@ import { describe, expect, it } from "vitest";
 import { chartPlugin } from "../src/plugin";
 
 const PLUGIN_NAME = "@dui-toolkit/plugin-chart";
+
+// Read package.json anchored to this test file so CWD changes do not
+// break the parity guard (same pattern as packages/dui/tests/plugin.test.ts).
+const pkgVersion = JSON.parse(
+	readFileSync(
+		new URL("../package.json", import.meta.url),
+		"utf-8",
+	),
+).version;
 
 describe("chartPlugin v2", () => {
 	it("registers chart.bar default", async () => {
@@ -40,5 +50,14 @@ describe("chartPlugin v2", () => {
 			"\x1b[38;2;0;0;255m",
 		);
 		unregisterPlugin(PLUGIN_NAME);
+	});
+
+	it("exposes plugin version matching package.json", () => {
+		expect(chartPlugin.version).toBe(pkgVersion);
+		const pkgMajor = Number(pkgVersion.split(".")[0]);
+		const pluginMajor = Number(
+			(chartPlugin.version ?? "0.0.0").split(".")[0],
+		);
+		expect(pluginMajor).toBe(pkgMajor);
 	});
 });

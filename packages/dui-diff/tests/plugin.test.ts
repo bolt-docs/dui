@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
 	configure,
 	getConfig,
@@ -10,6 +11,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { diffPlugin } from "../src/plugin";
 
 const PLUGIN_NAME = "@dui-toolkit/plugin-diff";
+
+// Read package.json anchored to this test file so CWD changes do not
+// break the parity guard (same pattern as packages/dui/tests/plugin.test.ts).
+const pkgVersion = JSON.parse(
+	readFileSync(
+		new URL("../package.json", import.meta.url),
+		"utf-8",
+	),
+).version;
 
 describe("diffPlugin v2", () => {
 	// `resolveColor` for hex-string defaults calls `colorize(s, hex, "fg")`,
@@ -88,5 +98,14 @@ describe("diffPlugin v2", () => {
 		// not just the default slot registration.
 		expect(out).toContain("\x1b[38;2;171;205;239m");
 		unregisterPlugin(PLUGIN_NAME);
+	});
+
+	it("exposes plugin version matching package.json", () => {
+		expect(diffPlugin.version).toBe(pkgVersion);
+		const pkgMajor = Number(pkgVersion.split(".")[0]);
+		const pluginMajor = Number(
+			(diffPlugin.version ?? "0.0.0").split(".")[0],
+		);
+		expect(pluginMajor).toBe(pkgMajor);
 	});
 });

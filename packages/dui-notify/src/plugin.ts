@@ -7,9 +7,17 @@
  *   2. Register a `notify` renderer so `renderWith("notify", payload)` returns the toast.
  *   3. Surface the chosen backend list in `api.shared` so dashboards can display "Sent via os / osc / terminal" status.
  */
+import { readFileSync } from "node:fs";
 import type { DuiPlugin } from "@bdocs/dui";
 import { notifyApi } from "./notify.js";
 import type { NotifyOptions } from "./types.js";
+
+// Version is read from package.json at runtime — the single source of
+// truth that changesets bumps on every release — so the advertised
+// plugin version can never drift from the published package version.
+const pkgVersion: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 const LEVELS = ["success", "info", "warning", "error", "neutral"] as const;
 
@@ -42,7 +50,7 @@ const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 
 export const notifyPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-notify",
-	version: "0.1.1-next.0",
+	version: pkgVersion,
 	description:
 		"Cross-platform desktop notifications — auto-routes between osascript/notify-send/PowerShell, OSC escape sequences (Kitty/iTerm2/WezTerm), and box-rendered TUI toasts depending on the host environment, with theme slots for every severity level.",
 	tags: ["renderer", "notify", "notification", "toast", "bell", "osc", "ansi"],
