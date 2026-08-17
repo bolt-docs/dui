@@ -1,5 +1,27 @@
 # @dui-toolkit/plugin-image
 
+## 0.4.0-next.1
+
+### Minor Changes
+
+- [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **v0.7.0 — Sixel and iTerm2 image rendering**
+
+  - **Sixel protocol** — `renderSixel()` / `pixelsToSixel()` / `wrapSixel()`
+    render raster images with the Sixel graphics protocol (256-color palette,
+    resizing via `SixelRenderOptions`).
+  - **iTerm2 inline images** — `renderIterm2()` emits OSC 1337 inline-image
+    sequences (base64, width/height control, `Iterm2RenderOptions`).
+  - **tmux passthrough** — `isTmux()` detection and `tmuxPassthrough()` wrapping
+    so both protocols survive inside tmux panes.
+  - **`renderImage()` routing** — high-level renderer now falls back through
+    kitty → sixel → iTerm2 → ANSI half-blocks based on detected terminal
+    capabilities.
+
+### Patch Changes
+
+- Updated dependencies [[`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc)]:
+  - @bdocs/dui@0.7.0-next.1
+
 ## 0.4.0-next.0
 
 ### Minor Changes
