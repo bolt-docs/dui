@@ -12,5 +12,10 @@
     "@dui-toolkit/plugin-qrcode": "0.3.0",
     "docs": "0.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "v0.7.0-create-dui",
+    "v0.7.0-image-protocols",
+    "v0.7.0-logger-testing-presets",
+    "v0.7.0-new-widgets"
+  ]
 }
