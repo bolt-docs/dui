@@ -42,7 +42,7 @@ const DEFAULTS: Record<string, string | { fg: string; bg: string }> = {
 
 export const notifyPlugin: DuiPlugin = {
 	name: "@dui-toolkit/plugin-notify",
-	version: "0.1.0",
+	version: "0.1.1-next.0",
 	description:
 		"Cross-platform desktop notifications — auto-routes between osascript/notify-send/PowerShell, OSC escape sequences (Kitty/iTerm2/WezTerm), and box-rendered TUI toasts depending on the host environment, with theme slots for every severity level.",
 	tags: ["renderer", "notify", "notification", "toast", "bell", "osc", "ansi"],
