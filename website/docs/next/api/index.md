@@ -61,4 +61,3 @@ import { usePluginAsync } from '@bdocs/dui'
 | [Status Bar](./statusbar) | `createStatusBar` | `StatusBar`, `StatusBarOptions`, `StatusBarParts` |
 | [Alt Screen](./alt-screen) | `withAltScreen`, `enterAltScreen`, `exitAltScreen`, `hideCursor`, `showCursor`, `saveCursor`, `restoreCursor` | |
 | [Testing](./testing) | `createMockTty`, `withMockTty`, `snapshotWidget`, `snapshotStatic` | `MockTty`, `MockTtyOptions`, `MockTtyStream` |
-| [create-dui](./create-dui) | `scaffold`, `parseArgs`, `main` | `ScaffoldOptions`, `ScaffoldResult` |

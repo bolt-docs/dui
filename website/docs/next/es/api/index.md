@@ -46,4 +46,3 @@ import { usePluginAsync } from '@bdocs/dui'
 | [Alt Screen](./alt-screen) | `withAltScreen`, `enterAltScreen`, `exitAltScreen`, `hideCursor`, `showCursor`, `saveCursor`, `restoreCursor` | |
 | [Fuzzy](./fuzzy) | `fuzzyMatch`, `highlightFuzzy`, `filterFuzzy` | `FuzzyResult`, `FuzzyItem` |
 | [Testing](./testing) | `createMockTty`, `withMockTty`, `snapshotWidget`, `snapshotStatic` | `MockTty`, `MockTtyOptions`, `MockTtyStream` |
-| [create-dui](./create-dui) | `scaffold`, `parseArgs`, `main` | `ScaffoldOptions`, `ScaffoldResult` |
