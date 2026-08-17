@@ -25,6 +25,23 @@ export {
 } from "./render";
 export { diffSideBySide } from "./side-by-side";
 export { DIFF_THEME_SLOTS, getPalette } from "./theme";
+// ── Review / apply (diff v2) ──────────────────────────────────
+export {
+	applyDiff,
+	applyHunks,
+	parseDiff,
+	reviewDiff,
+	serializeHunk,
+	serializeHunks,
+} from "./review";
+export type {
+	ApplyDiffResult,
+	DiffFileEntry,
+	DiffHunk,
+	DiffReview,
+	DiffReviewResult,
+	ReviewDiffOptions,
+} from "./review";
 // ── Public types ──────────────────────────────────────────────
 export type {
 	DiffColorPalette,

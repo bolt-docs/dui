@@ -41,6 +41,13 @@ declare module "diff" {
 		newLines: number;
 		lines: string[];
 	}
+	export interface StructuredPatch {
+		oldFileName: string;
+		newFileName: string;
+		oldHeader: string;
+		newHeader: string;
+		hunks: Hunk[];
+	}
 	export function structuredPatch(
 		oldFileName: string,
 		newFileName: string,
@@ -49,11 +56,15 @@ declare module "diff" {
 		oldHeader: string,
 		newHeader: string,
 		options?: { context?: number; ignoreNewlineAtEof?: boolean },
-	): {
-		oldFileName: string;
-		newFileName: string;
-		oldHeader: string;
-		newHeader: string;
-		hunks: Hunk[];
-	};
+	): StructuredPatch;
+	export interface ApplyPatchOptions {
+		fuzzFactor?: number;
+		autoConvertLineEndings?: boolean;
+	}
+	export function applyPatch(
+		source: string,
+		patch: string | StructuredPatch | StructuredPatch[],
+		options?: ApplyPatchOptions,
+	): string | false;
+	export function parsePatch(uniDiff: string): StructuredPatch[];
 }

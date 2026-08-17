@@ -2,6 +2,16 @@ export type { LanguageDef } from "./language";
 export { createLanguage, getLanguage, getLanguages } from "./language";
 export { markdownPlugin } from "./plugin";
 export { md, mdRender } from "./renderer";
+export {
+	collectChecklist,
+	mdInteractive,
+} from "./renderer";
+export type {
+	ChecklistItem,
+	MdInteractiveOptions,
+	MdInteractiveResult,
+	MdRenderOptions,
+} from "./renderer";
 export { hexToAnsi, mdSyntax } from "./syntax";
 export type {
 	BlockToken,
