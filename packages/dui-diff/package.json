@@ -1,6 +1,6 @@
 {
 	"name": "@dui-toolkit/plugin-diff",
-	"version": "0.3.1-next.0",
+	"version": "0.3.1-next.1",
 	"description": "Diff viewer for @bdocs/dui — render unified and side-by-side diffs with syntax-colored additions, deletions, and context in the terminal.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",

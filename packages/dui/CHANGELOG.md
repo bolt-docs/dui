@@ -1,5 +1,64 @@
 # @bdocs/dui
 
+## 0.7.0-next.1
+
+### Minor Changes
+
+- [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **v0.7.0 — logger v2, testing utils, tree, presets & accessibility**
+
+  - **Logger v2** — leveled logging with env-based filtering
+    (`getEffectiveLogLevel()` honors `LOG_LEVEL` / `DEBUG` / `NO_COLOR`),
+    timestamps, a file transport, and JSON output; `createLogger()` /
+    `configureLogger()` plus the module-level `debug` / `info` / `success` /
+    `warn` / `error` helpers.
+  - **Lazy tree loading** — `tree()` accepts an async `loadChildren` so nodes
+    expand on demand instead of preloading the full hierarchy.
+  - **Grapheme-aware widths** — `splitGraphemes()` and CJK/ZWJ/emoji-aware
+    measuring (family emoji, flags, skin tones no longer break box/table/grid
+    layout).
+  - **Widget testing utilities** — `createMockTty()`, `withMockTty()`,
+    `snapshotWidget()`, `snapshotStatic()` with `MockTty` for deterministic
+    snapshot tests of interactive widgets.
+  - **New theme presets** — `tokyonight`, `rose-pine`, and `ayu` added to the
+    `presets` registry alongside dracula/nord/solarized/catppuccin/gruvbox.
+  - **Accessibility live announcements** — `announce()`, `flushAnnouncements()`,
+    `clearAnnouncements()`, `getAnnouncementQueue()` for screen-reader live
+    regions, honoring plain mode.
+  - **Banner fixes** — ANSI Shadow figlet rendering hardened (plain-mode `#`
+    fill, trimmed rows, smush layout correctness, accented glyphs); docs
+    previews kept in sync with real output.
+
+- [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **v0.7.0 — new widgets and APIs**
+
+  - **`form()`** — full interactive form engine. Declarative field definitions
+    (`FormField`), text + select field types (`FormTextField` / `FormSelectField`),
+    validation, and typed submission.
+  - **`palette()`** — interactive color-picker prompt with keyboard navigation.
+  - **Fuzzy search engine** — `fuzzyMatch()`, `filterFuzzy()`, and
+    `highlightFuzzy()` with `FuzzyResult` scoring; powers type-ahead lists and
+    command palettes.
+  - **OSC 8 hyperlinks** — `link()` / `linkify()` / `hyperlink()` render clickable
+    terminal links with `supportsHyperlinks()` detection (Kitty/iTerm2/WezTerm
+    native support, tmux passthrough-aware).
+  - **OSC 52 clipboard** — `copyToClipboard()` / `copy()` write to the system
+    clipboard with `clipboardSupported()` detection.
+  - **`banner()`** — large terminal banners: embedded ANSI Shadow figlet font with
+    smush layout, kerning, spacing, `#` fill override, `block` style, accented
+    glyphs, and plain-mode fallback.
+  - **`richtext()`** — rich-text rendering with inline styles, `richtextToPlain()`
+    conversion, and full plain-mode support.
+  - **Toast center** — `createToastCenter()` / `toast()` / `dismissAllToasts()`
+    with `ToastType` severities and queueing.
+  - **`createStatusBar()`** — persistent status-bar widget with parts-based layout.
+  - **Alt screen** — `withAltScreen()`, `enterAltScreen()`, `exitAltScreen()`,
+    `saveCursor()` / `restoreCursor()`, `showCursor()` / `hideCursor()`.
+  - **Password input** — masked input mode for secrets.
+  - **`onCancel` hooks on every interactive prompt** (`select`, `multiselect`,
+    `tree`, `form`, `palette`, …) so consumers can distinguish cancel from submit.
+  - **Theme slots** for all new widgets (`form.*`, `palette.*`, `banner.*`,
+    `richtext.*`, `toast.*`, `statusbar.*`) via the existing `configure()` slot
+    system.
+
 ## 0.7.0-next.0
 
 ### Minor Changes
