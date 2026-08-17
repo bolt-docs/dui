@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-chart
 
+## 0.4.1-next.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @bdocs/dui@0.7.0-next.0
+
 ## 0.4.0
 
 ### Minor Changes

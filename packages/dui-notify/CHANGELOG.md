@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-notify
 
+## 0.1.1-next.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @bdocs/dui@0.7.0-next.0
+
 ## 0.1.0
 
 ### Minor Changes

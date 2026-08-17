@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-qrcode
 
+## 0.3.1-next.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @bdocs/dui@0.7.0-next.0
+
 ## 0.3.0
 
 ### Minor Changes

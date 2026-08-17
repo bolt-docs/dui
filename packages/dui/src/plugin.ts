@@ -18,7 +18,7 @@ import {
 	visibleLength,
 } from "./utils";
 
-export const DUI_VERSION = "0.6.0";
+export const DUI_VERSION = "0.7.0-next.0";
 
 export interface RenderContext {
 	width?: number;
