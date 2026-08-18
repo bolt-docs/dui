@@ -1,11 +1,15 @@
 {
   "name": "@dui-toolkit/plugin-tui",
-  "version": "0.1.0",
+  "version": "0.1.1-next.0",
   "description": "TUI widget toolkit plugin for @bdocs/dui — text inputs, select lists, modals, status bars, and more.",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
-  "publishConfig": { "access": "public" },
-  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -17,7 +21,15 @@
     "dev": "tsdown --watch --config-loader unrun",
     "test": "vitest run"
   },
-  "keywords": ["terminal", "tui", "widget", "input", "select", "modal", "statusbar"],
+  "keywords": [
+    "terminal",
+    "tui",
+    "widget",
+    "input",
+    "select",
+    "modal",
+    "statusbar"
+  ],
   "packageManager": "pnpm@10.30.2",
   "license": "MIT",
   "type": "module",

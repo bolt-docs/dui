@@ -1,5 +1,35 @@
 # @dui-toolkit/plugin-markdown
 
+## 0.4.0-next.2
+
+### Minor Changes
+
+- [`aa97ab7`](https://github.com/bolt-docs/dui/commit/aa97ab76bcfe48d9a23a2ef5b67766685a41214c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Interactive checklists + table and width upgrades (markdown v2)**:
+
+  - **`mdInteractive(text, options)`** — interactive checklist toggling:
+    render the document, move the focus with `j`/`k` (or arrows), toggle
+    a checkbox with space/Enter, `q`/Esc finishes with the current state,
+    Ctrl+C cancels. Returns the updated source text, the flattened item
+    list, and the rendered output. Non-TTY environments (or
+    `disable: true`) render statically without changes.
+  - **`collectChecklist(text)`** — pure helper that flattens `[ ]`/`[x]`
+    items with their source line indices.
+  - **Inline markdown inside table cells** — cells now render `**bold**`,
+    `` `code` ``, `[links](url)` and other inline syntax instead of raw
+    source (headers stay bold on top).
+  - **`md(text, { width })`** — the renderer accepts a width cap used by
+    code blocks, tables and paragraph wrapping, so wide documents fit
+    narrow panes (previously code blocks and tables only respected the
+    terminal width).
+  - **Docs** — interactive checklists (keymap), the width option and
+    inline table-cell markdown are now documented in the EN + ES plugin
+    guides.
+
+### Patch Changes
+
+- Updated dependencies [[`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053)]:
+  - @bdocs/dui@0.7.0-next.2
+
 ## 0.3.1-next.1
 
 ### Patch Changes

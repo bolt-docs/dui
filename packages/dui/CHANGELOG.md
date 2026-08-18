@@ -1,5 +1,30 @@
 # @bdocs/dui
 
+## 0.7.0-next.2
+
+### Patch Changes
+
+- [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug fixes**
+
+  - **Toast box alignment** — the top border of rendered toasts was two
+    columns wider than the body and bottom borders (the header's
+    trailing space stacked with the template's leading `┌─ ` gap), so
+    stacked toasts looked misaligned. The dash run now accounts for both
+    and every row renders at the same width.
+  - **Solarized preset** — `markdown.heading6` used `#6c71c4` (typo);
+    the official Solarized violet is `#6c71c6`. The heading now matches
+    the rest of the palette.
+  - **`richtext()` link color** — the `richtext.link` theme slot was
+    force-cast to a string before painting, so `{ fg, bg }` color
+    objects (and any non-string `ColorStyle`) silently misbehaved. Link
+    painting now resolves through `resolveColor` like every other slot.
+  - **Fuzzy docs** — the `fuzzyMatch("fb", "file-browser")` examples in
+    the JSDoc claimed a score of 12; the real subsequence scorer returns 3. Examples updated to the actual values so the shipped `.d.ts`
+    matches behavior.
+  - **`palette()` description** — the feature is a fuzzy-searchable
+    command palette (VS Code/Raycast-style action picker), not a color
+    picker; the release notes now describe it accurately.
+
 ## 0.7.0-next.1
 
 ### Minor Changes
