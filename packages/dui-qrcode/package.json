@@ -1,6 +1,6 @@
 {
 	"name": "@dui-toolkit/plugin-qrcode",
-	"version": "0.3.1-next.1",
+	"version": "0.3.1-next.2",
 	"description": "QR code generator for @bdocs/dui — render scannable QR codes directly in the terminal with ANSI blocks.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
