@@ -467,36 +467,43 @@ function interactiveForm(
 				process.exit(130);
 			} else {
 				const field = fields[active];
-				const state = states[active];
-				if (!isSelectField(field)) {
-					if (lastChar === "\x7f" || lastChar === "\x08") {
-						if (state.cursorPos > 0) {
-							state.buf =
-								state.buf.slice(0, state.cursorPos - 1) +
-								state.buf.slice(state.cursorPos);
-							state.cursorPos--;
-							state.error = "";
+				const state = states[active];					if (!isSelectField(field)) {
+						if (lastChar === "\x7f" || lastChar === "\x08") {
+							// Backspace: delete character before cursor.
+							if (state.cursorPos > 0) {
+								state.buf =
+									state.buf.slice(0, state.cursorPos - 1) +
+									state.buf.slice(state.cursorPos);
+								state.cursorPos--;
+								state.error = "";
+							}
+							buf = "";
+							render();
+						} else if (lastChar === "\x04") {
+							// Ctrl+D: ignore in text fields (EOF is not meaningful
+							// for single-line form inputs).
+							buf = "";
+						} else if (buf.startsWith("\x1b")) {
+							// Unrecognized escape sequence (Delete, PgUp, PgDn,
+							// Home, End, F-keys, etc.) — consume and discard so
+							// trailing characters like '~' don't leak into text.
+							buf = "";
+						} else {
+							const printable = text.replace(/[\u0000-\u001f\u007f]/g, "");
+							if (printable) {
+								state.buf =
+									state.buf.slice(0, state.cursorPos) +
+									printable +
+									state.buf.slice(state.cursorPos);
+								state.cursorPos += Array.from(printable).length;
+								state.error = "";
+							}
+							buf = "";
+							render();
 						}
-						buf = "";
-						render();
-					} else if (lastChar === "\x7f" || lastChar === "\x08" || lastChar === "\x04") {
-						buf = "";
 					} else {
-						const printable = text.replace(/[\u0000-\u001f\u007f]/g, "");
-						if (printable) {
-							state.buf =
-								state.buf.slice(0, state.cursorPos) +
-								printable +
-								state.buf.slice(state.cursorPos);
-							state.cursorPos += Array.from(printable).length;
-							state.error = "";
-						}
 						buf = "";
-						render();
 					}
-				} else {
-					buf = "";
-				}
 			}
 		}
 

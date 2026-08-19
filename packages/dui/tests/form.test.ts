@@ -204,6 +204,39 @@ describe("form", () => {
 			await expect(promise).rejects.toThrow("Cancelled");
 		});
 
+		it("discards unrecognized escape sequences without inserting stray characters", async () => {
+			const promise = form({
+				fields: [
+					{ id: "name", label: "Name", type: "text" },
+				],
+			});
+
+			// Type 'abc'
+			writeData("abc");
+			// Press Delete (\x1b[3~) — the trailing '~' must not appear
+			writeData("\x1b[3~");
+			// Press Page Down (\x1b[6~) — same issue
+			writeData("\x1b[6~");
+			// Submit
+			writeData("\r");
+
+			await expect(promise).resolves.toEqual({ name: "abc" });
+		});
+
+		it("handles Ctrl+D (\x04) without side effects", async () => {
+			const promise = form({
+				fields: [
+					{ id: "name", label: "Name", type: "text" },
+				],
+			});
+
+			writeData("abc");
+			writeData("\x04"); // should be silently ignored
+			writeData("\r");
+
+			await expect(promise).resolves.toEqual({ name: "abc" });
+		});
+
 		it("throws on empty fields", async () => {
 			await expect(form({ fields: [] })).rejects.toThrow(
 				"Form requires at least one field",

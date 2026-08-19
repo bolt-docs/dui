@@ -90,6 +90,10 @@ function stripAnsiForPlain(s: string): string {
 	);
 }
 
+/** Maximum nesting depth for inline markup (bold inside color
+ * inside link, etc.). Prevents stack overflow on crafted input. */
+const MAX_PARSE_DEPTH = 32;
+
 function parseNodes(ctx: Ctx, depth: number): { children: Node[]; pos: number } {
 	const children: Node[] = [];
 	let textBuf = "";
@@ -128,7 +132,7 @@ function parseNodes(ctx: Ctx, depth: number): { children: Node[]; pos: number } 
 			continue;
 		}
 
-		if (ch === "[") {
+		if (ch === "[" && depth < MAX_PARSE_DEPTH) {
 			// Link: [label](url)
 			const close = ctx.src.indexOf("](", ctx.pos);
 			if (close !== -1) {
@@ -153,12 +157,12 @@ function parseNodes(ctx: Ctx, depth: number): { children: Node[]; pos: number } 
 			continue;
 		}
 
-		if (ch === "{") {
+		if (ch === "{" && depth < MAX_PARSE_DEPTH) {
 			// Color span: {color:text}
 			const colon = ctx.src.indexOf(":", ctx.pos);
 			if (colon !== -1) {
 				const colorSpec = ctx.src.slice(ctx.pos + 1, colon);
-				if (colorSpec.length > 0) {
+				if (colorSpec.length > 0 && isValidColorSpec(colorSpec)) {
 					// Find the matching closing brace (no nesting of
 					// color spans; other markup can appear inside).
 					let depth2 = 1;
@@ -171,32 +175,38 @@ function parseNodes(ctx: Ctx, depth: number): { children: Node[]; pos: number } 
 								end = i;
 								break;
 							}
-						}
-					}
-					if (end !== -1) {
-						flush();
-						const innerCtx = {
-							src: ctx.src.slice(colon + 1, end),
-							pos: 0,
-						};
-						const inner = parseNodes(innerCtx, depth + 1);
-						children.push({
-							type: "styled",
-							style: "color",
-							color: colorSpec,
-							children: inner.children,
-						});
-						ctx.pos = end + 1;
-						continue;
 					}
 				}
+				if (end !== -1) {
+					flush();
+					const innerCtx = {
+						src: ctx.src.slice(colon + 1, end),
+						pos: 0,
+					};
+					const inner = parseNodes(innerCtx, depth + 1);
+					children.push({
+						type: "styled",
+						style: "color",
+						color: colorSpec,
+						children: inner.children,
+					});
+					ctx.pos = end + 1;
+					continue;
+				}
 			}
+		}
+		textBuf += ch;
+		ctx.pos++;
+		continue;
+	}
+
+		// Inline style markers.
+		if (depth >= MAX_PARSE_DEPTH) {
 			textBuf += ch;
 			ctx.pos++;
 			continue;
 		}
 
-		// Inline style markers.
 		const marker =
 			ch === "*" && ctx.src[ctx.pos + 1] === "*"
 				? "**"
@@ -246,6 +256,20 @@ function parseNodes(ctx: Ctx, depth: number): { children: Node[]; pos: number } 
 	return { children, pos: ctx.pos };
 }
 
+/**
+ * Quick check that `spec` could be a valid color before we
+ * commit to parsing it later. Accepts:
+ *  - Named colors: `red`, `green`, `cyan`, …
+ *  - Hex: `#rgb`, `#rrggbb`, `#rrggbbaa`
+ *  - CSS functions: `rgb(…)`, `hsl(…)`, `oklch(…)`
+ */
+const VALID_COLOR_RE =
+	/^(?:[a-zA-Z][\w-]*|#[0-9a-fA-F]{3,8}|(?:rgb|hsl|oklch)\()/;
+
+function isValidColorSpec(spec: string): boolean {
+	return VALID_COLOR_RE.test(spec);
+}
+
 /** Find the next occurrence of `marker`, honoring `\` escapes. */
 function findClosing(src: string, from: number, marker: string): number {
 	let i = from;
@@ -284,7 +308,13 @@ function renderNode(node: Node, options: RichTextOptions | undefined, plain: boo
 			const inner = renderNodes(node.children, options, plain);
 			if (plain) return inner;
 			if (node.style === "color") {
-				return applyStyle(inner, node.color, undefined, []);
+				try {
+					return applyStyle(inner, node.color, undefined, []);
+				} catch {
+					// Invalid color spec — fall back to unstyled text so
+					// a bad color string never crashes the render.
+					return inner;
+				}
 			}
 			const styleNames: Record<string, string> = {
 				bold: "bold",

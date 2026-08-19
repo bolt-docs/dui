@@ -85,3 +85,27 @@ describe("richtextToPlain", () => {
 		);
 	});
 });
+
+describe("richtext edge cases", () => {
+	it("does not stack overflow on deeply nested markup", () => {
+		// Build 200 levels of nesting: **[ [{red:* ...}]* **
+		let input = "x";
+		for (let i = 0; i < 200; i++) {
+			input = "**" + input + "**";
+		}
+		// Should complete without throwing or exceeding stack
+		expect(() => richtext(input)).not.toThrow();
+	});
+
+	it("renders text when color spec is invalid", () => {
+		// {notaColor:text} — should not crash
+		const out = richtext("{notaColor:hello}");
+		expect(out).toContain("hello");
+		expect(out).not.toThrow;
+	});
+
+	it("renders text for hex-like but invalid color", () => {
+		const out = richtext("{#xyz:notahex}");
+		expect(out).toContain("notahex");
+	});
+});
