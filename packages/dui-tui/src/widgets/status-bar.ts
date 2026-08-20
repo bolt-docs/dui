@@ -23,6 +23,7 @@
 
 import { stripAnsi, visibleLength } from "@bdocs/dui";
 import { BaseWidget, type WidgetRenderOptions } from "../widget";
+import { truncateAnsi } from "../utils";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -87,41 +88,46 @@ export class StatusBar extends BaseWidget<StatusBarData> {
     const bg = "\x1b[48;2;40;40;50m";
     const reset = "\x1b[0m";
 
-    // Build the bar.
-    const parts: string[] = [];
+    if (width <= 0) return "";
 
-    // Left sections.
-    for (const sec of sections) {
-      const style = STYLE_MAP[sec.style ?? "default"];
-      parts.push(`${style.bg}${style.fg} ${sec.text} ${reset}`);
+    // Left segment: styled sections first, then the left text.
+    const leftSeg = (
+      sections
+        .map((sec) => {
+          const style = STYLE_MAP[sec.style ?? "default"];
+          return `${style.bg}${style.fg} ${sec.text} ${reset}`;
+        })
+        .join("") + (left ? `${bg}\x1b[1m ${left} ${reset}` : "")
+    );
+    const centerSeg = center ? `${bg}\x1b[2m ${center} ${reset}` : "";
+    const rightSeg = right ? `${bg} ${right} ${reset}` : "";
+
+    const lw = visibleLength(stripAnsi(leftSeg));
+    const cw = visibleLength(stripAnsi(centerSeg));
+    const rw = visibleLength(stripAnsi(rightSeg));
+
+    let bar: string;
+    if (lw + cw + rw <= width) {
+      // Left flush, center roughly centered, right flush.
+      const rightStart = width - rw;
+      const centerStart = Math.min(
+        Math.max(lw, Math.floor((width - cw) / 2)),
+        rightStart - cw,
+      );
+      const gapLeft = " ".repeat(Math.max(0, centerStart - lw));
+      const gapCenter = " ".repeat(
+        Math.max(0, rightStart - (centerStart + cw)),
+      );
+      bar = `${leftSeg}${gapLeft}${centerSeg}${gapCenter}${rightSeg}`;
+    } else {
+      // Not enough room — just concatenate and let truncation cut the tail.
+      bar = `${leftSeg}${centerSeg}${rightSeg}`;
     }
 
-    // Left text.
-    if (left) {
-      parts.push(`${bg}\x1b[1m ${left} ${reset}`);
-    }
-
-    // Center text.
-    if (center) {
-      parts.push(`${bg}\x1b[2m ${center} ${reset}`);
-    }
-
-    // Right text + shortcuts.
-    if (right) {
-      parts.push(`${bg} ${right} ${reset}`);
-    }
-
-    // Join and pad to width.
-    let bar = parts.join("");
-    const visLen = visibleLength(stripAnsi(bar));
-    const pad = Math.max(0, width - visLen);
-    bar += " ".repeat(pad);
-
-    // Ensure exact width.
-    const stripped = stripAnsi(bar);
-    if (stripped.length > width) {
-      bar = bar.slice(0, width);
-    }
+    // Cap at the exact width without splitting ANSI escapes.
+    bar = truncateAnsi(bar, width);
+    const used = visibleLength(stripAnsi(bar));
+    if (used < width) bar += " ".repeat(width - used);
 
     return `${bg}${" ".repeat(width)}${reset}\r${bar}`;
   }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripAnsi, visibleLength } from "@bdocs/dui";
 import { TextInput } from "../../src/widgets/text-input";
 
 describe("TextInput", () => {
@@ -107,5 +108,17 @@ describe("TextInput", () => {
     const input = new TextInput("name");
     input.setVisible(false);
     expect(input.render({ width: 30, height: 3, focused: false })).toBe("");
+  });
+
+  it("truncates a long focused value without cutting the cursor escape", () => {
+    const input = new TextInput("name");
+    input.setValue("x".repeat(80));
+    input.setFocused(true);
+    const result = input.render({ width: 12, height: 3, focused: true });
+    expect(result).toContain("\x1b[7m");
+    expect(result).toContain("\x1b[27m");
+    for (const line of result.split("\n")) {
+      expect(visibleLength(stripAnsi(line))).toBeLessThanOrEqual(12);
+    }
   });
 });

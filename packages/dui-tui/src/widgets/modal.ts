@@ -20,6 +20,7 @@
 
 import { stripAnsi, visibleLength } from "@bdocs/dui";
 import { BaseWidget, type WidgetRenderOptions, type WidgetInputEvent } from "../widget";
+import { truncateAnsi } from "../utils";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -95,24 +96,26 @@ export class Modal extends BaseWidget<ModalData> {
     }
 
     // Title.
-    const titlePad = modalWidth - 4 - visibleLength(title);
+    const innerWidth = Math.max(0, modalWidth - 6);
+    const safeTitle = truncateAnsi(title, innerWidth);
+    const titlePad = Math.max(0, innerWidth - visibleLength(stripAnsi(safeTitle)));
     lines.push(
       `  ╔${"═".repeat(modalWidth - 4)}╗`,
     );
     lines.push(
-      `  ║ ${"\x1b[1m"}${title}${"\x1b[22m"}${" ".repeat(Math.max(0, titlePad))} ║`,
+      `  ║ ${"\x1b[1m"}${safeTitle}${"\x1b[22m"}${" ".repeat(titlePad)} ║`,
     );
     lines.push(
       `  ╠${"═".repeat(modalWidth - 4)}╣`,
     );
 
-    // Content.
+    // Content (truncated so long lines never overflow the bordered width).
     const contentLines = content.split("\n");
     const maxContentLines = modalHeight - 6; // title + actions + borders
     for (let i = 0; i < maxContentLines; i++) {
-      const line = contentLines[i] ?? "";
-      const visLen = visibleLength(line);
-      const pad = Math.max(0, modalWidth - 4 - visLen);
+      const raw = contentLines[i] ?? "";
+      const line = truncateAnsi(raw, innerWidth);
+      const pad = Math.max(0, innerWidth - visibleLength(stripAnsi(line)));
       lines.push(`  ║ ${line}${" ".repeat(pad)} ║`);
     }
 
@@ -133,9 +136,13 @@ export class Modal extends BaseWidget<ModalData> {
       })
       .join("  ");
 
-    const actionPad = Math.max(0, modalWidth - 4 - visibleLength(stripAnsi(actionStr)));
+    const safeActions = truncateAnsi(actionStr, innerWidth);
+    const actionPad = Math.max(
+      0,
+      innerWidth - visibleLength(stripAnsi(safeActions)),
+    );
     lines.push(
-      `  ║ ${actionStr}${" ".repeat(actionPad)} ║`,
+      `  ║ ${safeActions}${" ".repeat(actionPad)} ║`,
     );
 
     // Bottom border.
@@ -154,6 +161,7 @@ export class Modal extends BaseWidget<ModalData> {
 
     const { key } = event;
     const { actions } = this.data;
+    if (actions.length === 0) return false;
 
     switch (key) {
       case "ArrowLeft":

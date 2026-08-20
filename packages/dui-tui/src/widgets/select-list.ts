@@ -19,7 +19,7 @@
  * ```
  */
 
-import { stripAnsi, visibleLength } from "@bdocs/dui";
+import { stripAnsi, truncateByCells, visibleLength } from "@bdocs/dui";
 import { BaseWidget, type WidgetRenderOptions, type WidgetInputEvent } from "../widget";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -55,6 +55,9 @@ export interface SelectListOptions {
 // ── Widget ─────────────────────────────────────────────────────
 
 export class SelectList extends BaseWidget<SelectListData> {
+  /** Height of the last render — lets handleInput scroll in the same viewport the user actually sees. */
+  private viewportHeight = 10;
+
   constructor(id: string, opts: SelectListOptions) {
     super(id, "select-list", {
       items: opts.items,
@@ -97,6 +100,7 @@ export class SelectList extends BaseWidget<SelectListData> {
     if (!this.visible) return "";
 
     const { width, height } = opts;
+    this.viewportHeight = height;
     const items = this.getFilteredItems();
     const isFocused = this.focused;
     const showFilter = this.data.filterActive;
@@ -108,7 +112,7 @@ export class SelectList extends BaseWidget<SelectListData> {
     const header = this.data.filterActive
       ? ` 🔍 ${this.data.filter}█`
       : ` 📋 ${items.length} item(s)`;
-    lines.push(header);
+    lines.push(truncateByCells(header, width));
 
     // Items.
     const start = this.data.scrollOffset;
@@ -124,26 +128,22 @@ export class SelectList extends BaseWidget<SelectListData> {
       const isDisabled = item.disabled;
 
       let prefix: string;
+      if (isSelected) prefix = " ▸ ";
+      else prefix = "   ";
+
+      // Truncate the plain label first, then wrap it in styling so the
+      // ANSI codes are always balanced (never sliced in two).
+      const maxLabelWidth = Math.max(0, width - 4 - visibleLength(prefix));
+      const labelText = truncateByCells(item.label, maxLabelWidth);
       let label: string;
-
       if (isSelected && isFocused) {
-        prefix = " ▸ ";
-        label = `\x1b[7m ${item.label} \x1b[27m`;
+        label = `\x1b[7m ${labelText} \x1b[27m`;
       } else if (isSelected) {
-        prefix = " ▸ ";
-        label = ` ${item.label} `;
+        label = ` ${labelText} `;
       } else if (isDisabled) {
-        prefix = "   ";
-        label = `\x1b[2m${item.label}\x1b[22m`;
+        label = `\x1b[2m${labelText}\x1b[22m`;
       } else {
-        prefix = "   ";
-        label = ` ${item.label}`;
-      }
-
-      // Truncate label if too long.
-      const maxLabelWidth = width - 4 - visibleLength(prefix);
-      if (visibleLength(label) > maxLabelWidth) {
-        label = label.slice(0, maxLabelWidth - 1) + "…";
+        label = ` ${labelText}`;
       }
 
       lines.push(`${prefix}${label}`);
@@ -165,7 +165,8 @@ export class SelectList extends BaseWidget<SelectListData> {
 
     const { key, char, ctrl } = event;
     const items = this.getFilteredItems();
-    const maxVisible = 10; // approximate viewport
+    // Viewport must match the last render so scrolling keeps the selection on screen.
+    const maxVisible = Math.max(1, this.viewportHeight - 2);
 
     // Filter mode.
     if (this.data.filterActive) {

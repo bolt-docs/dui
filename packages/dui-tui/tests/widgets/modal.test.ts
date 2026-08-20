@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripAnsi, visibleLength } from "@bdocs/dui";
 import { Modal } from "../../src/widgets/modal";
 
 describe("Modal", () => {
@@ -80,5 +81,34 @@ describe("Modal", () => {
     });
     modal.setVisible(false);
     expect(modal.render({ width: 60, height: 20, focused: true })).toBe("");
+  });
+
+  it("truncates long content so every row stays at the modal width", () => {
+    const modal = new Modal("confirm", {
+      title: "x".repeat(80),
+      content: "A".repeat(80) + "\n" + "B".repeat(4),
+    });
+    modal.setFocused(true);
+    const result = modal.render({ width: 60, height: 20, focused: true });
+    expect(result).toContain("…");
+    const rows = result.split("\n").filter((line) => line.trim() !== "");
+    // Every non-empty row must fit inside the provided width (some are modal backdrops).
+    for (const line of rows) {
+      expect(visibleLength(stripAnsi(line))).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it("does not crash when actions is empty", () => {
+    const modal = new Modal("confirm", {
+      title: "Confirm",
+      content: "Proceed?",
+      actions: [],
+    });
+    modal.setFocused(true);
+    expect(() => modal.handleInput({ key: "ArrowRight" })).not.toThrow();
+    expect(modal.handleInput({ key: "Enter" })).toBe(false);
+    expect(modal.render({ width: 60, height: 20, focused: true })).toContain(
+      "Confirm",
+    );
   });
 });

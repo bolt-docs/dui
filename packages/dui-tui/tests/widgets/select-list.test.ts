@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripAnsi, visibleLength } from "@bdocs/dui";
 import { SelectList } from "../../src/widgets/select-list";
 
 const items = [
@@ -97,5 +98,40 @@ describe("SelectList", () => {
     const list = new SelectList("list", { items });
     list.setVisible(false);
     expect(list.render({ width: 30, height: 10, focused: false })).toBe("");
+  });
+
+  it("truncates a long selected label without breaking ANSI", () => {
+    const long = new SelectList("list", {
+      items: [{ label: "x".repeat(60), value: "a" }],
+    });
+    long.setFocused(true);
+    const result = long.render({ width: 20, height: 10, focused: true });
+    // Selected label uses an inverse-video escape — it must stay balanced.
+    expect(result).toContain("\x1b[7m");
+    expect(result).toContain("\x1b[27m");
+    // The truncated label should be visually bounded by the width provided.
+    for (const line of result.split("\n")) {
+      if (!line.trim()) continue;
+      expect(visibleLength(stripAnsi(line))).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it("scrolling keeps the selection visible within the rendered viewport", () => {
+    const long = Array.from({ length: 40 }, (_, i) => ({
+      label: `Item number ${i}`,
+      value: String(i),
+    }));
+    const list = new SelectList("list", { items: long });
+    list.setFocused(true);
+    // First render fixes the viewport height, then navigate far past the screen.
+    list.render({ width: 30, height: 6, focused: true });
+    for (let i = 0; i < 40; i++) list.handleInput({ key: "ArrowDown" });
+    const result = list.render({ width: 30, height: 6, focused: true });
+    // The last item must be selected and visible on screen.
+    expect(list.getSelected()?.label).toBe("Item number 39");
+    expect(result).toContain("Item number 39");
+    for (const line of result.split("\n")) {
+      expect(visibleLength(stripAnsi(line))).toBeLessThanOrEqual(30);
+    }
   });
 });

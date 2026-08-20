@@ -123,13 +123,14 @@ export class TextInput extends BaseWidget<TextInputData> {
       // Show value with cursor.
       const left = before;
       const right = after;
-      const cursorChar = isFocused ? `\x1b[7m${cursor}\x1b[27m` : cursor;
-      content = ` ${left}${cursorChar}${right}`;
-      // Pad to width.
-      const visLen = visibleLength(left) + 1 + visibleLength(right);
-      const pad = Math.max(0, width - 2 - visLen - 1);
-      content += " ".repeat(pad);
-      content = content.slice(0, width - 2);
+      const cursorChar = isFocused
+        ? `\x1b[7m${cursor}\x1b[27m`
+        : cursor;
+      // Pad via visible width (never slice the cursor's ANSI escape codes).
+      const visLen =
+        visibleLength(left) + visibleLength(cursorChar) + visibleLength(right);
+      const pad = Math.max(0, width - 2 - 1 - visLen);
+      content = ` ${left}${cursorChar}${right}${" ".repeat(pad)}`;
     }
 
     const border = isFocused ? "\x1b[36m" : "\x1b[2m";
