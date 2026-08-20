@@ -1,5 +1,27 @@
 # @bdocs/dui
 
+## 0.7.0-next.3
+
+### Patch Changes
+
+- [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug fixes**
+
+  - **`form()` stray characters from escape sequences** — pressing Delete
+    (`\x1b[3~`), Page Up/Down, Home, or End keys caused the trailing
+    character (`~`, `H`, `F`) to leak into the text field. Unrecognized
+    escape sequences are now consumed and discarded.
+  - **`form()` dead Ctrl+D handler** — the `else if` branch for
+    `\x04` (Ctrl+D) was unreachable because the preceding backspace
+    condition already matched. Ctrl+D is now explicitly handled
+    (silently ignored in text fields).
+  - **`richtext()` stack overflow on deep nesting** — `parseNodes`
+    recursed without a depth cap, so crafted input like 200 levels of
+    `****…****` could blow the call stack. A `MAX_PARSE_DEPTH` (32)
+    limit now truncates further nesting gracefully.
+  - **`richtext()` crash on invalid color specs** — a `{notaColor:text}`
+    span called `parseColor` which threw, crashing the entire render.
+    Invalid color specs now fall back to unstyled text.
+
 ## 0.7.0-next.2
 
 ### Patch Changes

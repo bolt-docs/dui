@@ -1,6 +1,6 @@
 {
 	"name": "@dui-toolkit/plugin-notify",
-	"version": "0.1.1-next.2",
+	"version": "0.1.1-next.3",
 	"description": "Cross-platform desktop notifications and inline TUI toasts for @bdocs/dui — auto-routes between OS spawn, OSC escape sequences, and box-rendered toasts depending on the host environment.",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
