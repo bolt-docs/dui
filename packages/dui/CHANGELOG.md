@@ -1,5 +1,24 @@
 # @bdocs/dui
 
+## 0.7.0-next.4
+
+### Minor Changes
+
+- [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **New features**
+
+  - **`form()` number fields** — new `type: "number"` field with `min`, `max`,
+    and a typed `validate(value: number)` callback. Input is filtered to
+    digits, minus, and decimal point; the result is returned as a `number`
+    (not a string).
+  - **`form()` textarea fields** — new `type: "textarea"` field with configurable
+    `rows` (default 3). Enter inserts a newline; Tab submits (or advances
+    if not the last field). Up/Down arrows navigate between lines. Inactive
+    fields collapse to a single-line preview. Backspace at line start joins
+    with the previous line.
+  - **Tab submits on the last field** — pressing Tab on the last field now
+    validates all fields and submits instead of wrapping to the first field.
+    This gives textarea-as-last-field a natural submit key.
+
 ## 0.7.0-next.3
 
 ### Patch Changes

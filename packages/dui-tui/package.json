@@ -1,6 +1,6 @@
 {
   "name": "@dui-toolkit/plugin-tui",
-  "version": "0.1.1-next.1",
+  "version": "0.1.1-next.2",
   "description": "TUI widget toolkit plugin for @bdocs/dui — text inputs, select lists, modals, status bars, and more.",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
