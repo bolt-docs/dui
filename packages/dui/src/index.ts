@@ -279,7 +279,7 @@ export {
 	showCursor,
 	withAltScreen,
 } from "./alt-screen";
-export type { FormField, FormOptions, FormSelectField, FormTextField } from "./form";
+export type { FormField, FormNumberField, FormOptions, FormSelectField, FormTextField, FormTextareaField } from "./form";
 export { form } from "./form";
 export type { PaletteItem, PaletteOptions } from "./palette";
 export { palette } from "./palette";
