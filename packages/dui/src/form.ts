@@ -351,11 +351,16 @@ async function nonInteractiveForm(
 					`${field.label}${hint} — enter text, finish with an empty line:`,
 				);
 				const lines: string[] = [];
+				let firstLine = true;
 				const onLine = (line: string) => {
 					if (line === "") {
 						rl.removeListener("line", onLine);
 						rl.close();
-						const value = lines.join("\n");
+						// Apply default when no input was provided.
+						const value =
+							lines.length === 0 && field.default !== undefined
+								? field.default
+								: lines.join("\n");
 						if (field.validate) {
 							const v = field.validate(value);
 							if (v !== true)
@@ -366,6 +371,7 @@ async function nonInteractiveForm(
 						return;
 					}
 					lines.push(line);
+					firstLine = false;
 				};
 				rl.on("line", onLine);
 			});

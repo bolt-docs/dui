@@ -196,40 +196,48 @@ export class SelectList extends BaseWidget<SelectListData> {
 
     switch (key) {
       case "ArrowUp":
-        if (this.data.selectedIndex > 0) {
+        if (items.length > 0 && this.data.selectedIndex > 0) {
           this.data.selectedIndex--;
           if (this.data.selectedIndex < this.data.scrollOffset) {
             this.data.scrollOffset = this.data.selectedIndex;
           }
         }
-        this.data.onSelect?.(items[this.data.selectedIndex], this.data.selectedIndex);
+        if (items[this.data.selectedIndex]) {
+          this.data.onSelect?.(items[this.data.selectedIndex], this.data.selectedIndex);
+        }
         return true;
 
       case "ArrowDown":
-        if (this.data.selectedIndex < items.length - 1) {
+        if (items.length > 0 && this.data.selectedIndex < items.length - 1) {
           this.data.selectedIndex++;
           if (this.data.selectedIndex >= this.data.scrollOffset + maxVisible) {
             this.data.scrollOffset = this.data.selectedIndex - maxVisible + 1;
           }
         }
-        this.data.onSelect?.(items[this.data.selectedIndex], this.data.selectedIndex);
+        if (items[this.data.selectedIndex]) {
+          this.data.onSelect?.(items[this.data.selectedIndex], this.data.selectedIndex);
+        }
         return true;
 
       case "Home":
         this.data.selectedIndex = 0;
         this.data.scrollOffset = 0;
-        this.data.onSelect?.(items[0], 0);
+        if (items[0]) {
+          this.data.onSelect?.(items[0], 0);
+        }
         return true;
 
       case "End":
-        this.data.selectedIndex = items.length - 1;
-        if (items.length > maxVisible) {
-          this.data.scrollOffset = items.length - maxVisible;
+        if (items.length > 0) {
+          this.data.selectedIndex = items.length - 1;
+          if (items.length > maxVisible) {
+            this.data.scrollOffset = items.length - maxVisible;
+          }
+          this.data.onSelect?.(
+            items[this.data.selectedIndex],
+            this.data.selectedIndex,
+          );
         }
-        this.data.onSelect?.(
-          items[this.data.selectedIndex],
-          this.data.selectedIndex,
-        );
         return true;
 
       case "Enter": {

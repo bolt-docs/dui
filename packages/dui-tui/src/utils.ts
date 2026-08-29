@@ -11,7 +11,34 @@
 import { stripAnsi, visibleLength } from "@bdocs/dui";
 
 // Matches a CSI escape sequence (`\x1b[ ... @-~`), e.g. `\x1b[7m`, `\x1b[38;2;…m`.
-const CSI_RE = /\x1b\[[0-9;:<=>?]*[ -/]*[@-~]/;
+const CSI_RE = /\x1b\[[0-9;:<=>?]*[ -\/]*[@-~]/;
+
+/**
+ * Skip past a single escape sequence starting at `rest[0]`.
+ * Returns the length of the escape sequence, or 0 if `rest` does not start
+ * with a recognised escape.
+ */
+function escapeLength(rest: string): number {
+	if (!rest.startsWith("\x1b")) return 0;
+	// 1. CSI: \x1b[ ... @-~  (variable length, terminated by a byte in @-~)
+	const csi = CSI_RE.exec(rest);
+	if (csi && csi[0].length > 0) return csi[0].length;
+	// 2. OSC: \x1b] ... (\x07 | \x1b\\)
+	if (rest.length >= 2) {
+		if (rest[1] === "]") {
+			// Scan for BEL (\x07) or ST (\x1b\\)
+			for (let i = 2; i < rest.length; i++) {
+				if (rest[i] === "\x07") return i + 1;
+				if (rest[i] === "\x1b" && rest[i + 1] === "\\") return i + 2;
+			}
+			// Unterminated OSC — consume everything after \x1b]
+			return rest.length;
+		}
+		// 3. Other two-byte escapes (e.g. \x1bM, \x1b=, \x1b7, \x1b8, \x1bP, \x1b_)
+		return 2;
+	}
+	return 1;
+}
 
 /**
  * Truncate an ANSI-wrapped string to `maxCells` terminal cells.
@@ -28,22 +55,20 @@ export function truncateAnsi(text: string, maxCells: number): string {
 	const target = Math.max(0, maxCells - 1); // 1 cell for the ellipsis
 	let out = "";
 	let used = 0;
-	let rest = text;
-	while (rest.length > 0 && used < target) {
-		if (rest.startsWith("\x1b")) {
-			const m = CSI_RE.exec(rest);
-			if (m && m[0].length > 0) {
-				out += m[0];
-				rest = rest.slice(m[0].length);
-				continue;
-			}
+	let pos = 0;
+	while (pos < text.length && used < target) {
+		const escLen = escapeLength(text.slice(pos));
+		if (escLen > 0) {
+			out += text.slice(pos, pos + escLen);
+			pos += escLen;
+			continue;
 		}
-		const ch = rest.charAt(0);
+		const ch = text.charAt(pos);
 		const w = visibleLength(ch);
 		if (used + w > target) break;
 		out += ch;
 		used += w;
-		rest = rest.slice(1);
+		pos++;
 	}
 	return out + "\u2026";
 }
