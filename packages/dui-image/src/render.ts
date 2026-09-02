@@ -14,22 +14,9 @@ import {
 	renderSixel,
 	tmuxPassthrough,
 } from "./protocols";
+import { getSharp } from "./load";
 import { loadResizedPixels, resolveDimensions } from "./utils";
 
-// Lazily load sharp so the package works without the native binary
-// for formats that don't need PNG encoding (ANSI half-block path).
-let _sharp: typeof import("sharp") | null | undefined;
-async function getSharp(): Promise<typeof import("sharp") | null> {
-	if (_sharp === undefined) {
-		try {
-			const mod = await import("sharp");
-			_sharp = mod.default;
-		} catch {
-			_sharp = null;
-		}
-	}
-	return _sharp;
-}
 
 export interface ImageRenderOptions extends AnsiImageOptions {
 	/**

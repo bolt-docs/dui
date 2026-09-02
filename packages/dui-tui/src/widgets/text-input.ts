@@ -15,7 +15,7 @@
  * ```
  */
 
-import { stripAnsi, visibleLength } from "@bdocs/dui";
+import { splitGraphemes, stripAnsi, visibleLength } from "@bdocs/dui";
 import { BaseWidget, type WidgetRenderOptions, type WidgetInputEvent } from "../widget";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -66,8 +66,13 @@ export class TextInput extends BaseWidget<TextInputData> {
   /** Set the text value programmatically. */
   setValue(value: string): void {
     const max = this.data.maxLength;
-    this.data.value = max > 0 ? value.slice(0, max) : value;
-    this.cursorPos = this.data.value.length;
+    if (max > 0) {
+      const g = splitGraphemes(value);
+      this.data.value = g.slice(0, max).join("");
+    } else {
+      this.data.value = value;
+    }
+    this.cursorPos = splitGraphemes(this.data.value).length;
     this.data.onChange?.(this.data.value);
   }
 
@@ -86,19 +91,22 @@ export class TextInput extends BaseWidget<TextInputData> {
     const display = value || this.data.placeholder;
     const isEmpty = !value;
 
-    // Build the display string with cursor.
-    const cursorInDisplay = this.cursorPos;
-    let before = display.slice(0, cursorInDisplay);
-    let cursor = display[cursorInDisplay] || " ";
-    let after = display.slice(cursorInDisplay + 1);
+    // Build the display string with cursor using grapheme-aware slicing
+    // so ZWJ emoji and combining marks don't split mid-grapheme.
+    const graphemes = splitGraphemes(display);
+    const cursorInDisplay = Math.min(this.cursorPos, graphemes.length);
+    let before = graphemes.slice(0, cursorInDisplay).join("");
+    let cursor = graphemes[cursorInDisplay] || " ";
+    let after = graphemes.slice(cursorInDisplay + 1).join("");
+    const afterGraphemes = graphemes.slice(cursorInDisplay + 1);
 
     // Truncate if wider than available space.
     const maxVisible = width - 4; // borders
     if (visibleLength(display) > maxVisible) {
       const start = Math.max(0, cursorInDisplay - Math.floor(maxVisible / 2));
-      before = display.slice(start, cursorInDisplay);
-      cursor = display[cursorInDisplay] || " ";
-      after = display.slice(cursorInDisplay + 1, start + maxVisible);
+      before = graphemes.slice(start, cursorInDisplay).join("");
+      cursor = graphemes[cursorInDisplay] || " ";
+      after = graphemes.slice(cursorInDisplay + 1, start + maxVisible).join("");
     }
 
     // Render.
@@ -168,19 +176,23 @@ export class TextInput extends BaseWidget<TextInputData> {
 
       case "Backspace":
         if (this.cursorPos > 0) {
+          const g = splitGraphemes(this.data.value);
+          const pos = Math.min(this.cursorPos, g.length);
           this.data.value =
-            this.data.value.slice(0, this.cursorPos - 1) +
-            this.data.value.slice(this.cursorPos);
-          this.cursorPos--;
+            g.slice(0, pos - 1).join("") +
+            g.slice(pos).join("");
+          this.cursorPos = pos - 1;
           this.data.onChange?.(this.data.value);
         }
         return true;
 
       case "Delete":
         if (this.cursorPos < this.data.value.length) {
+          const g = splitGraphemes(this.data.value);
+          const pos = Math.min(this.cursorPos, g.length);
           this.data.value =
-            this.data.value.slice(0, this.cursorPos) +
-            this.data.value.slice(this.cursorPos + 1);
+            g.slice(0, pos).join("") +
+            g.slice(pos + 1).join("");
           this.data.onChange?.(this.data.value);
         }
         return true;
@@ -216,13 +228,18 @@ export class TextInput extends BaseWidget<TextInputData> {
     // Printable character.
     if (char && char.length === 1 && char >= " ") {
       const max = this.data.maxLength;
-      if (max > 0 && this.data.value.length >= max) return true;
+      if (max > 0) {
+        const gLen = splitGraphemes(this.data.value).length;
+        if (gLen >= max) return true;
+      }
 
+      const g = splitGraphemes(this.data.value);
+      const pos = Math.min(this.cursorPos, g.length);
       this.data.value =
-        this.data.value.slice(0, this.cursorPos) +
+        g.slice(0, pos).join("") +
         char +
-        this.data.value.slice(this.cursorPos);
-      this.cursorPos++;
+        g.slice(pos).join("");
+      this.cursorPos = pos + 1;
       this.data.onChange?.(this.data.value);
       return true;
     }

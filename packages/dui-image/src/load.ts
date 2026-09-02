@@ -45,7 +45,7 @@ async function tryLoadSharp(): Promise<typeof import("sharp") | null> {
 
 let sharpModule: typeof import("sharp") | null | undefined;
 
-async function getSharp(): Promise<typeof import("sharp") | null> {
+export async function getSharp(): Promise<typeof import("sharp") | null> {
 	if (sharpModule === undefined) {
 		sharpModule = await tryLoadSharp();
 	}

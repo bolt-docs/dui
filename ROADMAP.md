@@ -138,9 +138,7 @@ via `changeset pre exit` + `changeset version`.
   `level` double-spec, `LazySection` `style` prop, `Card` route type,
   `LazyTerminalPreview`, `InteractiveNotifyDemo`) — pre-existing on
   clean `HEAD`, unrelated to recent core changes.
-- **`dui-qrcode` test**: `tests/animate.test.ts` `rotate mode cycles
-  spinner characters in the label` fails on clean `HEAD` — the label
-  text is not preserved during rotation.
+- **`dui-qrcode` test**: rotate test **FIXED** — now passes.
 - **`dui-notify` queue flake** — **FIXED**: `queue.test.ts`
   "respects throttleMs between dispatches" raced at a razor-thin
   boundary (debounce 10ms + throttle 50ms = second drain at exactly

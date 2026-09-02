@@ -1,4 +1,4 @@
-import { colorize, colors } from "@bdocs/dui";
+import { colorize, colors, visibleLength } from "@bdocs/dui";
 import { barColor, clamp, padEnd } from "./utils";
 
 export interface PieSlice {
@@ -35,7 +35,7 @@ export function pie(data: PieSlice[], options: PieOptions = {}): string {
 
 	const lines: string[] = [];
 	const barW = 24;
-	const maxLabelLen = Math.max(...data.map((s) => s.label.length));
+	const maxLabelLen = Math.max(...data.map((s) => visibleLength(s.label)));
 
 	// Each slice's share is its fraction of the [min, max] axis (share
 	// of total by default). With `progress: p` the revealed share is

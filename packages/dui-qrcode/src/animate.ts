@@ -140,13 +140,13 @@ function pulseBorder(
 	const color = interpolateHex(dimmedHex, accentHex, t);
 
 	const lines = qrBody.split("\n");
-	const width = Math.max(...lines.map((l) => l.length));
+	const width = Math.max(...lines.map((l) => stripAnsi(l).length));
 	const horizontal = colorize("─".repeat(width + 2), color, "fg");
 	const vertical = colorize("│", color, "fg");
 
 	return [
 		`┌${horizontal}┐`,
-		...lines.map((l) => `│${l}${" ".repeat(width - l.length)}│`),
+		...lines.map((l) => `│${l}${" ".repeat(width - stripAnsi(l).length)}│`),
 		`└${horizontal}┘`,
 	].join("\n");
 }

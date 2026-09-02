@@ -166,7 +166,7 @@ export class SelectList extends BaseWidget<SelectListData> {
     const { key, char, ctrl } = event;
     const items = this.getFilteredItems();
     // Viewport must match the last render so scrolling keeps the selection on screen.
-    const maxVisible = Math.max(1, this.viewportHeight - 2);
+    const maxVisible = Math.max(1, this.viewportHeight - (this.data.filterActive ? 4 : 2));
 
     // Filter mode.
     if (this.data.filterActive) {
