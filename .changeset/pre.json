@@ -13,6 +13,7 @@
     "@dui-toolkit/plugin-tui": "0.1.0"
   },
   "changesets": [
+    "bug-hunting-tdd-tests",
     "v0.7.0-bugfixes",
     "v0.7.0-diff-v2",
     "v0.7.0-form-number-textarea",
