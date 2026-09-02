@@ -73,7 +73,7 @@ export function splitGraphemes(text: string): string[] {
  */
 export function truncateByCells(s: string, maxCells: number): string {
 	if (visibleLength(s) <= maxCells) return s;
-	if (maxCells <= 0) return "";
+	if (maxCells <= 0) return "\u2026";
 	const target = Math.max(0, maxCells - 1); // 1 cell for the ellipsis
 	const chars = splitGraphemes(s); // grapheme-aware, keeps ZWJ/combining intact
 	let accum = "";
@@ -133,7 +133,7 @@ export function computeLinesRendered(lines: string[]): number {
 	let rows = 0;
 	for (const line of lines) {
 		const len = visibleLength(line);
-		rows += Math.floor(len / width);
+		rows += Math.ceil(len / width);
 	}
 	return rows + (lines.length - 1);
 }

@@ -205,7 +205,7 @@ function initState(field: FormField): FieldState {
 			if (idx >= 0) selected = idx;
 		}
 		const first = field.choices.findIndex((c) => !c.disabled);
-		if (first >= 0 && (selected < 0 || field.choices[selected]?.disabled)) {
+		if (first >= 0 && field.choices[selected]?.disabled) {
 			selected = first;
 		}
 		return {
@@ -351,7 +351,6 @@ async function nonInteractiveForm(
 					`${field.label}${hint} — enter text, finish with an empty line:`,
 				);
 				const lines: string[] = [];
-				let firstLine = true;
 				const onLine = (line: string) => {
 					if (line === "") {
 						rl.removeListener("line", onLine);
@@ -371,7 +370,6 @@ async function nonInteractiveForm(
 						return;
 					}
 					lines.push(line);
-					firstLine = false;
 				};
 				rl.on("line", onLine);
 			});
@@ -656,7 +654,8 @@ function interactiveForm(
 					result[field.id] =
 						field.choices[states[i].selected]?.value;
 				} else if (isNumberField(field)) {
-					const num = Number(states[i].buf);
+					const raw = states[i].buf.trim();
+					const num = raw === "" || raw === "-" ? (fields[i] as FormNumberField).default ?? 0 : Number(raw);
 					result[field.id] = Number.isNaN(num) ? 0 : num;
 				} else {
 					result[field.id] = states[i].buf;

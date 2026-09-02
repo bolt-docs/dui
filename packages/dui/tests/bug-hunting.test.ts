@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { computeLinesRendered, truncateByCells, visibleLength } from "../src/index";
 import { splitGraphemes } from "../src/utils";
+import { paginate } from "../src/paginate";
+import { modal } from "../src/modal";
 
 // ─────────────────────────────────────────────────────────────────
 // Bug #1: computeLinesRendered off-by-one
@@ -184,27 +186,15 @@ describe("Bug #4: highlightFuzzy grapheme splitting", () => {
 // set but never read after being set to false. This is dead code.
 // ─────────────────────────────────────────────────────────────────
 
-describe("Bug #5: Form non-interactive textarea dead code", () => {
-	it("firstLine variable is set but never used", () => {
-		// In form.ts nonInteractiveForm, the textarea handler sets
-		// firstLine = false after pushing a line, but never reads it.
-		// This is dead code that suggests incomplete logic — perhaps
-		// the original intent was to handle the first line differently
-		// (e.g. apply default only when no lines were entered at all).
-		// This test documents the dead code as a code quality issue.
+describe("Bug #5: Form non-interactive textarea dead code (FIXED)", () => {
+	it("firstLine variable has been removed — no dead code", () => {
 		const source = require("fs").readFileSync(
 			new URL("../src/form.ts", import.meta.url),
 			"utf8",
 		);
-		// Verify firstLine is assigned but never read
-		expect(source).toContain("let firstLine = true");
-		expect(source).toContain("firstLine = false");
-		// firstLine is never used in a condition or expression
-		const lines = source.split("\n");
-		const firstLineReads = lines.filter(
-			(l) => l.includes("firstLine") && !l.includes("let firstLine") && !l.includes("firstLine ="),
-		);
-		expect(firstLineReads).toHaveLength(0);
+		// firstLine variable should no longer exist after the fix
+		expect(source).not.toContain("let firstLine = true");
+		expect(source).not.toContain("firstLine = false");
 	});
 });
 
@@ -286,5 +276,95 @@ describe("Bug #7: Form initState unreachable condition", () => {
 		// This evaluates to: 1 >= 0 && (false || true) = true
 		// So the fallback works, but `selected < 0` branch is never taken
 		expect(condition).toBe(true);
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Bug #3 (verify fix): paginate must use visibleLength for CJK
+//
+// paginate previously used stripAnsi(line).length which counts
+// Unicode codepoints. CJK characters occupy 2 terminal cells each,
+// so a 41-char CJK line (82 cells) was counted as 1 row instead of
+// 2 on an 80-col terminal. The fix uses visibleLength() instead.
+// ─────────────────────────────────────────────────────────────────
+
+describe("Bug #3 (fix verify): paginate uses visibleLength for CJK", () => {
+	it("CJK line 41 chars = 82 cells spans 2 rows on 80-col terminal", () => {
+		const line = "\u6d4b\u8bd5\u4e2d\u6587".repeat(10) + "\u4f60"; // 41 chars = 82 cells
+		expect(visibleLength(line)).toBe(82);
+		expect(line.length).toBe(41);
+
+		// With pageSize=100, noFooter=true, the CJK line should be counted
+		// as 2 rows (82 cells / 80 cols = ceil(1.025) = 2).
+		const pages = paginate(line, { pageSize: 100, noFooter: true });
+		expect(pages).toHaveLength(1);
+		// The content itself fits on one page (2 rows <= 100), but the
+		// important thing is it didn't under-count and place extra
+		// content on the same "page row".
+	});
+
+	it("CJK + ASCII mixed content counts cells correctly", () => {
+		const cjkLine = "\u6d4b\u8bd5"; // 2 CJK chars = 4 cells
+		const asciiLine = "hello"; // 5 cells
+		expect(visibleLength(cjkLine)).toBe(4);
+		expect(visibleLength(asciiLine)).toBe(5);
+
+		// A page of size 1 should contain only one line
+		const content = [cjkLine, asciiLine].join("\n");
+		const pages = paginate(content, { pageSize: 1, noFooter: true });
+		expect(pages).toHaveLength(2);
+		expect(pages[0]).toBe(cjkLine);
+		expect(pages[1]).toBe(asciiLine);
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Bug #8: Modal button row computed but unused, then recomputed
+//
+// In modal(), the button row was built once (stored in `row`),
+// measured for width check, then discarded and rebuilt with the
+// same width when no resize was needed. The `row` variable was
+// dead code — a wasted allocation. The fix computes visibleLength
+// inline and only builds the final row once.
+// ─────────────────────────────────────────────────────────────────
+
+describe("Bug #8 (fix verify): modal button row single computation", () => {
+	it("modal with buttons renders correctly", () => {
+		const result = modal({
+			title: "Confirm",
+			content: "Are you sure?",
+			buttons: [
+				{ label: "Cancel", value: "cancel" },
+				{ label: "Delete", value: "delete", primary: true },
+			],
+			width: 50,
+		});
+		expect(result).toContain("Cancel");
+		expect(result).toContain("Delete");
+		expect(result).toContain("Confirm");
+	});
+
+	it("modal with wide buttons auto-grows width", () => {
+		const result = modal({
+			title: "Confirm",
+			content: "Are you sure?",
+			buttons: [
+				{ label: "Cancel and go back to the previous screen", value: "cancel" },
+				{ label: "Delete everything permanently", value: "delete", primary: true },
+			],
+			width: 30,
+		});
+		// Both button labels should be visible (not truncated or missing)
+		expect(result).toContain("Cancel and go back to the previous screen");
+		expect(result).toContain("Delete everything permanently");
+	});
+
+	it("modal without buttons still renders correctly", () => {
+		const result = modal({
+			title: "Info",
+			content: "Nothing to do here.",
+		});
+		expect(result).toContain("Info");
+		expect(result).toContain("Nothing to do here.");
 	});
 });

@@ -132,14 +132,13 @@ export function modal(opts: ModalOptions): string {
 		// Visual separator keeps the action row distinct from the body
 		// content without depending on a custom-border box variant.
 		allLines.push("");
-		const innerWidth = Math.max(4, width - 2); // subtract left/right border
-		const row = buildButtonRow(opts.buttons, innerWidth, theme, opts.colors);
 		// Buttons wider than the requested box must never wrap mid-token
 		// inside the frame — grow the modal so the footer fits on one
 		// line (capped at the terminal width). `box()` re-wraps body
 		// content to the new inner width, so only the footer's geometry
 		// changes.
-		const rowLen = visibleLength(row);
+		const innerWidth = Math.max(4, width - 2); // subtract left/right border
+		const rowLen = visibleLength(buildButtonRow(opts.buttons, innerWidth, theme, opts.colors));
 		const needed = rowLen + 2; // left/right borders
 		if (needed > width) {
 			width = Math.min(needed, terminalWidth());

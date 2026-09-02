@@ -19,7 +19,7 @@
  */
 
 import * as readline from "node:readline";
-import { stripAnsi, terminalWidth } from "./utils";
+import { terminalWidth, visibleLength } from "./utils";
 
 /* ── Options ─────────────────────────────────────────────────── */
 
@@ -96,7 +96,7 @@ export function paginate(
 	// Compute visual row consumption per logical line using the same
 	// logic as computeLinesRendered from utils.
 	const lineRows: number[] = lines.map((line) => {
-		const len = stripAnsi(line).length;
+		const len = visibleLength(line);
 		if (width <= 0) return 1;
 		return Math.max(1, Math.ceil(len / width));
 	});
