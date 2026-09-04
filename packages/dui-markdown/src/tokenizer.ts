@@ -205,7 +205,8 @@ export function tokenizeInline(text: string): InlineToken[] {
 			const ch = text[pos];
 			const next = text[pos + 1] ?? "";
 
-			// Stop at any delimiter start
+			// Stop at any delimiter start — the outer loop re-checks it
+			// (it may open a construct whose closer appears later)
 			if (
 				ch === "`" ||
 				ch === "[" ||
@@ -235,6 +236,18 @@ export function tokenizeInline(text: string): InlineToken[] {
 		}
 		if (textContent) {
 			result.push({ type: "text", content: textContent });
+		} else if (pos < text.length) {
+			// Every construct above was tried at this position and none
+			// matched, yet the accumulator stopped at a delimiter start —
+			// the delimiter is unbalanced (no closing pair downstream).
+			// Emit the whole run of identical chars as literal text so the
+			// loop ALWAYS makes forward progress. Without this, input like
+			// `"a * b"`, a lone `**`, or an unterminated backtick spun
+			// forever and froze the CLI.
+			let runEnd = pos;
+			while (runEnd < text.length && text[runEnd] === text[pos]) runEnd++;
+			result.push({ type: "text", content: text.slice(pos, runEnd) });
+			pos = runEnd;
 		}
 	}
 

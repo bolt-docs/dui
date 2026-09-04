@@ -1,10 +1,12 @@
 import {
+	splitGraphemes,
 	table as duiTable,
 	getConfig,
 	resolveColor,
 	stripAnsi,
 	terminalWidth,
 	visibleLength,
+	wrapAnsiWord,
 } from "@bdocs/dui";
 import { mdSyntax } from "./syntax";
 import { type BlockToken, type InlineToken, tokenize, tokenizeInline } from "./tokenizer";
@@ -150,20 +152,26 @@ async function renderCode(
 		lang !== "text" ? ` ${tColor("markdown.codeLang").apply(lang)}` : "";
 	const borderFn = tColor("markdown.codeBorder").apply;
 
+	const innerWidth = Math.max(1, width - 2);
 	const lines = highlighted.split("\n");
 	const wrapped = lines.map((l) => {
-		const clean = stripAnsi(l);
-		if (visibleLength(clean) > width - 2) {
-			return l.slice(0, width - 5) + "\x1b[0m…";
+		// Measure visible cells (ANSI codes count 0, CJK counts 2) —
+		// `String#length` counts code units, which misaligns the border.
+		const cleanWidth = visibleLength(stripAnsi(l));
+		if (cleanWidth > innerWidth) {
+			// Truncate by cells WITHOUT slicing an SGR sequence in half,
+			// reserving 1 cell for `…`; reset first so a cut token color
+			// doesn't bleed into the ellipsis or the box border.
+			return truncateToCells(l, Math.max(1, innerWidth - 1)) + "\x1b[0m…";
 		}
 		return l;
 	});
 
-	const top = `${borderFn("┌" + "─".repeat(width - 2) + "┐")}${langTag}`;
-	const bottom = `${borderFn("└" + "─".repeat(width - 2) + "┘")}`;
+	const top = `${borderFn("┌" + "─".repeat(innerWidth) + "┐")}${langTag}`;
+	const bottom = `${borderFn("└" + "─".repeat(innerWidth) + "┘")}`;
 	const body = wrapped
 		.map((l) => {
-			const pad = width - 2 - stripAnsi(l).length;
+			const pad = innerWidth - visibleLength(stripAnsi(l));
 			return `${borderFn("│")}${l}${" ".repeat(Math.max(0, pad))}${borderFn("│")}`;
 		})
 		.join("\n");
@@ -272,9 +280,50 @@ async function renderParagraph(
 	const label = renderInline(token.inline);
 	const width = ctx.width ?? terminalWidth();
 	if (visibleLength(label) > width) {
+		if (label.includes("\x1b")) {
+			// ANSI-aware wrap: carries open styles (bold/italic/color)
+			// across line breaks and resets them at each line end, so a
+			// styled span never leaks an SGR opener onto the next line.
+			return wrapAnsiWord(label, width).join("\n");
+		}
 		return wrapTextByVisualWidth(label, width);
 	}
 	return label;
+}
+
+// A single complete ANSI escape sequence (CSI / OSC / single-char). Used
+// by `truncateToCells` to copy codes through verbatim instead of slicing
+// one in half.
+const ANSI_SEQ_RE =
+	/^[\u001b\u009b](?:\[[0-9;:<=>?]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)|[@-Z\\-_])/;
+
+/**
+ * Truncate a (possibly ANSI-colored) string to `maxCells` terminal cells
+ * without breaking an escape sequence: SGR/OSC codes are copied through
+ * whole and count as zero cells, while CJK/emoji count by their real
+ * width (`visibleLength`).
+ */
+function truncateToCells(line: string, maxCells: number): string {
+	if (maxCells <= 0) return "";
+	let out = "";
+	let used = 0;
+	let i = 0;
+	while (i < line.length && used < maxCells) {
+		const rest = line.slice(i);
+		const ansi = rest.match(ANSI_SEQ_RE);
+		if (ansi) {
+			out += ansi[0];
+			i += ansi[0].length;
+			continue;
+		}
+		const g = splitGraphemes(rest)[0];
+		const w = visibleLength(g);
+		if (used + w > maxCells) break;
+		out += g;
+		used += w;
+		i += g.length;
+	}
+	return out;
 }
 
 /**
