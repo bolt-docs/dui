@@ -1,5 +1,31 @@
 # @bdocs/dui
 
+## 0.7.0-next.6
+
+### Patch Changes
+
+- [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug hunting round 3 — toast border geometry, `grey` alias, grapheme-safe fuzzy highlight**
+
+  - **`toast` top border overhangs when the title is wider than the message** —
+    The box content width was derived from `title.length` (UTF‑16 units)
+    and ignored the badge + separator cells, so any title longer than the
+    message (or any CJK title, 2 cells per character) rendered a top row
+    wider than the body and bottom rows. The box is now sized from the
+    whole header line's `visibleLength`, keeping every row the same width.
+  - **`colorize` / `applyStyle` / `toAnsiFg` / `toAnsiBg` threw on the
+    `"grey"` alias** — The chainable `colors.grey`, `colorMap.grey` and
+    theme slots all accept `"grey"`, but the string color entry points
+    routed it into `parseColor` and crashed with
+    `Unsupported color format: "grey"`. `"grey"` now aliases to
+    `"gray"` (SGR 90 / bg 100) everywhere a named fg/bg color is accepted.
+  - **`highlightFuzzy` sliced multi-codepoint graphemes in half** —
+    Matched codepoint indices were applied against `Array.from(text)`, so
+    a query matching a member emoji inside a ZWJ family sequence (e.g.
+    👩 inside 👨‍👩‍👧‍👦) or the base letter of a combining-mark cluster wrapped
+    only part of the grapheme, breaking the sequence into fragment glyphs
+    on terminals. Matched indices are now mapped onto whole graphemes
+    (`splitGraphemes`) before highlighting.
+
 ## 0.7.0-next.5
 
 ### Patch Changes
