@@ -20,6 +20,8 @@
  * ```
  */
 
+import { splitGraphemes } from "./utils";
+
 export interface FuzzyResult {
 	/** Higher is better. */
 	score: number;
@@ -164,8 +166,25 @@ export function highlightFuzzy(
 	const result = fuzzyMatch(query, text);
 	if (!result || result.indices.length === 0) return text;
 
-	const chars = Array.from(text);
-	const set = new Set(result.indices);
+	// Match on user-perceived characters: `fuzzyMatch` indexes by
+	// codepoint, but a matched codepoint may sit *inside* a ZWJ emoji
+	// sequence or a combining-mark cluster (e.g. 👩 inside 👨‍👩‍👧‍👦, or the
+	// `e` of `e\u0301`). Mapping each matched codepoint back to its
+	// whole grapheme keeps the highlight from slicing the sequence in
+	// half — which terminals render as broken glyphs or leave the
+	// combining mark outside the styled run.
+	const chars = splitGraphemes(text);
+	const cpToGrapheme: number[] = [];
+	for (let gi = 0; gi < chars.length; gi++) {
+		// One entry per codepoint so indices stay in fuzzyMatch's
+		// codepoint index space.
+		for (const _cp of chars[gi]) cpToGrapheme.push(gi);
+	}
+	const set = new Set<number>();
+	for (const idx of result.indices) {
+		const gi = idx >= 0 && idx < cpToGrapheme.length ? cpToGrapheme[idx] : -1;
+		if (gi >= 0) set.add(gi);
+	}
 	let out = "";
 	for (let i = 0; i < chars.length; i++) {
 		out += set.has(i) ? matchFn(chars[i]) : chars[i];

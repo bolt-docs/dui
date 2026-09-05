@@ -151,10 +151,15 @@ export function createToastCenter(options?: ToastCenterOptions): ToastCenter {
 		const badge = color(TYPE_BADGE[item.type]);
 		const header = item.title ? `${badge} ${colors.bold(item.title)} ` : badge;
 		const headerLen = visibleLength(strip(header));
-		const innerWidth = Math.min(
-			56,
-			Math.max(visibleLength(item.message), item.title ? item.title.length : 0),
-		);
+		// The box content must be wide enough for the whole header line
+		// (badge + title + separators) AND the message body. Sizing it
+		// only from `title.length` (UTF-16 units) under-measures CJK
+		// titles (2 cells/char) and drops the badge + spaces, so a title
+		// wider than the message made the top border overhang the body
+		// and bottom rows. headerLen is measured in cells via
+		// visibleLength, keeping every row the same width.
+		const messageWidth = visibleLength(item.message);
+		const innerWidth = Math.min(56, Math.max(messageWidth, headerLen));
 		const total = innerWidth + 4;
 		// The top row must match the body/bottom width (`total`): the
 		// template already contributes the leading `┌─ `, and the

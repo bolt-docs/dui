@@ -35,13 +35,30 @@ function ansi(params: number[]): string {
 }
 
 /**
- * Resolve a named-color string to its SGR palette index.
+ * Resolve a named fg color to its SGR palette index.
  *
- * `NAMED_FG` keys are the plain names (`"cyan"`) while `NAMED_BG` keys
- * are the `"bg"`-prefixed chainable-API names (`"bgCyan"`). When a
- * caller passes `"cyan"` as a bg color, we transparently alias it to
- * `"bgCyan"` so the chainable `colors.bgCyan("x")` API and the
- * `colorize("x", "cyan", "bg")` API produce identical SGR.
+ * Handles the `"grey"` alias for `"gray"` (long-established spelling,
+ * already accepted by the chainable `colors.grey` API and `colorMap`)
+ * so every string-based entry point — `colorize`, `applyStyle`,
+ * `toAnsiFg`, theme overrides — treats the two spellings identically.
+ * Returns `undefined` for non-named strings — callers fall through to
+ * `parseColor` for hex / OkLCh / rgb strings.
+ */
+function namedFgSgr(name: string): number | undefined {
+	if (typeof name !== "string" || name.length === 0) return undefined;
+	if (name === "grey") return NAMED_FG.gray;
+	return NAMED_FG[name as FgName];
+}
+
+/**
+ * Resolve a named-color string to its SGR bg palette index.
+ *
+ * `NAMED_BG` keys are the `"bg"`-prefixed chainable-API names
+ * (`"bgCyan"`). When a caller passes `"cyan"` as a bg color, we
+ * transparently alias it to `"bgCyan"` so the chainable
+ * `colors.bgCyan("x")` API and the `colorize("x", "cyan", "bg")`
+ * API produce identical SGR. `"grey"` aliases to `"bgGray"` the same
+ * way the fg path aliases `"grey"` to `"gray"`.
  *
  * Returns `undefined` for non-named strings — callers fall through to
  * `parseColor` for hex / OkLCh / rgb strings.
@@ -52,7 +69,10 @@ function resolveNamedBgSgr(name: string): number | undefined {
 	if (direct !== undefined) return direct;
 	// Alias lookup: "cyan" → "bgCyan" (capitalize first letter + prefix).
 	const aliased = `bg${name[0]?.toUpperCase()}${name.slice(1)}`;
-	return NAMED_BG[aliased as BgName];
+	const fromAlias = NAMED_BG[aliased as BgName];
+	if (fromAlias !== undefined) return fromAlias;
+	if (name === "grey") return NAMED_BG.bgGray;
+	return undefined;
 }
 
 // Individual SGR close codes (instead of blanket \x1b[0m)
@@ -556,8 +576,9 @@ export function toAnsiFg(color: ColorInput): string {
 	// to the corresponding SGR palette index so theme overrides can use
 	// the same vocabulary as the chainable `colors.cyan(...)` API.
 	// Falls back to 24-bit hex/OkLCh/rgb parsing for everything else.
-	if (typeof color === "string" && NAMED_FG[color as FgName] !== undefined) {
-		return ansi([NAMED_FG[color as FgName]]);
+	const code = namedFgSgr(color);
+	if (code !== undefined) {
+		return ansi([code]);
 	}
 	const { r, g, b } = parseColor(color);
 	return ansi([38, 2, r, g, b]);
@@ -591,8 +612,9 @@ export function colorize(
 		}
 		return `${toAnsiBg(color)}${text}${ansi([CLOSE_BG])}`;
 	}
-	if (typeof color === "string" && NAMED_FG[color as FgName] !== undefined) {
-		return `${ansi([NAMED_FG[color as FgName]])}${text}${ansi([CLOSE_FG])}`;
+	const fgCode = namedFgSgr(color);
+	if (fgCode !== undefined) {
+		return `${ansi([fgCode])}${text}${ansi([CLOSE_FG])}`;
 	}
 	return `${toAnsiFg(color)}${text}${ansi([CLOSE_FG])}`;
 }
@@ -631,8 +653,9 @@ export function applyStyle(
 	}
 
 	if (color) {
-		if (NAMED_FG[color as FgName] !== undefined) {
-			openParts.push(NAMED_FG[color as FgName]);
+		const fgCode = namedFgSgr(color);
+		if (fgCode !== undefined) {
+			openParts.push(fgCode);
 			closeParts.push(CLOSE_FG);
 		} else {
 			const { r, g, b } = parseColor(color);
