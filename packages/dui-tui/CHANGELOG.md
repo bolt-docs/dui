@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-tui
 
+## 0.1.1-next.5
+
+### Patch Changes
+
+- Updated dependencies [[`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f)]:
+  - @bdocs/dui@0.7.0-next.7
+
 ## 0.1.1-next.4
 
 ### Patch Changes
