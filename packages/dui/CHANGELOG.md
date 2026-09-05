@@ -1,5 +1,23 @@
 # @bdocs/dui
 
+## 0.7.0-next.7
+
+### Patch Changes
+
+- [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Fix interactive `input()` caret drift on CJK text**
+
+  The prompt caret was positioned with UTF‑16 code-unit lengths
+  (`promptPrefix.length` + `buf.slice(0, cursorPos).length`), but
+  `readline.cursorTo` needs terminal **columns**. Each CJK ideograph in
+  the typed value — or in the prompt message itself — is 2 cells wide
+  but only 1 code unit, so the caret landed one column too far left for
+  every CJK character before it, appearing mid-text. The prefix and the
+  text before the caret are now measured with `visibleLength()`;
+  password fields keep the unit-index path since each code unit is
+  masked as a single `•` bullet. `confirm()`/`prompt.ts` is unaffected —
+  it delegates caret rendering to `readline.question`, which is already
+  fullwidth-aware.
+
 ## 0.7.0-next.6
 
 ### Patch Changes
