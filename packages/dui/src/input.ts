@@ -3,7 +3,7 @@ import { colors } from "./color";
 import { getConfig } from "./config";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
-import { computeLinesRendered, stripAnsi } from "./utils";
+import { computeLinesRendered, stripAnsi, visibleLength } from "./utils";
 
 export interface InputOptions {
 	default?: string;
@@ -166,12 +166,21 @@ function interactiveInput(
 			stdout.write(output);
 			linesRendered = computeLinesRendered(lines);
 
-			// Position cursor after the prompt text in the input line
+			// Position cursor after the prompt text in the input line.
+			// Columns are terminal CELLS, so the prefix and the text
+			// before the caret must be measured with `visibleLength` —
+			// `.length` counts UTF-16 code units, which under-positions
+			// the caret whenever CJK text (2 cells/char) sits before it
+			// (typed value OR the prompt message itself). Passwords are
+			// masked one bullet per code unit, so the caret tracks the
+			// bullet count (unit index) instead.
 			const promptPrefix = `${stripAnsi(promptLine)} `;
-			const prefixLen = promptPrefix.length;
-			const cursorOffset = prefixLen + buf.slice(0, cursorPos).length;
+			const prefixLen = visibleLength(promptPrefix);
+			const caretColumn =
+				prefixLen +
+				(isPassword ? cursorPos : visibleLength(buf.slice(0, cursorPos)));
 			readline.moveCursor(stdout, 0, -(linesRendered - 1));
-			readline.cursorTo(stdout, cursorOffset);
+			readline.cursorTo(stdout, caretColumn);
 		}
 
 		function cleanup() {

@@ -1,7 +1,7 @@
 import readline from "node:readline";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { input, resetConfig } from "../src/index";
+import { input, resetConfig, visibleLength } from "../src/index";
 
 const ORIG_STDIN_IS_TTY = process.stdin.isTTY;
 const ORIG_STDOUT_IS_TTY = process.stdout.isTTY;
@@ -307,6 +307,84 @@ describe("input", () => {
 			press("enter");
 
 			await expect(promise).resolves.toBe("XABC");
+		});
+
+		// The interactive render() positions the caret with
+		// `readline.cursorTo(stdout, col)`. `col` must count terminal
+		// CELLS before the caret — a CJK ideograph is 2 cells wide but
+		// only 1 UTF-16 code unit, so a `.length`-based column lands
+		// mid-text for CJK input (and for CJK in the prompt message).
+		// cursorTo emits `\x1b[<col+1>G`, so we read the last such
+		// escape off the (mocked) stdout writes instead of relying on
+		// a readline spy — the widget sees its own namespace import of
+		// `node:readline`, which a default-import spy can miss.
+		function lastCursorColumn(): number {
+			const writes = vi
+				.mocked(process.stdout.write)
+				.mock.calls.map((c) => String(c[0]))
+				.join("");
+			const matches = [...writes.matchAll(/\x1b\[(\d+)G/g)];
+			const last = matches[matches.length - 1];
+			return last ? Number(last[1]) - 1 : -1;
+		}
+
+		it("positions the caret by visible cells (CJK = 2 cells/char)", async () => {
+			const promise = input("Name:");
+
+			typeChar("你");
+			typeChar("好");
+
+			// Caret must sit 1 column past "你好": 4 visible cells, not
+			// its 2 code units.
+			const expected = visibleLength("? Name: ") + visibleLength("你好");
+			expect(lastCursorColumn()).toBe(expected);
+
+			press("enter");
+			await expect(promise).resolves.toBe("你好");
+		});
+
+		it("keeps the caret aligned when editing before CJK text", async () => {
+			const promise = input("Name:");
+
+			typeChar("你");
+			typeChar("好");
+			press("left"); // caret between 你 and 好
+			typeChar("x");
+
+			const expected =
+				visibleLength("? Name: ") + visibleLength("你x");
+			expect(lastCursorColumn()).toBe(expected);
+
+			press("enter");
+			await expect(promise).resolves.toBe("你x好");
+		});
+
+		it("measures a CJK prompt message in cells, not code units", async () => {
+			const promise = input("名字?");
+
+			typeChar("a");
+
+			// "? 名字? " is 8 cells (名字 = 4) — the caret lands at 9.
+			const expected = visibleLength("? 名字? ") + 1;
+			expect(lastCursorColumn()).toBe(expected);
+
+			press("enter");
+			await expect(promise).resolves.toBe("a");
+		});
+
+		it("password masks one bullet per code unit and aligns the caret", async () => {
+			const promise = input("Secret:", { type: "password" });
+
+			typeChar("你");
+			typeChar("好");
+
+			// Two bullets are rendered (one per unit); the caret sits
+			// right after them.
+			const expected = visibleLength("? Secret: ") + 2;
+			expect(lastCursorColumn()).toBe(expected);
+
+			press("enter");
+			await expect(promise).resolves.toBe("你好");
 		});
 
 		it("rejects on escape", async () => {
