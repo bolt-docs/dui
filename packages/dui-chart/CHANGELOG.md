@@ -1,5 +1,12 @@
 # @dui-toolkit/plugin-chart
 
+## 0.4.1-next.6
+
+### Patch Changes
+
+- Updated dependencies [[`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf)]:
+  - @bdocs/dui@0.7.0-next.6
+
 ## 0.4.1-next.5
 
 ### Patch Changes
