@@ -1,5 +1,29 @@
 # @bdocs/dui
 
+## 0.7.0-next.7
+
+### Patch Changes
+
+- [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Fix interactive `input()` caret drift on CJK text**
+
+  The prompt caret was positioned with UTF‑16 code-unit lengths
+  (`promptPrefix.length` + `buf.slice(0, cursorPos).length`), but
+  `readline.cursorTo` needs terminal **columns**. Each CJK ideograph in
+  the typed value — or in the prompt message itself — is 2 cells wide
+  but only 1 code unit, so the caret landed one column too far left for
+  every CJK character before it, appearing mid-text. The prefix and the
+  text before the caret are now measured with `visibleLength()`;
+  password fields keep the unit-index path since each code unit is
+  masked as a single `•` bullet. `confirm()`/`prompt.ts` is unaffected —
+  it delegates caret rendering to `readline.question`, which is already
+  fullwidth-aware.
+
+- [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix three rendering bugs in the `next` features (TDD):
+
+  - **RenderSurface wide-character alignment** — `write()` skipped CJK/emoji glyphs without reserving their terminal cells, so every following character in the row landed one cell early. Glyphs are now written whole (grapheme-aware) and their continuation cells reserved.
+  - **RenderSurface dim attribute lost on bold→dim transitions** — the SGR delta emitter closed both bold and dim with `22` but never re-opened dim; the pair is now enumerated so `22;2` is emitted and dim survives.
+  - **form() caret drift with CJK values** — the caret column inside a text field's value box counted UTF-16 code units instead of visible cells, drifting the caret into the middle of typed CJK text (the same class of bug fixed for `input()` earlier). Password fields keep the unit-index path because bullets mask one per code unit.
+
 ## 0.7.0-next.6
 
 ### Patch Changes
