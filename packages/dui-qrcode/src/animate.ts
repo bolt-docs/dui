@@ -141,7 +141,9 @@ function pulseBorder(
 
 	const lines = qrBody.split("\n");
 	const width = Math.max(...lines.map((l) => stripAnsi(l).length));
-	const horizontal = colorize("─".repeat(width + 2), color, "fg");
+	// Horizontal rule spans exactly the interior width so that
+	// `┌` + rule + `┐` lines up with `│` + body + `│` rows.
+	const horizontal = colorize("─".repeat(width), color, "fg");
 	const vertical = colorize("│", color, "fg");
 
 	return [

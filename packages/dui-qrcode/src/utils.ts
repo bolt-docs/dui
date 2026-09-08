@@ -21,6 +21,15 @@
 /** Max length of the auto-generated (encoded-text) label before ellipsis. */
 export const LABEL_MAX_LENGTH = 40;
 
+/** Visible width of a string in terminal cells (CJK counts 2). */
+function labelCellLength(s: string): number {
+	let cells = 0;
+	for (const ch of s) {
+		cells += ch.codePointAt(0)! > 0x2e7f ? 2 : 1;
+	}
+	return cells;
+}
+
 export type CellChars = { dark: string; light: string };
 
 /**
@@ -64,8 +73,17 @@ export function formatLabel(opts: {
 	}
 
 	// Default: encoded payload, truncated for column hygiene
-	if (text.length > LABEL_MAX_LENGTH) {
-		return `${text.slice(0, LABEL_MAX_LENGTH - 3)}...`;
+	// (truncated by visible cells so CJK labels fit the same column budget)
+	if (labelCellLength(text) > LABEL_MAX_LENGTH) {
+		let out = "";
+		let cells = 0;
+		for (const ch of text) {
+			const w = ch.codePointAt(0)! > 0x2e7f ? 2 : 1;
+			if (cells + w > LABEL_MAX_LENGTH - 3) break;
+			out += ch;
+			cells += w;
+		}
+		return `${out}...`;
 	}
 	return text;
 }
