@@ -1,5 +1,19 @@
 # @dui-toolkit/plugin-qrcode
 
+## 0.3.1-next.7
+
+### Patch Changes
+
+- [`e3e20e6`](https://github.com/bolt-docs/dui/commit/e3e20e6a2046472eb2af489f50e83536252b0b02) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix two rendering bugs in the QR plugin (TDD):
+
+  - **`pulseBorder` box geometry** — top/bottom borders used `width + 2` dashes _plus_ the `┌`/`┐` corner characters, double-counting the corner cells so the border rows rendered 2 columns wider than the `│…│` body rows. The rule now spans exactly the interior width.
+  - **CJK label truncation** — `formatLabel` truncated by UTF-16 code units, cutting CJK labels at roughly half the intended cell width. Truncation is now cell-aware so a 40-cell budget holds ~20 CJK characters plus the ellipsis.
+
+  Regression tests in `packages/dui-qrcode/tests/bug-hunting.test.ts`.
+
+- Updated dependencies [[`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f), [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc)]:
+  - @bdocs/dui@0.7.0-next.7
+
 ## 0.3.1-next.6
 
 ### Patch Changes
