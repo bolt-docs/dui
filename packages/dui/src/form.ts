@@ -142,6 +142,12 @@ function isEditableField(
 	return !isSelectField(field);
 }
 
+function isPasswordField(
+	field: FormField,
+): field is FormTextField {
+	return field.type === "password";
+}
+
 // ── Textarea helpers ─────────────────────────────────────────────
 
 /** Number of lines in the buffer (at least 1). */
@@ -619,13 +625,15 @@ function interactiveForm(
 				);
 				// Textarea content starts after "◆ Label: " (3 + labelLen + 3)
 				col = 3 + visibleLength(fields[active].label) + 3 + lineCol;
-			} else {
-				col =
-					3 +
-					visibleLength(fields[active].label) +
-					3 +
-					state.cursorPos;
-			}
+				} else {
+					col =
+						3 +
+						visibleLength(fields[active].label) +
+						3 +
+						(isPasswordField(fields[active])
+							? state.cursorPos
+							: visibleLength(state.buf.slice(0, state.cursorPos)));
+				}
 			readline.moveCursor(stdout, 0, -(linesRendered - cursorRow));
 			readline.cursorTo(stdout, col);
 		}

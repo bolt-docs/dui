@@ -26,7 +26,7 @@
  * ```
  */
 
-import { stripAnsi, visibleLength } from "./utils";
+import { splitGraphemes, stripAnsi, visibleLength } from "./utils";
 
 /* ── Types ───────────────────────────────────────────────────── */
 
@@ -119,27 +119,29 @@ const SGR_DEFAULT: SgrState = {
 	underline: false,
 	dim: false,
 	inverse: false,
-};
-
-function sgrSequence(delta: Partial<SgrState>, current: SgrState): string {
+};	function sgrSequence(delta: Partial<SgrState>, current: SgrState): string {
 	const parts: number[] = [];
 
-	// SGR 22 turns off BOTH bold and dim simultaneously. When both
-	// toggle off together, emit only one 22 instead of 22;22.
-	if (delta.bold !== undefined && delta.dim === true) {
-		// dim coming on while bold going off — they cancel on 22;
-		// the subsequent `2` re-enables dim. Emit both for clarity.
-		parts.push(delta.bold ? 1 : 22);
-		// dim is handled below
+	// SGR 22 turns off BOTH bold and dim simultaneously. When the delta
+	// touches both attributes we must reason about the pair, because a
+	// naive `22` for one and a separate `2`/`22` for the other either
+	// duplicates the close (22;22) or — worse — closes the attribute the
+	// delta is trying to OPEN (e.g. bold→dim emitted `22` then `2` was
+	// skipped, silently dropping dim). Enumerate the four combinations:
+	if (delta.bold !== undefined && delta.dim !== undefined) {
+		if (delta.bold && delta.dim) {
+			parts.push(1, 2); // open both
+		} else if (delta.bold && !delta.dim) {
+			parts.push(22, 1); // close both, re-open bold
+		} else if (!delta.bold && delta.dim) {
+			parts.push(22, 2); // close both, re-open dim
+		} else {
+			parts.push(22); // close both — one 22 suffices
+		}
 	} else if (delta.bold !== undefined) {
 		parts.push(delta.bold ? 1 : 22);
-	}
-	if (delta.dim !== undefined) {
-		// Only emit when bold wasn't already emitting 22 (which resets both)
-		const boldClosing = delta.bold === false;
-		if (!boldClosing) {
-			parts.push(delta.dim ? 2 : 22);
-		}
+	} else if (delta.dim !== undefined) {
+		parts.push(delta.dim ? 2 : 22);
 	}
 	if (delta.italic !== undefined) parts.push(delta.italic ? 3 : 23);
 	if (delta.underline !== undefined) parts.push(delta.underline ? 4 : 24);
@@ -243,18 +245,30 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 		const row = this.grid[y];
 		if (!row) return;
 
-		// Fast-path: ASCII chars are always 1 cell wide, avoid the
-		// expensive visibleLength() call for every character.
-		for (let i = 0; i < clean.length; i++) {
-			const cx = x + i;
-			if (cx < 0 || cx >= this.opts.width) continue;
-			const ch = clean[i];
-			// Skip wide/surrogate characters for simplicity
-			if (ch > "\x7f" && visibleLength(ch) !== 1 && ch !== " ") continue;
-
+		// Walk grapheme clusters (not UTF-16 units) so surrogate-pair
+		// emoji stay whole, and advance the cursor by each cluster's
+		// CELL width. A 2-cell CJK ideograph occupies two columns: the
+		// glyph is stored in the leading cell and the trailing cell is
+		// reserved with an empty char (flush() emits nothing for it, and
+		// the cursor-position tracking already accounts for the skip).
+		// The old loop advanced one cell per UTF-16 unit and *skipped*
+		// wide chars entirely, so every following character landed one
+		// cell early and the rest of the row misaligned.
+		let cx = x;
+		for (const grapheme of splitGraphemes(clean)) {
+			const w = Math.max(1, visibleLength(grapheme));
+			if (cx >= this.opts.width) break;
+			if (cx < 0) {
+				cx += w;
+				continue;
+			}
 			const cell = row[cx];
+			if (!cell) {
+				cx += w;
+				continue;
+			}
+			cell.char = grapheme;
 			if (style) {
-				cell.char = ch;
 				cell.fg = style.fg ?? cell.fg;
 				cell.bg = style.bg ?? cell.bg;
 				cell.bold = style.bold ?? cell.bold;
@@ -262,10 +276,21 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 				cell.underline = style.underline ?? cell.underline;
 				cell.dim = style.dim ?? cell.dim;
 				cell.inverse = style.inverse ?? cell.inverse;
-			} else {
-				cell.char = ch;
 			}
 			cell.dirty = true;
+
+			// Reserve the continuation cells of a wide glyph so the
+			// next write() call lands after the full glyph, not on top
+			// of its second half.
+			for (let extra = 1; extra < w && cx + extra < this.opts.width; extra++) {
+				const trail = row[cx + extra];
+				if (trail) {
+					trail.char = "";
+					if (style?.bg !== undefined) trail.bg = style.bg;
+					trail.dirty = true;
+				}
+			}
+			cx += w;
 		}
 	}
 

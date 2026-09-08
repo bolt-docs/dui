@@ -148,6 +148,14 @@ via `changeset pre exit` + `changeset version`.
   parallel-suite runs with zero failures.
 - **Stale `PLAN.md`** — was superseded by this roadmap; it documented
   the reverted xterm.js homepage approach.
+- **`RenderSurface` wide-char + SGR-delta bugs** — **FIXED**:
+  `write()` skipped CJK/emoji glyphs without reserving their cells
+  (misaligning every following column), and a bold→dim transition
+  dropped the `dim` attribute (SGR 22 closes both; dim is now
+  re-opened). Regression tests in `tests/bug-hunting-v4.test.ts`.
+- **`form()` caret drift with CJK values** — **FIXED**: the caret
+  column inside a text field counted UTF-16 units instead of visible
+  cells (same class as the `input()` fix); regression-tested.
 
 ## Next steps
 
