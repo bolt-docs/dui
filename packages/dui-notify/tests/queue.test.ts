@@ -405,19 +405,27 @@ describe("NotifyQueue", () => {
 		});
 
 		// The debounce-merged pair upgrades to `error`; overflow protection
-		// must evict one of the `info` fills, never the upgraded error.
+		// must evict one of the `info` fills, never the upgraded error. The
+		// fills and the overflow-triggering error may legitimately be dropped,
+		// so their promises must be handled to avoid unhandled rejections.
 		const merged = q.notify({
 			body: "same",
 			title: "T",
 			level: "info",
 			force: "bell",
 		});
-		q.notify({ body: "same", title: "T", level: "error", force: "bell" });
-		q.notify({ body: "fill-1", level: "info", force: "bell" });
-		q.notify({ body: "fill-2", level: "info", force: "bell" });
-		q.notify({ body: "is-error", level: "error", force: "bell" });
+		const upgraded = q.notify({
+			body: "same",
+			title: "T",
+			level: "error",
+			force: "bell",
+		});
+		q.notify({ body: "fill-1", level: "info", force: "bell" }).catch(() => {});
+		q.notify({ body: "fill-2", level: "info", force: "bell" }).catch(() => {});
+		q.notify({ body: "is-error", level: "error", force: "bell" }).catch(() => {});
 
 		await expect(merged).resolves.toBeTruthy();
+		await expect(upgraded).resolves.toBeTruthy();
 		await waitFor(() => log.length === 3);
 		expect(log.some((l) => l.opts.body === "same")).toBe(true);
 	});
