@@ -716,7 +716,9 @@ function interactiveForm(
 						render();
 					}
 				} else if (isSelectField(field)) {
-					// handled below
+					if (active > 0) active--;
+					render();
+					return;
 				} else {
 					if (active > 0) active--;
 					render();

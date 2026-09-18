@@ -296,7 +296,7 @@ export function createNotifyQueue(
 
 	// ── Drain ──────────────────────────────────────────────────
 
-	function drain(): void {
+	function drain(fullDrain = false): void {
 		if (destroyed || queue.length === 0) {
 			draining = false;
 			if (pendingFlush) {
@@ -317,15 +317,23 @@ export function createNotifyQueue(
 		});
 
 		// Take one item (or one batch) off the queue
-		const batchSize = mutableOpts.batchTerminal ? Math.min(queue.length, 5) : 1;
+		const batchSize = fullDrain
+			? queue.length
+			: mutableOpts.batchTerminal
+				? Math.min(queue.length, 5)
+				: 1;
 		const batch = queue.splice(0, batchSize);
 		doDispatchBatch(batch);
 
 		// Schedule next drain after throttle interval
 		if (queue.length > 0) {
-			timer = setTimeout(drain, mutableOpts.throttleMs);
-			if (typeof timer === "object" && "unref" in timer) {
-				(timer as NodeJS.Timeout).unref();
+			if (fullDrain) {
+				drain(true);
+			} else {
+				timer = setTimeout(drain, mutableOpts.throttleMs);
+				if (typeof timer === "object" && "unref" in timer) {
+					(timer as NodeJS.Timeout).unref();
+				}
 			}
 		} else {
 			draining = false;
@@ -361,6 +369,7 @@ export function createNotifyQueue(
 					existing.opts.level,
 					notifyOpts.level,
 				);
+				existing.levelPriority = levelPriority(existing.opts.level);
 				existing.opts.body = notifyOpts.body ?? existing.opts.body;
 				existing.opts.title = notifyOpts.title ?? existing.opts.title;
 				existing.opts.ttl = notifyOpts.ttl ?? existing.opts.ttl;
@@ -513,7 +522,7 @@ export function createNotifyQueue(
 					clearTimeout(timer);
 					timer = null;
 				}
-				drain();
+				drain(true);
 			});
 		},
 

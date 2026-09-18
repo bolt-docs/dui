@@ -377,6 +377,74 @@ describe("NotifyQueue", () => {
 		await waitFor(() => log.length === 2);
 	});
 
+	it("keeps the upgraded drain priority after a debounce merge", async () => {
+		const q = createNotifyQueue(backend, {
+			debounceMs: 30,
+			throttleMs: 20,
+			batchTerminal: false,
+		});
+
+		// A same-key `error` arrives inside the debounce window and must
+		// upgrade the queued item's priority, so it drains before an older
+		// `info` even though it was first queued as `info`.
+		q.notify({ body: "low-before", level: "info", force: "bell" });
+		q.notify({ body: "same", title: "T", level: "info", force: "bell" });
+		q.notify({ body: "same", title: "T", level: "error", force: "bell" });
+
+		await waitFor(() => log.length === 1);
+		expect(log[0].opts.body).toBe("same");
+		expect(log[0].opts.level).toBe("error");
+	});
+
+	it("never drops an upgraded (debounce-merged) error on overflow", async () => {
+		const q = createNotifyQueue(backend, {
+			debounceMs: 30,
+			throttleMs: 0,
+			maxQueueSize: 3,
+			batchTerminal: false,
+		});
+
+		// The debounce-merged pair upgrades to `error`; overflow protection
+		// must evict one of the `info` fills, never the upgraded error.
+		const merged = q.notify({
+			body: "same",
+			title: "T",
+			level: "info",
+			force: "bell",
+		});
+		q.notify({ body: "same", title: "T", level: "error", force: "bell" });
+		q.notify({ body: "fill-1", level: "info", force: "bell" });
+		q.notify({ body: "fill-2", level: "info", force: "bell" });
+		q.notify({ body: "is-error", level: "error", force: "bell" });
+
+		await expect(merged).resolves.toBeTruthy();
+		await waitFor(() => log.length === 3);
+		expect(log.some((l) => l.opts.body === "same")).toBe(true);
+	});
+
+	it("flush() bypasses throttle even when batching is disabled", async () => {
+		const q = createNotifyQueue(backend, {
+			debounceMs: 0,
+			throttleMs: 1000,
+			batchTerminal: false,
+		});
+
+		q.notify({ body: "one", level: "info", force: "bell" });
+		await waitFor(() => log.length === 1); // first drain is immediate
+
+		// Items queued inside the throttle window must ALL be delivered by
+		// flush(), without waiting for the throttle interval.
+		q.notify({ body: "two", level: "info", force: "bell" });
+		q.notify({ body: "three", level: "info", force: "bell" });
+
+		const start = Date.now();
+		await q.flush();
+		const elapsed = Date.now() - start;
+
+		expect(log.map((l) => l.opts.body)).toEqual(["one", "two", "three"]);
+		expect(elapsed).toBeLessThan(500);
+	});
+
 	/* ── Subscribe passthrough ───────────────────────────────── */
 
 	it("subscribe() delegates to the underlying backend", () => {

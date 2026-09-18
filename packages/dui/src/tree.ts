@@ -438,17 +438,22 @@ function interactiveTree<T>(
 
 		function rebuildFlat(fromNode?: TreeNode<T>) {
 			flat = getCurrentFlat();
+			resetFilter();
 			if (fromNode) {
 				const idx = flat.findIndex((f) => f.node === fromNode);
 				if (idx >= 0) {
-					cursor = idx;
-				} else if (cursor >= flat.length && flat.length > 0) {
-					cursor = flat.length - 1;
+					if (filteredPositions) {
+						cursor = filteredPositions.indexOf(idx);
+						if (cursor < 0) cursor = 0;
+					} else {
+						cursor = idx;
+					}
+				} else if (cursor >= totalCount() && totalCount() > 0) {
+					cursor = totalCount() - 1;
 				}
-			} else if (cursor >= flat.length && flat.length > 0) {
-				cursor = flat.length - 1;
+			} else if (cursor >= totalCount() && totalCount() > 0) {
+				cursor = totalCount() - 1;
 			}
-			resetFilter();
 		}
 
 		function render() {
