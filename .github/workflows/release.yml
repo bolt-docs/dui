@@ -23,6 +23,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          # Writes an .npmrc with
+          # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`, which is
+          # what actually hands the publish step its credentials. Without
+          # `registry-url` there is no auth at all: the committed .npmrc
+          # only sets `shamefully-hoist` (the auth line was dropped in
+          # 3279af4), so `npm publish` ran unauthenticated and the 0.7.0
+          # release failed at the publish step.
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -46,4 +54,9 @@ jobs:
           version: pnpm version-packages
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          # changesets publish shells out to `npm publish`, which reads the
+          # token from the .npmrc that `registry-url` above generates. Both
+          # names are set: pnpm-based tooling looks for NPM_TOKEN, npm itself
+          # for NODE_AUTH_TOKEN.
+          NODE_AUTH_TOKEN: ${{ secrets.TOKEN_NPM }}
           NPM_TOKEN: ${{ secrets.TOKEN_NPM }}
