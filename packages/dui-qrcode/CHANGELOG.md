@@ -1,5 +1,19 @@
 # @dui-toolkit/plugin-qrcode
 
+## 0.3.1
+
+### Patch Changes
+
+- [`e3e20e6`](https://github.com/bolt-docs/dui/commit/e3e20e6a2046472eb2af489f50e83536252b0b02) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix two rendering bugs in the QR plugin (TDD):
+
+  - **`pulseBorder` box geometry** — top/bottom borders used `width + 2` dashes _plus_ the `┌`/`┐` corner characters, double-counting the corner cells so the border rows rendered 2 columns wider than the `│…│` body rows. The rule now spans exactly the interior width.
+  - **CJK label truncation** — `formatLabel` truncated by UTF-16 code units, cutting CJK labels at roughly half the intended cell width. Truncation is now cell-aware so a 40-cell budget holds ~20 CJK characters plus the ellipsis.
+
+  Regression tests in `packages/dui-qrcode/tests/bug-hunting.test.ts`.
+
+- Updated dependencies [[`0204e9c`](https://github.com/bolt-docs/dui/commit/0204e9c806da758b35875b09e6da5154425ea7b6), [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c), [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053), [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c), [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb), [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`b496505`](https://github.com/bolt-docs/dui/commit/b496505ba7c599d084a3ef9b9edb8e949f153328), [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc), [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf), [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0)]:
+  - @bdocs/dui@0.7.0
+
 ## 0.3.1-next.8
 
 ### Patch Changes

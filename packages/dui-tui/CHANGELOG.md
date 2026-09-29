@@ -1,5 +1,48 @@
 # @dui-toolkit/plugin-tui
 
+## 0.1.1
+
+### Patch Changes
+
+- [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug fixes**
+
+  - **`truncateAnsi()` OSC leak** — the TUI helper only handled CSI escape
+    sequences (`\x1b[...m`). OSC sequences like hyperlinks
+    (`\x1b]8;;url\x1b\\`) were partially consumed: the `\x1b` was
+    swallowed as zero-width and the remainder leaked as visible garbage in
+    truncated output. Added `escapeLength()` that correctly scans past CSI,
+    OSC (BEL and ST terminators), and two-byte escapes.
+  - **`SelectList` empty-filter crash** — ArrowUp/Down/Home/End navigation
+    called `onSelect` unconditionally, passing `undefined` to the callback
+    when the active filter yielded zero results. All navigation paths now
+    guard against an empty items list.
+  - **`form()` non-interactive textarea default** — the non-interactive
+    textarea path always collected fresh input, ignoring `field.default`.
+    Submitting an empty first line now falls back to the default value,
+    matching the behavior of text and number fields.
+
+- [`45aad3f`](https://github.com/bolt-docs/dui/commit/45aad3f27a7404d1f5e164572236150f15cfbb56) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Stop the plugin being versioned as 1.0.0, and make its build explicit.
+
+  `@bdocs/dui` was declared in both `dependencies` and `peerDependencies`. A
+  duplicated `peerDependency` makes changesets escalate the dependent to a
+  **major** bump whenever the dependency takes a minor or major release
+  (`onlyUpdatePeerDependentsWhenOutOfRange` defaults to false), so exiting
+  pre mode would have published `@dui-toolkit/plugin-tui@1.0.0` — from a
+  `0.1.x` prerelease, on a `patch` changeset. That falsely signals a stable
+  1.0 API and breaks anyone resolving `^0.1.0`.
+
+  Removing the redundant `peerDependencies` block puts the plugin on the same
+  footing as the other six, which declare `@bdocs/dui` only in
+  `dependencies`, and yields the intended `0.1.1`.
+
+  Also adds the missing `tsdown.config.ts`, so `@bdocs/dui` is externalized
+  explicitly rather than relying on tsdown's defaults — the same way the
+  other plugins are configured. Verified byte-identical `dist/` output
+  before and after.
+
+- Updated dependencies [[`0204e9c`](https://github.com/bolt-docs/dui/commit/0204e9c806da758b35875b09e6da5154425ea7b6), [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c), [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053), [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c), [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb), [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`b496505`](https://github.com/bolt-docs/dui/commit/b496505ba7c599d084a3ef9b9edb8e949f153328), [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc), [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf), [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0)]:
+  - @bdocs/dui@0.7.0
+
 ## 0.1.1-next.6
 
 ### Patch Changes

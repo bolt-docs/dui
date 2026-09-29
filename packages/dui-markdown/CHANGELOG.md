@@ -1,5 +1,35 @@
 # @dui-toolkit/plugin-markdown
 
+## 0.4.0
+
+### Minor Changes
+
+- [`aa97ab7`](https://github.com/bolt-docs/dui/commit/aa97ab76bcfe48d9a23a2ef5b67766685a41214c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Interactive checklists + table and width upgrades (markdown v2)**:
+
+  - **`mdInteractive(text, options)`** — interactive checklist toggling:
+    render the document, move the focus with `j`/`k` (or arrows), toggle
+    a checkbox with space/Enter, `q`/Esc finishes with the current state,
+    Ctrl+C cancels. Returns the updated source text, the flattened item
+    list, and the rendered output. Non-TTY environments (or
+    `disable: true`) render statically without changes.
+  - **`collectChecklist(text)`** — pure helper that flattens `[ ]`/`[x]`
+    items with their source line indices.
+  - **Inline markdown inside table cells** — cells now render `**bold**`,
+    `` `code` ``, `[links](url)` and other inline syntax instead of raw
+    source (headers stay bold on top).
+  - **`md(text, { width })`** — the renderer accepts a width cap used by
+    code blocks, tables and paragraph wrapping, so wide documents fit
+    narrow panes (previously code blocks and tables only respected the
+    terminal width).
+  - **Docs** — interactive checklists (keymap), the width option and
+    inline table-cell markdown are now documented in the EN + ES plugin
+    guides.
+
+### Patch Changes
+
+- Updated dependencies [[`0204e9c`](https://github.com/bolt-docs/dui/commit/0204e9c806da758b35875b09e6da5154425ea7b6), [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c), [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053), [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c), [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb), [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`b496505`](https://github.com/bolt-docs/dui/commit/b496505ba7c599d084a3ef9b9edb8e949f153328), [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc), [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf), [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0)]:
+  - @bdocs/dui@0.7.0
+
 ## 0.4.0-next.8
 
 ### Patch Changes

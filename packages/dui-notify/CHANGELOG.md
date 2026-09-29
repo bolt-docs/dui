@@ -1,5 +1,19 @@
 # @dui-toolkit/plugin-notify
 
+## 0.1.1
+
+### Patch Changes
+
+- [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix four more bugs in the `next` features (TDD):
+
+  - **form() up arrow on a `select` field** — the up arrow was a no-op on selects (only down/left/right worked), so you could not return focus to the field above. The select case now moves the pointer back like a text field, and returns immediately so the leftover escape bytes are not typed.
+  - **tree() cursor jumps to the top after collapsing a nested branch** — `rebuildFlat()` positioned the cursor onto the collapsed ancestor via `resetFilter()` after positioning, which unconditionally reset `cursor` back to `0`. The filter reset now runs first and the cursor is pinned to the collapsed branch afterwards.
+  - **NotifyQueue stale priority after debounce merge** — merging a higher `level` into a queued item updated `opts.level` but left `levelPriority` stale, so the upgraded item drained late and could even be evicted by overflow protection as the "lowest" item.
+  - **NotifyQueue `flush()` still throttled** — `flush()` drained a single batch and let the rest wait for the throttle interval despite documenting that it bypasses the throttle. It now drains every queued item immediately.
+
+- Updated dependencies [[`0204e9c`](https://github.com/bolt-docs/dui/commit/0204e9c806da758b35875b09e6da5154425ea7b6), [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c), [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053), [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c), [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb), [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`b496505`](https://github.com/bolt-docs/dui/commit/b496505ba7c599d084a3ef9b9edb8e949f153328), [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc), [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf), [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0)]:
+  - @bdocs/dui@0.7.0
+
 ## 0.1.1-next.8
 
 ### Patch Changes
