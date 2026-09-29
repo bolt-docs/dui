@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - master
+  # Lets a publish be re-driven (or the token re-tested) without a new commit.
+  workflow_dispatch:
+    inputs:
+      verify_only:
+        description: "Check npm credentials and report pending versions, then stop (no build, no publish)"
+        required: false
+        default: false
+        type: boolean
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -23,13 +31,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # Writes an .npmrc with
-          # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`, which is
-          # what actually hands the publish step its credentials. Without
-          # `registry-url` there is no auth at all: the committed .npmrc
-          # only sets `shamefully-hoist` (the auth line was dropped in
-          # 3279af4), so `npm publish` ran unauthenticated and the 0.7.0
-          # release failed at the publish step.
+          # Generates the `.npmrc` that carries the publish credentials:
+          # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`. Without
+          # `registry-url` nothing writes it (the committed .npmrc only sets
+          # `shamefully-hoist`), so `npm publish` runs unauthenticated.
           registry-url: "https://registry.npmjs.org"
 
       - name: Install pnpm
@@ -40,23 +45,136 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      # Auth gate before the expensive work. `npm publish` failing 8 minutes
+      # in — after a full build and test run — is a bad way to learn that a
+      # token expired, and the reason is buried in logs that need admin access
+      # to read. This fails in seconds and prints the cause into the run
+      # summary, which is visible on the run page itself.
+      - name: Verify npm credentials
+        run: |
+          set -uo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::secrets.TOKEN_NPM is empty"
+            {
+              echo "### npm publish preflight"
+              echo
+              echo '❌ `secrets.TOKEN_NPM` is empty.'
+              echo
+              echo 'Create a token: https://www.npmjs.com/settings/dui/access-tokens (type **Automation**, scope **Read & write**), then:'
+              echo
+              echo '```bash'
+              echo 'gh secret set TOKEN_NPM --repo bolt-docs/dui'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if ! who=$(npm whoami 2>&1); then
+            echo "::error::npm rejected the token (401) — invalid, expired or revoked"
+            {
+              echo "### npm publish preflight"
+              echo
+              echo '❌ npm rejected `secrets.TOKEN_NPM`.'
+              echo
+              echo '```'
+              echo "$who" | head -8
+              echo '```'
+              echo
+              echo 'The token is invalid, expired or revoked. Create a new **Automation** token (read & write, scoped to `@bdocs/dui` and `@dui-toolkit/*`) at'
+              echo 'https://www.npmjs.com/settings/dui/access-tokens , then:'
+              echo
+              echo '```bash'
+              echo 'gh secret set TOKEN_NPM --repo bolt-docs/dui'
+              echo 'gh workflow run release.yml --repo bolt-docs/dui'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          {
+            echo "### npm publish preflight"
+            echo
+            echo "✅ Authenticated as **${who}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.TOKEN_NPM }}
+
+      # What is on disk vs what npm already has. Makes an accidental
+      # double-publish visible, and shows the run's real purpose at a glance.
+      - name: Report pending publish
+        run: |
+          node --input-type=module <<'NODE' > "$GITHUB_STEP_SUMMARY"
+          import { existsSync, readFileSync, readdirSync } from "node:fs";
+
+          const pkgs = [];
+          for (const dir of readdirSync("packages")) {
+            const file = `packages/${dir}/package.json`;
+            if (!existsSync(file)) continue;
+            const p = JSON.parse(readFileSync(file, "utf8"));
+            if (p.private || !p.version || p.name === "docs") continue;
+            pkgs.push(p);
+          }
+
+          const rows = [];
+          for (const p of pkgs) {
+            let remote = "lookup failed";
+            try {
+              const res = await fetch(
+                `https://registry.npmjs.org/${encodeURIComponent(p.name)}/latest`,
+              );
+              remote = res.ok ? (await res.json()).version : "not published";
+            } catch {}
+            rows.push(`| \`${p.name}\` | \`${p.version}\` | \`${remote}\` |`);
+          }
+
+          console.log(
+            [
+              "### Pending publish",
+              "",
+              "| Package | Version | npm `latest` |",
+              "| --- | --- | --- |",
+              ...rows,
+              "",
+            ].join("\n"),
+          );
+          NODE
+        continue-on-error: true
+
       - name: Build
+        if: ${{ !inputs.verify_only }}
         run: pnpm build
 
       - name: Test
+        if: ${{ !inputs.verify_only }}
         run: pnpm test
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
+        if: ${{ !inputs.verify_only }}
         uses: changesets/action@v1
         with:
           publish: pnpm release
           version: pnpm version-packages
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
-          # changesets publish shells out to `npm publish`, which reads the
-          # token from the .npmrc that `registry-url` above generates. Both
-          # names are set: pnpm-based tooling looks for NPM_TOKEN, npm itself
-          # for NODE_AUTH_TOKEN.
+          # `changeset publish` shells out to `npm publish`, which reads the
+          # token from the `.npmrc` generated by `registry-url` above.
+          # `NPM_TOKEN` is kept alongside it for pnpm-based tooling.
           NODE_AUTH_TOKEN: ${{ secrets.TOKEN_NPM }}
           NPM_TOKEN: ${{ secrets.TOKEN_NPM }}
+
+      - name: Summary
+        if: ${{ always() }}
+        run: |
+          if [ "${{ inputs.verify_only }}" = "true" ]; then
+            echo "Preflight only — no build and no publish were run." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.changesets.outputs.published }}" = "true" ]; then
+            echo "### ✅ Published" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            echo '${{ steps.changesets.outputs.published-packages }}' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ⚠️ Nothing was published" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo 'The publish step did not report a publish. Re-run it with' >> "$GITHUB_STEP_SUMMARY"
+            echo '`gh workflow run release.yml --repo bolt-docs/dui` once npm auth passes.' >> "$GITHUB_STEP_SUMMARY"
+          fi
