@@ -1,0 +1,48 @@
+---
+title: Grid
+sidebarPosition: 16
+description: Primitiva de layout por columnas para dashboards CLI lado a lado.
+---
+
+```ts
+import { grid } from '@bdocs/dui'
+```
+
+Renderiza varias columnas de texto lado a lado en las mismas filas de salida. Cada columna se envuelve independientemente con `wrapAnsiWord` respetando su ancho asignado; las líneas resultantes se unen por índice de fila — las columnas más cortas se rellenan con espacios para que las filas queden alineadas.
+
+```ts
+grid({
+  columns: [
+    { content: 'mitad izquierda', width: '1fr', align: 'left' },
+    { content: 'mitad derecha',   width: '1fr', align: 'right' },
+  ],
+  width: 60,
+  gap: 2,
+})
+```
+
+## Opciones
+
+<Field name="columns" type="number | GridColumn[]">Atajo numérico = N columnas iguales.</Field>
+<Field name="width" type="number" default="min(terminalWidth(), 80)">Ancho total del layout.</Field>
+<Field name="gap" type="number" default="2">Separación horizontal (espacios) entre columnas.</Field>
+
+### `GridColumn`
+
+<Field name="content" type="string | string[]">Texto del cuerpo. Los arrays se unen con `\n` antes de envolver.</Field>
+<Field name="width" type="number | string" default="'1fr'">Ancho fijo o unidades flex (`1fr`, `2fr`, …).</Field>
+<Field name="align" type="'left' | 'center' | 'right'" default="'left'">Alinea la celda dentro del ancho de su columna.</Field>
+
+## Algoritmo
+
+1. **Asignación de anchos.** Las columnas con `width: number` fijo toman sus celdas primero; el espacio restante se reparte entre las columnas flex en proporción a sus unidades `fr`. Las columnas con `width: undefined` comparten a partes iguales con las hermanas automáticas.
+2. **Envolvido independiente.** Cada columna se envuelve a su ancho asignado con `wrapAnsiWord` — una columna de 12 caracteres se envuelve a N filas independientemente de una de 20.
+3. **Zip de filas.** La columna más alta dicta el número de filas de salida; cada fila dibuja la línea `i` de cada columna, rellenando las más cortas con `alignMode("left"|"center"|"right")`.
+
+## Cuándo usarlo
+
+- Layouts de dos paneles (lista de archivos a la izquierda, preview a la derecha).
+- Diffs lado a lado donde el cuerpo se envuelve de forma irregular.
+- Matrices de estado con anchos de columna predecibles.
+
+Para composición interactiva (un header con tabs y un pie con atajos kbd), combina `grid()` con `tabs()` y `section()` en lugar de construir layouts a mano.

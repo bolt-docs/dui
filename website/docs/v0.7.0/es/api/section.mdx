@@ -1,0 +1,47 @@
+---
+title: Section
+sidebarPosition: 22
+description: Encabezado de sección / divisor con etiqueta para dividir salida CLI densa.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { section } from '@bdocs/dui'
+```
+
+Renderiza un divisor de una sola línea con el título inline. Dos alineaciones: `"left"` (por defecto) coloca el título al borde izquierdo del ancho disponible; `"center"` reparte los guiones equitativamente a ambos lados del título.
+
+```ts
+console.log(section({ title: 'Configuración', width: 70 }))
+// ── Configuración ─────────────────────────────────────────────────
+console.log(section({ title: 'Defaults', align: 'center' }))
+// ───────────────────────── Defaults ────────────────────────────────
+```
+
+<TerminalPreview command="node section.js">
+{`\x1b[38;2;100;200;255m── Configuración ────────────────────────────\x1b[0m
+\x1b[38;2;255;200;100m───────────── Defaults ─────────────────────\x1b[0m`}
+</TerminalPreview>
+
+## Opciones
+
+<Field name="title" type="string">Texto del título dentro del divisor.</Field>
+<Field name="width" type="number" default="min(terminalWidth(), 80)">Ancho total del divisor.</Field>
+<Field name="align" type="'left' | 'center'" default="'left'">Posición del título.</Field>
+<Field name="colors.title" type="ColorStyle" default="theme.section.title">Color del título.</Field>
+<Field name="colors.line" type="ColorStyle" default="theme.section.line">Color de los guiones.</Field>
+
+## Comportamiento de truncado
+
+Si el ancho visible del título es mayor que `width - 4` (los slots para "──" y el padding del título), el título se **trunca** con una elipsis (`…`) para que el divisor siga siendo estrictamente de una línea. Los encabezados de sección multilínea rompen los layouts circundantes que asumen un hueco de una sola fila.
+
+Si incluso el título truncado desbordaría (ej. `width: 3`), el divisor degenera a una línea pura de `─` de `width` celdas. La geometría vertical del consumidor se preserva (una fila de alto) incluso sin espacio para el título.
+
+## Cuándo usarlo
+
+- Separadores de bloque en logs CLI largos.
+- Identificar secciones de configuración / indicadores de paso / sub-paneles.
+- Reforzar el ritmo visual en salida de terminal densa (cada ~40 filas).
+
+Combina con `divider()` para líneas planas y `box({ title })` para cajas completas con marco.

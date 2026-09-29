@@ -5,10 +5,10 @@
  * Usage in MDX:
  *
  *   <ChangelogTimeline>
- *     <ChangelogTimelineItem version="v0.6.0" tag="Next" date="next release">
- *       - [`badge()`](/docs/v0.6.0/api/badge) — status chips
+ *     <ChangelogTimelineItem version="v0.8.0" tag="Next" date="next release">
+ *       - [`badge()`](/docs/next/api/badge) — status chips
  *     </ChangelogTimelineItem>
- *     <ChangelogTimelineItem version="v0.5.0" date="current stable">
+ *     <ChangelogTimelineItem version="v0.7.0" date="current stable">
  *       - ...
  *     </ChangelogTimelineItem>
  *   </ChangelogTimeline>

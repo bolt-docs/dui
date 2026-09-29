@@ -1,0 +1,123 @@
+---
+title: Form
+sidebarPosition: 26
+badge: New
+description: Multi-field terminal forms — text, password, and select fields with validation, arrow navigation, and a single submit.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# `form(opts)` — multi-field form
+
+Renders a compact vertical form — text, password, and select fields — navigable with ↑/↓ or Tab, each with inline editing and per-field validation. One Enter on the last field resolves with an object keyed by field `id`. Built for setup wizards, config prompts, and login flows.
+
+```ts
+import { form } from '@bdocs/dui'
+
+const answers = await form({
+  title: 'New project',
+  fields: [
+    { id: 'name', label: 'Name', type: 'text',
+      validate: (v) => v.trim() ? true : 'Name is required' },
+    { id: 'token', label: 'Token', type: 'password' },
+    { id: 'runtime', label: 'Runtime', type: 'select',
+      choices: [{ label: 'Node', value: 'node' },
+                { label: 'Bun', value: 'bun' }] },
+  ],
+})
+
+console.log(answers)
+// { name: 'my-app', token: 's3cret', runtime: 'bun' }
+```
+
+<TerminalPreview command="node form.js">
+{`\x1b[33m? New project\x1b[0m \x1b[90m(arrows/tab move, enter to submit, esc to cancel)\x1b[0m
+\x1b[36m◆\x1b[0m \x1b[1mName\x1b[0m: [ \x1b[37mmy-app\x1b[0m ]
+  \x1b[90mToken\x1b[0m: [ \x1b[90m••••••\x1b[0m ]
+  \x1b[90mRuntime\x1b[0m: [ \x1b[90mbun\x1b[0m ▾ ]`}
+</TerminalPreview>
+
+## Keys
+
+| Key | Action |
+| --- | --- |
+| `↑` / `↓` or `Tab` | Move between fields |
+| `←` / `→` | Move the caret (text) or cycle the select field |
+| `Enter` | Validate the current field and move on; on the last field, submit |
+| `Backspace` | Delete before the caret (text) |
+| `Escape` | Cancel (rejects) |
+| `Ctrl+C` | Exit with code 130 |
+
+Validation errors render below the active field in the `form.error` color, and the field keeps focus until it passes.
+
+## Field types
+
+### `text` / `password`
+
+```ts
+{
+  id: 'token',
+  label: 'Token',
+  type: 'password',
+  default: undefined,
+  placeholder: 'ghp_…',
+  validate: (v) => v.length >= 8 ? true : 'Minimum 8 characters',
+}
+```
+
+- `default` seeds the value; `placeholder` shows a dim hint while empty.
+- `validate` returns `true` or an error string; the field won't advance until it passes.
+- Password fields render `•` bullets and never echo the real value.
+
+### `select`
+
+```ts
+{
+  id: 'runtime',
+  label: 'Runtime',
+  type: 'select',
+  required: true,
+  choices: [
+    { label: 'Node', value: 'node' },
+    { label: 'Bun', value: 'bun', disabled: true },
+  ],
+}
+```
+
+- `default` selects a choice by value; otherwise the first enabled choice wins.
+- `required` rejects an empty selection.
+- While the field is focused, `←` / `→` cycle through enabled choices.
+
+## Non-TTY fallback
+
+When stdin/stdout aren't a TTY (scripts, CI, pipes) each field falls back to a numbered `readline` question — select fields print the choices and read a number — so the same call works in scripts without a terminal.
+
+## Theme slots
+
+| Slot | Default | Notes |
+| --- | --- | --- |
+| `form.label` | `bold` | Field labels |
+| `form.value` | `white` | Value text inside the brackets |
+| `form.message` | `yellow` | Form title line |
+| `form.error` | `red` | Validation errors |
+| `form.pointer` | `cyan` | Active-field `◆` pointer |
+
+```ts
+import { configure } from '@bdocs/dui'
+
+configure({ theme: { form: { label: 'cyan', error: 'yellow' } } })
+```
+
+## Cancellation
+
+Pass `onCancel` to run cleanup when the form is cancelled (Escape or
+Ctrl+C) — restore terminal state, kill child processes, release
+resources:
+
+```ts
+const answers = await form({
+  title: 'Setup',
+  fields: [...],
+  onCancel: () => cleanupConnections(),
+})
+```

@@ -1,0 +1,68 @@
+---
+title: Status Bar
+sidebarPosition: 33
+badge: New
+description: Línea de estado persistente fijada a la fila inferior — segmentos izquierda/centro/derecha actualizados en sitio.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+# `createStatusBar(opts)` — línea de estado persistente
+
+Una línea única a todo el ancho fijada a la fila inferior de la terminal — la clásica statusline de editor/pager (piensa en la statusline de vim o el prompt de `less`). Los segmentos izquierda/centro/derecha se actualizan en sitio sin hacer parpadear el resto de la pantalla. Combina de forma natural con `withAltScreen()` + `RenderSurface` para TUIs a pantalla completa.
+
+```ts
+import { createStatusBar } from '@bdocs/dui'
+
+const bar = createStatusBar({ left: 'main.ts', right: 'utf-8' })
+bar.update({ left: 'main.ts', center: '12:34', right: '4, 8' })
+// ... más tarde
+bar.clear()
+```
+
+<TerminalPreview command="node statusbar.js">
+{`\x1b[42m main.ts \x1b[0m\x1b[90m          12:34          \x1b[0m\x1b[90m 4, 8 \x1b[0m`}
+</TerminalPreview>
+
+## API
+
+### `createStatusBar(options?)`
+
+| Campo | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `left` / `center` / `right` | `string` | — | Segmentos iniciales |
+| `colors.*` | `ColorStyle` | slots del tema | Colores por segmento |
+| `stream` | `NodeJS.WriteStream` | `process.stdout` | Dónde se renderiza la barra |
+
+Devuelve `{ update, render, clear }`:
+
+| Método | Notas |
+| --- | --- |
+| `update(parts)` | Reemplaza segmentos (solo las claves dadas) y redibuja |
+| `render()` | Redibuja con los segmentos actuales |
+| `clear()` | Borra la barra de la fila inferior |
+
+## Slots de tema
+
+| Slot | Default | Notas |
+| --- | --- | --- |
+| `statusbar.left` | `green` | Segmento izquierdo |
+| `statusbar.center` | `gray` | Segmento central |
+| `statusbar.right` | `gray` | Segmento derecho |
+
+## Ejemplo a pantalla completa
+
+```ts
+import { createStatusBar, withAltScreen } from '@bdocs/dui'
+
+await withAltScreen(() => {
+  const bar = createStatusBar({ left: 'viewer', right: 'q para salir' })
+  // ... pinta el área de contenido, la barra queda fija abajo ...
+  return new Promise((resolve) => { /* al salir */ resolve() })
+})
+```
+
+## Notas
+
+- Los streams no-TTY y el modo plain imprimen los segmentos una vez como línea de texto plano (sin juegos de cursor) para que los logs sigan capturando el estado.
+- El cursor se oculta mientras la barra pinta y luego se restaura — seguro para loops que redibujan con frecuencia.

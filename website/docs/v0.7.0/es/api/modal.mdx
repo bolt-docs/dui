@@ -1,0 +1,74 @@
+---
+title: Modal
+sidebarPosition: 21
+description: Diálogo overlay con título, contenido y pie de botones opcional.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { modal } from '@bdocs/dui'
+```
+
+Envuelve `box()` con dos conveniencias para diálogos de confirmación:
+
+1. **Título** y **contenido** comparten un único objeto de opciones.
+2. **Botones** (una fila de acciones en el pie) se componen automáticamente: cada botón se envuelve entre `[ label ]`, los primarios reciben el color `modal.buttonPrimary` y la fila se centra dentro del ancho del diálogo.
+
+`modal()` no es interactivo — devuelve un string renderizado estático. Para flujos de diálogo interactivos, coloca el string bajo un prompt `select` para que el usuario pueda conducir el valor del botón programáticamente.
+
+```ts
+console.log(modal({
+  title: 'Confirmar',
+  content: '¿Seguro que quieres eliminar este archivo?',
+  buttons: [
+    { label: 'Cancelar', value: 'cancel' },
+    { label: 'Eliminar', value: 'delete', primary: true },
+  ],
+  width: 50,
+}))
+```
+
+<TerminalPreview command="node modal.js">
+{`\x1b[38;2;100;200;255m╭─\x1b[0m \x1b[1mConfirmar Eliminación\x1b[0m \x1b[38;2;100;200;255m────────╮\x1b[0m
+\x1b[38;2;100;200;255m│\x1b[0m  ¿Seguro que quieres eliminar este archivo?  \x1b[38;2;100;200;255m│\x1b[0m
+\x1b[38;2;100;200;255m│\x1b[0m         \x1b[90m[\x1b[0m \x1b[90mCancelar\x1b[0m \x1b[90m]\x1b[0m  \x1b[48;2;0;255;200m\x1b[38;2;0;0;0m Eliminar \x1b[0m      \x1b[38;2;100;200;255m│\x1b[0m
+\x1b[38;2;100;200;255m╰──────────────────────────────────────╯\x1b[0m`}
+</TerminalPreview>
+
+## Opciones
+
+<Field name="title" type="string">Título del diálogo; se renderiza dentro de la fila del borde superior.</Field>
+<Field name="content" type="string | string[]">Líneas del cuerpo.</Field>
+<Field name="width" type="number" default="60">Ancho total incluyendo bordes.</Field>
+<Field name="buttons" type="ModalButton[]">Fila de acciones del pie.</Field>
+<Field name="style" type="BoxBorderStyle" default="'round'">Estilo de borde del marco.</Field>
+<Field name="colors.border" type="ColorStyle" default="theme.modal.border">Color del borde.</Field>
+<Field name="colors.title" type="ColorStyle" default="theme.modal.title">Color del título.</Field>
+<Field name="colors.buttonPrimary" type="ColorStyle" default="theme.modal.buttonPrimary">Color del botón primario.</Field>
+<Field name="colors.buttonSecondary" type="ColorStyle" default="theme.modal.buttonSecondary">Color del botón secundario.</Field>
+
+### `ModalButton`
+
+<Field name="label" type="string">Etiqueta visible dentro de `[ … ]`.</Field>
+<Field name="value" type="string">Devuelto al consumidor cuando el botón se "presiona".</Field>
+<Field name="primary" type="boolean" default="false">Recibe el color `modal.buttonPrimary`.</Field>
+
+## Renderizado
+
+El diálogo es un `box()` que encierra:
+
+- Una fila de título (el borde superior reserva espacio para el texto),
+- Todas las líneas de `content` (cada entrada del array es su propia fila),
+- Un separador (línea `""` como hueco visual),
+- Un pie centrado con un token `[ label ]` por botón.
+
+Los botones con `primary: true` reciben el chip `fg`/`bg` en negrita de `modal.buttonPrimary`. El valor por defecto es `{ fg: 'black', bg: 'cyan' }`, que renderiza un inverso llamativo sobre el marco del diálogo.
+
+## Cuándo usarlo
+
+- Prompts de confirmación donde la respuesta es "sí / no / cancelar".
+- Diálogos de estado que muestran una sola pieza de estado (ej. "Conexión perdida — ¿reintentar?").
+- Overlays de ayuda en dashboards.
+
+Si necesitas diálogos con scroll o basados en formularios, usa `select()` para listas tipo radio o un prompt dedicado y llama a `modal()` solo para el arte estático.

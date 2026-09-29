@@ -1,0 +1,101 @@
+---
+title: Spinner
+sidebarPosition: 17
+description: Animated terminal spinners with braille frames.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+import LiveDemo from '../../../components/LiveDemo'
+
+```ts
+import { createSpinner } from '@bdocs/dui'
+```
+
+## Live demo
+
+<LiveDemo
+  title="spinner"
+  command="node spinner-demo.mjs"
+  lines={[
+    "  \x1b[36m⠋\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠙\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠹\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠸\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠼\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠴\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠦\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠧\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠇\x1b[0m Installing dependencies...",
+    "  \x1b[36m⠏\x1b[0m Installing dependencies...",
+    "  \x1b[32m✔\x1b[0m Installed!                                  \x1b[90m(1.2s)\x1b[0m",
+    "",
+    "  \x1b[1m━━━ Multiple spinner states ─────────────────\x1b[0m",
+    "",
+    "  \x1b[32m✔\x1b[0m  Build succeeded    \x1b[90m|\x1b[0m  \x1b[31m✖\x1b[0m  Tests failed      \x1b[90m|\x1b[0m  \x1b[33m⚠\x1b[0m  Lint warnings",
+    "",
+    "  \x1b[1m━━━ Custom color spinner ───────────────────\x1b[0m",
+    "",
+    "  \x1b[38;2;255;107;107m⠋\x1b[0m \x1b[38;2;255;107;107mProcessing…\x1b[0m",
+    "  \x1b[38;2;255;107;107m✖\x1b[0m \x1b[38;2;255;107;107mFailed!\x1b[0m",
+  ]}
+  columns={54}
+  rows={15}
+  typewriterMs={4}
+  autoRun
+/>
+
+---
+
+## createSpinner
+
+```ts
+createSpinner(message: string, opts?: SpinnerOptions): Spinner
+```
+
+<Field name="message" type="string">Initial status text.</Field>
+<Field name="opts.prefix" type="string" default="configured prefix">Custom prefix for this spinner.</Field>
+<Field name="opts.color" type="ColorStyle">Foreground and/or background color for the spinner frames and status icon. Supports hex, rgb, rgba, oklch, or named colors.</Field>
+
+Creates an animated spinner for long-running operations.
+
+### usage
+
+```ts
+const spinner = createSpinner('Installing dependencies...')
+spinner.start()
+
+// ... do async work ...
+
+spinner.stop('success', 'Installed!')
+spinner.stop('fail', 'Build failed!')
+```
+
+<TerminalPreview command="node spinner.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[36m⠋\x1b[0m Installing dependencies...
+\x1b[1m[dui]\x1b[0m \x1b[32m✔\x1b[0m Installed!`}
+</TerminalPreview>
+
+### api
+
+<Field name="start" type="() => void">Start the spinner animation.</Field>
+<Field name="update" type="(msg: string) => void">Update the displayed message.</Field>
+<Field name="stop" type="(status?, msg?) => void">Stop with a status icon (`'success'`, `'fail'`, `'warn'`, or `'info'`).</Field>
+
+| Status | Icon |
+|--------|------|
+| `'success'` | green ✔ |
+| `'fail'` | red ✖ |
+| `'warn'` | yellow ⚠ |
+| `'info'` | blue ℹ |
+
+Override the spinner color by passing `color` in the options:
+
+```ts
+const spinner = createSpinner('Loading...', { color: { fg: '#00aaff' } })
+spinner.start()
+```
+
+<TerminalPreview command="node color-spinner.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255m⠋\x1b[0m Loading...
+\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255m✔\x1b[0m Done!`}
+</TerminalPreview>

@@ -4,18 +4,57 @@ Status of the DUI monorepo: released versions and the work queued behind them.
 
 ## Release state
 
-`@bdocs/dui@0.6.0` (stable) shipped together with all plugins.
-The `next` pre-release (`0.6.0-next.0 → 0.6.0-next.2`) was promoted
-via `changeset pre exit` + `changeset version`.
+`@bdocs/dui@0.7.0` (stable) is the current release, promoted from the
+`next` pre-release (`0.7.0-next.1 → 0.7.0-next.8`) via `changeset pre
+exit` + `changeset version`.
 
 | Package | Released |
-| `@bdocs/dui` | `0.6.0` |
-| `@dui-toolkit/plugin-chart` | `0.4.0` |
-| `@dui-toolkit/plugin-diff` | `0.3.0` |
-| `@dui-toolkit/plugin-image` | `0.3.0` |
-| `@dui-toolkit/plugin-markdown` | `0.3.0` |
-| `@dui-toolkit/plugin-qrcode` | `0.3.0` |
-| `@dui-toolkit/plugin-notify` | `0.1.0` |
+| `@bdocs/dui` | `0.7.0` |
+| `@dui-toolkit/plugin-chart` | `0.4.1` |
+| `@dui-toolkit/plugin-diff` | `0.4.0` |
+| `@dui-toolkit/plugin-image` | `0.4.0` |
+| `@dui-toolkit/plugin-markdown` | `0.4.0` |
+| `@dui-toolkit/plugin-qrcode` | `0.3.1` |
+| `@dui-toolkit/plugin-notify` | `0.1.1` |
+| `@dui-toolkit/plugin-tui` | `0.1.1` |
+
+Docs for 0.7.0 live at `/docs/v0.7.0`; `/docs/next` now tracks the
+0.8.0 cycle.
+
+## Shipped in 0.7.0 (changesets consumed)
+
+- **Native widget set** (`v0.7.0-new-widgets`) — `toast()` center,
+  `createStatusBar()`, `banner()` (embedded ANSI Shadow figlet),
+  `richtext()`, `link()`/`linkify()` (OSC 8), `copyToClipboard()`
+  (OSC 52) and the `tabs` label fix.
+- **Multi-field forms** (`v0.7.0-form-number-textarea`) — `form()` with
+  text / password / select / number / textarea fields, per-field
+  validation, Tab-submits-on-last-field.
+- **Command palette** (`v0.7.0-palette-tests-surface-perf`) —
+  `palette()` with fuzzy search, `wheelSensitivity`, full mouse support
+  (click / wheel / hover), and `disabled`-item skipping on both keyboard
+  and mouse paths.
+- **Fuzzy engine** — `fuzzyMatch` / `highlightFuzzy` / `filterFuzzy`
+  plus `searchable` mode on `select` / `multiselect` / `tree`.
+- **Logger v2 + testing utils** (`v0.7.0-logger-testing-presets`) —
+  leveled logging with `LOG_LEVEL` filtering, file transport and JSON
+  output; `createMockTty()` / `withMockTty()` / `snapshotWidget()`.
+- **Alt screen** — `withAltScreen()` and cursor helpers.
+- **Rendering perf** — ASCII fast path in `RenderSurface.write()` and a
+  single rebindable SGR `delta` per `flush()`/`render()`; measured on
+  the `surface-batch` benchmark: `write()/fill()` ~16 → ~577 ops/sec,
+  `render()` full→ANSI ~20 → ~227 ops/sec (median of 3, vs the
+  pre-optimisation code). Exposed as `pnpm bench` and excluded from the
+  turbo cache, since a cached benchmark replays stale numbers.
+- **Bug fixes** — 16-colour SGR parsing in `json-output`, truecolor
+  probing for `TERM=xterm-kitty`-style terminals, grapheme/CJK width
+  fixes across `surface`, `input()`, `form()`, `toast` and `fuzzy`,
+  markdown tokenizer hang on unmatched delimiters, and the
+  `@dui-toolkit/plugin-tui` manifest that would have shipped it as
+  `1.0.0` (duplicated `peerDependency` escalated it to a major bump).
+- **CI** — build/test/bench workflow, plus a type-level regression that
+  tests cannot catch: `ClickableArea["type"]` is now the exported
+  `MouseAreaType` and includes `"palette"`.
 
 ## Shipped in 0.6.0 (changesets consumed)
 
@@ -159,11 +198,30 @@ via `changeset pre exit` + `changeset version`.
 
 ## Next steps
 
-1. ~~Promote the `next` pre-release~~ — **done**: 0.6.0 stable shipped
-   (all changesets consumed, versions bumped, `DUI_VERSION`/peerDeps
-   aligned, docs promoted to `/docs/v0.6.0`).
-2. Close the docs gaps above (`es/api` pages, README refresh).
-3. Fix the pre-existing `dui-qrcode` rotate test and the 8 website
+1. ~~Promote the `next` pre-release~~ — **done**: 0.7.0 stable cut (all
+   changesets consumed, versions bumped, `DUI_VERSION`/peerDeps aligned,
+   docs promoted to `/docs/v0.7.0` with a fresh `/docs/next` for 0.8.0).
+2. **Unblock the npm publish** — the Release workflow's publish step runs
+   `npm publish` with no credentials wired up: `release.yml` exports
+   `NPM_TOKEN` but the committed `.npmrc` has no
+   `//registry.npmjs.org/:_authToken=${NPM_TOKEN}` line (dropped in
+   `3279af4`) and `actions/setup-node` runs without `registry-url`, so
+   nothing writes an `.npmrc` for npm to read. Give `setup-node` a
+   `registry-url` and pass `NODE_AUTH_TOKEN`, then re-run the publish.
+3. Close the docs gaps above (`es/api` pages, README refresh).
+4. Fix the pre-existing `dui-qrcode` rotate test and the 8 website
    type errors.
-4. Add a `formatModalPlain` parity test between `box()` and
+5. Add a `formatModalPlain` parity test between `box()` and
    `plainEmit()` so the shared action grammar can't silently diverge.
+6. Fix the 67 broken cross-references the docs site emits for relative
+   links — a `[Theme](./theme)` written inside `api/*.mdx` is published
+   as `/docs/<version>/./theme` instead of `/docs/<version>/api/theme`.
+   Pre-existing in `v0.5.0` (80) and `v0.6.0` (67) alike, so it is a
+   link-resolution bug in the docs pipeline rather than a content bug.
+7. Make `turbo run test` self-sufficient: the `test` task has no
+   `dependsOn`, so `pnpm test` on a fresh clone fails every plugin suite
+   with `Failed to resolve entry for package "@bdocs/dui"` because
+   `packages/dui/dist` does not exist yet. The workflows hide this by
+   running `pnpm build` first.
+8. Land a `tsc --noEmit` gate in CI — currently blocked by 11
+   pre-existing `sharp` import errors in `dui-image`.

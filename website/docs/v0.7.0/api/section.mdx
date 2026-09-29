@@ -1,0 +1,72 @@
+---
+title: Section
+sidebarPosition: 22
+description: Section header / labeled divider for breaking up dense CLI output.
+---
+
+import LiveDemo from '../../../components/LiveDemo'
+
+# `section(opts)` — labeled divider
+
+## Live demo
+
+<LiveDemo
+  title="section"
+  command="node section-demo.mjs"
+  lines={[
+    "  \x1b[1m$ dui section --demo\x1b[0m",
+    "",
+    "  \x1b[38;2;100;200;255m── Configuration ─────────────────────────────\x1b[0m",
+    "  Server port: \x1b[33m3000\x1b[0m",
+    "  Database URL: \x1b[33mpostgres://localhost:5432\x1b[0m",
+    "  Debug mode: \x1b[33mfalse\x1b[0m",
+    "",
+    "  \x1b[38;2;255;200;100m───────────── Defaults ───────────────────────\x1b[0m",
+    "  host: \x1b[90mlocalhost\x1b[0m",
+    "  port: \x1b[90m8080\x1b[0m",
+    "  logLevel: \x1b[90minfo\x1b[0m",
+    "",
+    "  \x1b[38;2;155;93;229m── Results ───────────────────────────────────\x1b[0m",
+    "  \x1b[32m✓\x1b[0m  All 142 tests passed",
+    "  \x1b[32m✓\x1b[0m  Coverage: 94%",
+  ]}
+  columns={54}
+  rows={16}
+  typewriterMs={5}
+  autoRun
+/>
+
+Renders a single-line divider with the title inline. Two alignments are supported: `"left"` (default) flushes the title at the left edge of the available width, `"center"` splits the dashes equally on both sides of the title.
+
+```ts
+import { section } from "@bdocs/dui";
+
+console.log(section({ title: "Configuration", width: 70 }));
+// ── Configuration ─────────────────────────────────────────────────────
+console.log(section({ title: "Defaults", align: "center" }));
+// ───────────────────────── Defaults ────────────────────────────────────
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `title` | `string` | — | Title text inside the divider. |
+| `width` | `number` | `min(terminalWidth(), 80)` | Total divider width. |
+| `align` | `"left" \| "center"` | `"left"` | Title position. |
+| `colors.title` | `ColorStyle` | `theme.section.title` | Title color. |
+| `colors.line` | `ColorStyle` | `theme.section.line` | Dash color. |
+
+## Truncation behavior
+
+If the title's visible length is greater than `width - 4` (the slots for "──" and the title padding), the title is **truncated** with an ellipsis (`…`) so the divider stays strictly one line. Multi-line section headers break surrounding layouts that assume a single-row gap.
+
+If even the truncated title would overflow (e.g. `width: 3`), the divider degrades to a pure line of `─` of `width` cells. The consumer's vertical geometry is preserved (one row tall) even with no room for the title.
+
+## When to use
+
+- Block separators in long CLI logs.
+- Identify configuration sections / step indicators / sub-panes.
+- Reinforce visual rhythm in dense terminal output (every 40 rows or so).
+
+Combine with `divider()` for plain lines, `box({ title })` for full framed boxes.

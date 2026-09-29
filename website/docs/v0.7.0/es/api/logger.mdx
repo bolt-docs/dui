@@ -1,0 +1,144 @@
+---
+title: Logger
+sidebarPosition: 3
+description: info, warn, error, success, debug — salida consistente con prefijo [prefix].
+---
+
+```ts
+import { info, warn, error, success, debug } from '@bdocs/dui'
+```
+
+Cada función acepta un objeto de opciones opcional como último argumento:
+
+```ts
+info(msg, { prefix?: string, color?: ColorInput })
+warn(msg, { prefix?: string, color?: ColorInput })
+error(msg, err?, { prefix?: string, color?: ColorInput })
+success(msg, { prefix?: string, color?: ColorInput })
+debug(msg, { prefix?: string, color?: ColorInput })
+```
+
+| Función | Color por Defecto | Stream | Compuerta |
+|----------|--------------|--------|------|
+| `info(msg)` | ninguno | stdout | no |
+| `warn(msg)` | amarillo | stdout | no |
+| `error(msg, err?)` | rojo | stderr | no |
+| `success(msg)` | verde | stdout | no |
+| `debug(msg)` | dim | stdout | `DEBUG` |
+
+<Callout variant="info">
+  `debug()` solo imprime cuando `DEBUG` o `BOLTDOCS_DEBUG` está configurado.
+</Callout>
+
+### ejemplos
+
+```ts
+info('Iniciando build...')
+success('Build completado!')
+warn('API deprecada usada')
+error('Error al conectar')
+debug('Traza verbose') // solo se muestra con DEBUG=1
+```
+
+<TerminalPreview command="node demo.js">
+{`\x1b[1m[dui]\x1b[0m Iniciando build...
+\x1b[32m\x1b[1m[dui] Build completado!\x1b[0m
+\x1b[33m\x1b[1m[dui] API deprecada usada\x1b[0m
+\x1b[31m\x1b[1m[dui] Error al conectar\x1b[0m`}
+</TerminalPreview>
+
+Pasa una opción `color` para sobrescribir el color por defecto en cualquier llamada al logger:
+
+```ts
+import { info, success } from '@bdocs/dui'
+
+info('Mensaje azul personalizado', { color: '#00aaff' })
+success('Verde es el default, pero podemos sobrescribir', { color: '#ff8800' })
+```
+
+<TerminalPreview command="node colors.js">
+{`\x1b[1m[dui]\x1b[0m \x1b[38;2;0;170;255mMensaje azul personalizado\x1b[39m
+\x1b[1m[dui]\x1b[0m \x1b[38;2;255;136;0mVerde es el default, pero podemos sobrescribir\x1b[39m`}
+</TerminalPreview>
+
+La función `error` acepta un objeto de error opcional que se imprimirá después del mensaje:
+
+```ts
+error('Algo se rompió', err)
+// [mytool] Algo se rompió
+// [mytool]   ↳ Error: Algo se rompió
+//       at main (file.ts:10)
+```
+
+## createLogger
+
+```ts
+createLogger(prefix: string): LoggerInstance
+```
+
+Crea una instancia de logger aislada con un prefijo personalizado. Es útil para sub-módulos o plugins donde deseas un prefijo diferente al configurado globalmente en `configure({ prefix })`.
+
+```ts
+import { createLogger } from '@bdocs/dui'
+
+const log = createLogger('myapp')
+log.info('Ejecutando instalador...')
+log.success('¡Instalación completada!')
+```
+
+Todos los métodos (`info`, `warn`, `error`, `success`, `debug`) se comportan exactamente como las funciones globales del logger, pero muestran el prefijo personalizado `[prefix]`.
+
+---
+
+## Logger v2 — niveles, timestamps, archivos y JSON
+
+v0.7.0 añade una capa estructurada sobre el logger clásico: **niveles**
+de severidad con filtrado, **timestamps**, un **transporte a archivo** y un
+**modo JSON** — más configuración por instancia vía `createLogger`.
+
+Orden de severidad: `debug < info/warn < error` (`success` comparte el
+tier de `info`). El nivel mínimo efectivo se resuelve por prioridad:
+env `LOG_LEVEL`/`BOLTDOCS_LOG_LEVEL` → `configureLogger({ level })` →
+default `"info"`. `LOG_LEVEL=silent` (o `off`/`none`) desactiva todo.
+
+```ts
+import { configureLogger } from '@bdocs/dui'
+
+configureLogger({ level: 'warn' })   // descarta info/debug/success
+// $ LOG_LEVEL=debug ./my-cli        // el env gana en runtime
+```
+
+`debug()` conserva su gate clásico: `DEBUG=1` o `BOLTDOCS_DEBUG=1`
+fuerza las líneas debug aunque el nivel configurado las descartaría.
+
+### `configureLogger(options)`
+
+| Campo | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `level` | `LogLevel` | `"info"` | Severidad mínima a emitir |
+| `timestamp` | `boolean` | `false` | Prefijar líneas con `[HH:MM:SS]` |
+| `format` | `"text" \| "json"` | `"text"` | JSON emite un objeto por línea |
+| `file` | `string` | — | Añade cada línea (texto plano, sin ANSI) a este archivo |
+
+```ts
+configureLogger({ timestamp: true, file: 'run.log', format: 'json' })
+info('deploying') // → {"time":"…","level":"info","prefix":"dui","message":"deploying"}
+```
+
+En modo JSON el transporte a archivo escribe las mismas líneas JSON; en
+modo texto el archivo recibe líneas `[prefix] message` planas con todo
+el ANSI eliminado, para logs greppables y seguros en CI. Los errores se
+serializan como `{ name, message, stack }`.
+
+### `createLogger(prefix, options)`
+
+La instancia acepta el set completo de opciones — y, a diferencia del
+logger global, su `level` **no** lo pisan las env vars salvo que optes
+con `respectEnv: true`:
+
+```ts
+const build = createLogger('build', { level: 'debug', timestamp: true })
+build.debug('cache miss')   // se muestra (el nivel de la instancia es debug)
+```
+
+Introspection: `getLoggerOptions()` y `getEffectiveLogLevel()`.

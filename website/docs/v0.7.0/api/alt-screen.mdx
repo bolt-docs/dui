@@ -1,0 +1,66 @@
+---
+title: Alt Screen
+sidebarPosition: 34
+badge: New
+description: Alternate screen buffer management for full-screen TUIs — enter, exit, and guaranteed restore.
+---
+
+# `withAltScreen(fn)` — full-screen TUIs
+
+Full-screen TUIs (editors, pickers, pagers) swap into the terminal's alternate screen, paint over it, and swap back on exit so the user's scrollback and shell prompt are preserved. These helpers wrap the raw sequences (`ESC[?1049h` / `ESC[?1049l`) and guarantee the swap-back and cursor restore even when the body throws.
+
+```ts
+import { withAltScreen, RenderSurface } from '@bdocs/dui'
+
+await withAltScreen(async () => {
+  const surface = new RenderSurface()
+  // paint full-screen content...
+  await new Promise((resolve) => setTimeout(resolve, 3000))
+})
+// terminal restored to the normal buffer
+```
+
+## API
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `withAltScreen(fn, options?)` | `Promise<T>` | Runs `fn` in the alt buffer, always restores after (even on error) |
+| `enterAltScreen(stream?)` | `boolean` | Swaps in + hides cursor; `false` on non-TTY |
+| `exitAltScreen(stream?)` | `boolean` | Swaps out + shows cursor; `false` on non-TTY |
+| `hideCursor(stream?)` / `showCursor(stream?)` | — | `ESC[?25l` / `ESC[?25h` |
+| `saveCursor(stream?)` / `restoreCursor(stream?)` | — | `ESC[s` / `ESC[u` |
+
+All functions accept an optional `stream` (default `process.stdout`).
+
+## Usage patterns
+
+### Raw pairing with RenderSurface
+
+```ts
+import { enterAltScreen, exitAltScreen, RenderSurface } from '@bdocs/dui'
+
+if (enterAltScreen()) {
+  try {
+    const surface = new RenderSurface()
+    // … paint …
+  } finally {
+    exitAltScreen()
+  }
+}
+```
+
+### Interactive full-screen picker
+
+```ts
+import { withAltScreen, palette } from '@bdocs/dui'
+
+const result = await withAltScreen(() =>
+  palette('Pick an action', { items }),
+)
+```
+
+## Notes
+
+- `enterAltScreen`/`exitAltScreen` return `false` (and write nothing) on non-TTY streams, so CI-safe wrappers can skip the screen swap.
+- Cursor save/restore uses `ESC[s`/`ESC[u` (SCO), which is more reliable than DECSC across tmux/screen than the raw DEC sequence.
+- Pair with `statusbar` for a persistent bottom line inside the alt screen.

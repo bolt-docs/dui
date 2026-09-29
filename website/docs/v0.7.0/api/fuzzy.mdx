@@ -1,0 +1,76 @@
+---
+title: Fuzzy Search
+sidebarPosition: 35
+badge: New
+description: Fuzzy matching engine plus the searchable mode of select, multiselect, and tree.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# Fuzzy search & matching
+
+The shared fuzzy engine behind the `searchable` mode of `select`, `multiselect`, and `tree`, and the `palette()` command palette. `fuzzyMatch` finds the best way to line a query up inside a candidate (case-insensitively) and returns a score plus the matched indices, so callers can highlight the hits.
+
+```ts
+import { fuzzyMatch, highlightFuzzy } from '@bdocs/dui'
+
+fuzzyMatch('fb', 'file-browser') // → { score: 12, indices: [0, 5] }
+fuzzyMatch('xyz', 'hello')       // → null
+
+highlightFuzzy('fb', 'file-browser', (s) => `\u001b[1m${s}\u001b[0m`)
+// → "\u001b[1mf\u001b[0mile-\u001b[1mb\u001b[0mrowser"
+```
+
+<TerminalPreview command="node fuzzy.js">
+{`\x1b[36m? Pick a package\x1b[0m \x1b[90m(Type to filter, arrows to move, enter to select)\x1b[0m
+  \x1b[36m▸\x1b[0m \x1b[90mdr\x1b[0m
+  \x1b[36m◆\x1b[0m \x1b[36md\x1b[0m\x1b[37mrag-\x1b[0m\x1b[36mr\x1b[0m\x1b[37meorder\x1b[0m \x1b[90m(drag-and-drop reordering)\x1b[0m
+  \x1b[90m  \x1b[36md\x1b[0m\x1b[90mi\x1b[0m\x1b[36mr\x1b[0m\x1b[90mectory diff (diff two folders)\x1b[0m`}
+</TerminalPreview>
+
+## API
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `fuzzyMatch(query, text)` | `{ score, indices } \| null` | Best subsequence alignment; `null` when the query can't line up in order |
+| `highlightFuzzy(query, text, matchFn)` | `string` | Wraps only the matched characters with `matchFn` |
+| `filterFuzzy(query, items, labelOf)` | `{ item, result }[] \| null` | Filters and sorts candidates by score; `null` for an empty query ("show all") |
+
+### Scoring
+
+Rewards consecutive runs, word boundaries (start of string, or after `-`, `_`, `.`, `/`, `:`, or whitespace), and exact-case matches; penalizes gaps between matches so compact hits beat spread-out ones.
+
+```ts
+fuzzyMatch('br', 'file-browser') // consecutive → high score
+fuzzyMatch('io', 'file-browser') // spread out  → lower score
+```
+
+## `searchable` in select / multiselect / tree
+
+Pass `searchable: true` to any of the three interactive widgets to enable type-to-filter:
+
+```ts
+import { select } from '@bdocs/dui'
+
+const pkg = await select('Pick a package', {
+  choices: packages.map((p) => ({ label: p.name, value: p.name })),
+  searchable: true,
+})
+```
+
+| Widget | Behavior |
+| --- | --- |
+| `select` | Typing filters and highlights; Enter picks the match; Escape clears the query (a second Escape cancels) |
+| `multiselect` | Same, plus **Tab** toggles the row under the cursor (Space types into the query while filtering, and toggles as usual with an empty query) |
+| `tree` | Filters the flattened tree — matched nodes keep their original depth indent; branches match by their own labels |
+
+Common keys while searching: printable characters (including spaces) build the query, `Backspace` edits it, `↑`/`↓` navigate the filtered list, and mouse/wheel scroll the filtered window.
+
+### Highlighting
+
+Matched characters are painted in the widget's `selected` color (default cyan) so the reason an item matched is visible at a glance.
+
+## Notes
+
+- The matcher is pure and dependency-free — reuse it in your own fuzzy search UI, autocomplete, or test assertions.
+- `filterFuzzy` returns `null` for an empty query so callers can distinguish "show everything" from "no matches" (empty array).

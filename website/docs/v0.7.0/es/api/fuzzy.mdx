@@ -1,0 +1,76 @@
+---
+title: Fuzzy Search
+sidebarPosition: 35
+badge: New
+description: Motor de matching fuzzy más el modo searchable de select, multiselect y tree.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+# Búsqueda fuzzy & matching
+
+El motor fuzzy compartido detrás del modo `searchable` de `select`, `multiselect` y `tree`, y de la command palette `palette()`. `fuzzyMatch` encuentra la mejor forma de alinear una query dentro de un candidato (sin distinguir mayúsculas) y devuelve un score más los índices coincidentes, para que los callers puedan resaltar los hits.
+
+```ts
+import { fuzzyMatch, highlightFuzzy } from '@bdocs/dui'
+
+fuzzyMatch('fb', 'file-browser') // → { score: 12, indices: [0, 5] }
+fuzzyMatch('xyz', 'hello')       // → null
+
+highlightFuzzy('fb', 'file-browser', (s) => `\u001b[1m${s}\u001b[0m`)
+// → "\u001b[1mf\u001b[0mile-\u001b[1mb\u001b[0mrowser"
+```
+
+<TerminalPreview command="node fuzzy.js">
+{`\x1b[36m? Elige un paquete\x1b[0m \x1b[90m(Escribe para filtrar, flechas para mover, enter para seleccionar)\x1b[0m
+  \x1b[36m▸\x1b[0m \x1b[90mdr\x1b[0m
+  \x1b[36m◆\x1b[0m \x1b[36md\x1b[0m\x1b[37mrag-\x1b[0m\x1b[36mr\x1b[0m\x1b[37meorder\x1b[0m \x1b[90m(drag-and-drop reordering)\x1b[0m
+  \x1b[90m  \x1b[36md\x1b[0m\x1b[90mi\x1b[0m\x1b[36mr\x1b[0m\x1b[90mectory diff (diff two folders)\x1b[0m`}
+</TerminalPreview>
+
+## API
+
+| Función | Devuelve | Notas |
+| --- | --- | --- |
+| `fuzzyMatch(query, text)` | `{ score, indices } \| null` | Mejor alineación por subsequence; `null` cuando la query no puede alinearse en orden |
+| `highlightFuzzy(query, text, matchFn)` | `string` | Envuelve solo los caracteres coincidentes con `matchFn` |
+| `filterFuzzy(query, items, labelOf)` | `{ item, result }[] \| null` | Filtra y ordena candidatos por score; `null` para query vacía ("mostrar todo") |
+
+### Scoring
+
+Premia los runs consecutivos, los word boundaries (inicio de string, o después de `-`, `_`, `.`, `/`, `:` o whitespace) y los matches exactos en mayúsculas; penaliza los huecos entre matches para que los hits compactos ganen a los dispersos.
+
+```ts
+fuzzyMatch('br', 'file-browser') // consecutivo → score alto
+fuzzyMatch('io', 'file-browser') // disperso    → score bajo
+```
+
+## `searchable` en select / multiselect / tree
+
+Pasa `searchable: true` a cualquiera de los tres widgets interactivos para habilitar escribir-para-filtrar:
+
+```ts
+import { select } from '@bdocs/dui'
+
+const pkg = await select('Elige un paquete', {
+  choices: packages.map((p) => ({ label: p.name, value: p.name })),
+  searchable: true,
+})
+```
+
+| Widget | Comportamiento |
+| --- | --- |
+| `select` | Escribir filtra y resalta; Enter elige el match; Escape limpia la query (un segundo Escape cancela) |
+| `multiselect` | Igual, más **Tab** para togglear la fila bajo el cursor (Espacio escribe en la query mientras filtra, y togglea como siempre con query vacía) |
+| `tree` | Filtra el árbol aplanado — los nodos coincidentes conservan su indent original; las ramas matchean por sus propias etiquetas |
+
+Teclas comunes mientras buscas: los caracteres imprimibles (incluidos espacios) construyen la query, `Retroceso` la edita, `↑`/`↓` navegan la lista filtrada, y el mouse/wheel hacen scroll de la ventana filtrada.
+
+### Resaltado
+
+Los caracteres coincidentes se pintan con el color `selected` del widget (default cyan) para que la razón de un match sea visible de un vistazo.
+
+## Notas
+
+- El matcher es puro y sin dependencias — reutilízalo en tu propia UI de búsqueda fuzzy, autocomplete o assertions de tests.
+- `filterFuzzy` devuelve `null` para query vacía para que los callers distingan "mostrar todo" de "sin matches" (array vacío).

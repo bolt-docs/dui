@@ -1,0 +1,79 @@
+---
+title: Toast
+sidebarPosition: 32
+badge: New
+description: In-core toast notifications — transient stacked toasts with auto-dismiss, no plugin required.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# `toast(message)` — notification toasts
+
+A lightweight toast center that stacks transient notifications in the bottom-right of the terminal and auto-dismisses them after a TTL — no plugin required. Pairs with `@dui-toolkit/plugin-notify` for OS-level notifications, but works standalone for CLIs that want a quick "operation finished" flash.
+
+```ts
+import { toast } from '@bdocs/dui'
+
+toast('Deploy finished', { type: 'success' })
+toast('Build failed', { type: 'error', ttl: 6000 })
+```
+
+<TerminalPreview command="node toast.js">
+{`\x1b[90m┌─ \x1b[32m✔ \x1b[0m\x1b[90m────────────────────────┐\x1b[0m
+\x1b[90m│\x1b[0m Deploy finished                \x1b[90m│\x1b[0m
+\x1b[90m└────────────────────────────────┘\x1b[0m`}
+</TerminalPreview>
+
+## API
+
+### `toast(message, options?)`
+
+Pushes a toast to the shared default center (created lazily).
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `type` | `"info" \| "success" \| "warning" \| "error"` | `"info"` | Severity — colors the badge and box |
+| `ttl` | `number` | `4000` | Lifetime in ms before auto-dismiss |
+| `title` | `string` | — | Bold header next to the badge |
+
+### `createToastCenter(options?)`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `max` | `number` | `4` | Visible toasts before the stack caps |
+| `ttl` | `number` | `4000` | Default TTL for toasts without their own |
+| `stream` | `NodeJS.WriteStream` | `process.stdout` | Where toasts render |
+
+Returns `{ toast, dismissAll, close }` — use a custom center for separate stacks (e.g. one per service).
+
+### Helpers
+
+| Function | Notes |
+| --- | --- |
+| `dismissAllToasts()` | Clears the default center (no-op if never created) |
+
+## Theme slots
+
+| Slot | Default | Notes |
+| --- | --- | --- |
+| `toast.info` | `blue` | Badge + border for `info` |
+| `toast.success` | `green` | Badge + border for `success` |
+| `toast.warning` | `yellow` | Badge + border for `warning` |
+| `toast.error` | `red` | Badge + border for `error` |
+
+## Usage patterns
+
+```ts
+import { toast, task } from '@bdocs/dui'
+
+await task('Deploying', async () => { /* … */ })
+toast('Deploy finished', { type: 'success', title: 'CI' })
+
+// Plain-mode fallback prints a log line instead of painting:
+//   ✔ CI: Deploy finished
+```
+
+## Notes
+
+- Plain mode (screen readers, `NO_COLOR`, dumb terminals, CI) prints each toast as a single `<badge> <title>: <message>` log line instead of painting, so no information is lost.
+- Toasts render over the bottom rows; they're designed for CLIs that own the bottom of the screen (pair with `statusbar`/`withAltScreen` if you need a strict layout).

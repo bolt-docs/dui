@@ -1,0 +1,52 @@
+---
+title: Tabs
+sidebarPosition: 23
+description: Control segmentado / barra de navegación con tres estilos visuales.
+---
+
+import TerminalPreview from '../../../../components/TerminalPreview'
+
+```ts
+import { tabs } from '@bdocs/dui'
+```
+
+Renderiza un array de etiquetas con una marcada como activa. Tres estilos visuales:
+
+- `"underline"` (por defecto) — tira plana de una sola línea donde el tab activo recibe su color más un subrayado SGR.
+- `"pill"` — render entre corchetes `[ label ]` con el color del tab activo.
+- `"boxed"` — render enmarcado `╭─label─╮` con el color activo en la etiqueta y `tabs.border` en los trazos.
+
+```ts
+console.log(tabs({
+  items: ['Home', 'Docs', 'Blog'],
+  active: 1,
+  style: 'underline',
+}))
+```
+
+<TerminalPreview command="node tabs.js">
+{`\x1b[38;2;255;200;100mHome\x1b[0m  \x1b[38;2;100;200;255mDocs\x1b[0m  \x1b[4m\x1b[38;2;100;200;255mBlog\x1b[0m  \x1b[38;2;100;200;255mAPI\x1b[0m`}
+</TerminalPreview>
+
+## Opciones
+
+<Field name="items" type="string[]">Etiquetas de los tabs.</Field>
+<Field name="active" type="number">Índice del tab activo (base 0).</Field>
+<Field name="style" type="'underline' | 'pill' | 'boxed'" default="'underline'">Renderizador visual.</Field>
+<Field name="colors.active" type="ColorStyle" default="theme.tabs.active">Color de la etiqueta activa.</Field>
+<Field name="colors.inactive" type="ColorStyle" default="theme.tabs.inactive">Color de las etiquetas inactivas.</Field>
+<Field name="colors.border" type="ColorStyle" default="theme.tabs.border">Color de los trazos (modo boxed).</Field>
+
+## Compromisos de estilo
+
+- **`underline`** se lee más limpio en salida CLI densa y es el look canónico. El tab activo se diferencia por tono Y un subrayado SGR (`\x1b[4m`/`\x1b[24m`), así que sigue visible incluso cuando el fg coincide con los inactivos.
+- **`pill`** hace que cada tab sea visualmente distinto con `[ label ]` y es fácil de escanear de un vistazo. Consume ~2 caracteres extra por tab.
+- **`boxed`** enmarca cada tab en trazos `╭─╮`. Es el más "tipo GUI" pero consume ~4 caracteres extra por tab. Ideal para barras de navegación donde el resto del dashboard es plano.
+
+## Cuándo usarlo
+
+- Navegación superior entre paneles de dashboard.
+- Filas de toggle de sub-panel (ej. `Files | Branches | Tags | Logs`).
+- Indicadores de pasos de wizard (`Paso 1 / Paso 2 / …`).
+
+`tabs()` no es interactivo — conecta el índice `active` de vuelta a tu estado de navegación. Para selección interactiva de tabs, conduce `active` desde un `select({ choices: items })`.

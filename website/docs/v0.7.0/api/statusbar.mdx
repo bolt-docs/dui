@@ -1,0 +1,68 @@
+---
+title: Status Bar
+sidebarPosition: 33
+badge: New
+description: Persistent terminal status line pinned to the bottom row — left/center/right segments updated in place.
+---
+
+import TerminalPreview from '../../../components/TerminalPreview'
+
+# `createStatusBar(opts)` — persistent status line
+
+A single full-width line pinned to the bottom row of the terminal — the classic editor/pager status line (think vim's statusline or `less`'s prompt). Left/center/right segments update in place without flickering the rest of the screen. Pairs naturally with `withAltScreen()` + `RenderSurface` for full-screen TUIs.
+
+```ts
+import { createStatusBar } from '@bdocs/dui'
+
+const bar = createStatusBar({ left: 'main.ts', right: 'utf-8' })
+bar.update({ left: 'main.ts', center: '12:34', right: '4, 8' })
+// ... later
+bar.clear()
+```
+
+<TerminalPreview command="node statusbar.js">
+{`\x1b[42m main.ts \x1b[0m\x1b[90m          12:34          \x1b[0m\x1b[90m 4, 8 \x1b[0m`}
+</TerminalPreview>
+
+## API
+
+### `createStatusBar(options?)`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `left` / `center` / `right` | `string` | — | Initial segments |
+| `colors.*` | `ColorStyle` | theme slots | Per-segment colors |
+| `stream` | `NodeJS.WriteStream` | `process.stdout` | Where the bar renders |
+
+Returns `{ update, render, clear }`:
+
+| Method | Notes |
+| --- | --- |
+| `update(parts)` | Replace segments (only the provided keys) and redraw |
+| `render()` | Redraw with the current segments |
+| `clear()` | Erase the bar from the bottom row |
+
+## Theme slots
+
+| Slot | Default | Notes |
+| --- | --- | --- |
+| `statusbar.left` | `green` | Left segment |
+| `statusbar.center` | `gray` | Center segment |
+| `statusbar.right` | `gray` | Right segment |
+
+## Full-screen example
+
+```ts
+import { createStatusBar, withAltScreen } from '@bdocs/dui'
+
+await withAltScreen(() => {
+  const bar = createStatusBar({ left: 'viewer', right: 'q to quit' })
+  // ... paint the content area, bar stays pinned at the bottom ...
+  return new Promise((resolve) => { /* on exit */ resolve() })
+})
+```
+
+## Notes
+
+- Non-TTY streams and plain mode print the segments once as a plain text line (no cursor games) so logs still capture the state.
+- The cursor is hidden while the bar paints, then restored — safe for loops that redraw frequently.

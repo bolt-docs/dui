@@ -177,7 +177,7 @@ export function HomePage() {
 			<section className="border-b border-strong px-6 py-20 md:py-24 relative overflow-hidden">
 				<div className="mx-auto max-w-4xl flex flex-col items-center text-center">
 					<div className="text-xs text-dim mb-4 select-none font-mono tracking-wider">
-						{">> @bdocs/dui v0.6.0"}
+						{">> @bdocs/dui v0.7.0"}
 					</div>
 					<div className="flex items-center gap-2 text-xs text-muted mb-8 select-none font-mono tracking-wider border border-strong/60 bg-soft/40 px-3 py-1.5">
 						<span className="text-terminal-green font-bold">$</span>
@@ -194,14 +194,14 @@ export function HomePage() {
 					</p>
 					<div className="mt-8 flex flex-wrap justify-center gap-3">
 						<Link
-							href="/docs/v0.6.0/overview/getting-started"
+							href="/docs/v0.7.0/overview/getting-started"
 							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium font-mono border border-terminal-green/60 text-terminal-green bg-terminal-green/5 hover:bg-terminal-green/10 hover:border-terminal-green transition-all duration-150 rounded-none"
 						>
 							<span className="font-mono text-xs">$</span>
 							{txt("gettingStarted")}
 						</Link>
 						<Link
-							href="/docs/v0.6.0/api"
+							href="/docs/v0.7.0/api"
 							className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium font-mono border border-strong/70 text-muted hover:text-body hover:border-strong hover:bg-soft/50 transition-all duration-150 rounded-none"
 						>
 							{txt("apiReference")}
@@ -319,13 +319,13 @@ export function HomePage() {
 					</p>
 					<nav className="flex items-center gap-5">
 						<Link
-							href="/docs/v0.6.0/overview"
+							href="/docs/v0.7.0/overview"
 							className="hover:text-body transition-colors"
 						>
 							Docs
 						</Link>
 						<Link
-							href="/docs/v0.6.0/overview/changelog"
+							href="/docs/v0.7.0/overview/changelog"
 							className="hover:text-body transition-colors"
 						>
 							Changelog
