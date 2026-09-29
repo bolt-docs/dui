@@ -36,11 +36,23 @@ const action = await palette('Ejecutar comando', {
 | Tecla | Acción |
 | --- | --- |
 | Escribir | Filtro fuzzy por etiqueta **y** keywords |
-| `↑` / `↓` | Mover el cursor |
+| `↑` / `↓` | Mover el cursor (omite items `disabled`) |
 | `Enter` | Ejecutar la acción seleccionada (resuelve con su `value`) |
 | `Retroceso` | Editar la búsqueda |
 | `Escape` | Limpiar la búsqueda; un segundo Escape cancela |
 | `Ctrl+C` | Salir con código 130 |
+
+## Ratón
+
+Cuando el terminal soporta SGR mouse, la palette es interactiva:
+
+| Entrada | Acción |
+| --- | --- |
+| Clic en una fila | Ejecutar esa acción |
+| Scroll arriba / abajo | Mover el cursor (`wheelSensitivity` filas por tick) |
+| Hover sobre una fila | Resaltarla sin mover el cursor |
+
+Hacer clic en una fila `disabled` se ignora; el scroll y las flechas siempre omiten los items `disabled`.
 
 ## Items
 
@@ -51,7 +63,7 @@ const action = await palette('Ejecutar comando', {
 | `description` | `string` | Detalle tenue tras la etiqueta |
 | `keywords` | `string[]` | Términos extra para el match fuzzy (alias, acrónimos) |
 | `shortcut` | `string` | Hint de tecla alineado a la derecha (ej. `"⌘K"`) |
-| `disabled` | `boolean` | No seleccionable |
+| `disabled` | `boolean` | No seleccionable; lo omiten teclado, scroll y clics |
 
 ## Opciones
 
@@ -59,6 +71,7 @@ const action = await palette('Ejecutar comando', {
 | --- | --- | --- | --- |
 | `items` | `PaletteItem<T>[]` | — | Acciones a elegir (obligatorio) |
 | `pageSize` | `number` | `8` | Filas visibles antes de hacer scroll |
+| `wheelSensitivity` | `number` | `1` | Filas que avanza el cursor por tick de scroll |
 | `placeholder` | `string` | `"Type to search…"` | Hint tenue en la línea de búsqueda |
 | `onCancel` | `() => void` | — | Se llama una vez al cancelar (Escape con query vacía, o Ctrl+C) |
 | `colors.*` | `ColorStyle` | slots del tema | Overrides de color por parte |
@@ -72,6 +85,9 @@ const action = await palette('Ejecutar comando', {
 | `palette.match` | `cyan` | Caracteres que coinciden con el fuzzy |
 | `palette.description` | `gray` | Descripciones |
 | `palette.shortcut` | `gray` | Hints de tecla |
+
+El tracking de ratón se activa mientras dura el prompt con secuencias SGR
+(`?1000h`/`?1006h`/`?1003h`) y se desactiva al finalizar/cancelar.
 
 ## Fallback no-TTY
 

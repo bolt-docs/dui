@@ -13,8 +13,9 @@
  *
  * All three layouts are joined with a single-space gap (underline/pill)
  * or a tight border-mesh (boxed). The widget is non-interactive —
- * consumer code wires `active` index to navigation state (e.g. via
- * `select({ choices: items, initialIndex: active })`).
+ * consumer code wires `active` index to navigation state (e.g. render a
+ * `tabs` row above a `select({ choices })` list and map the selected
+ * choice index onto the active tab).
  *
  * @example
  * tabs({ items: ["Home", "Docs", "Blog"], active: 1, style: "underline" });

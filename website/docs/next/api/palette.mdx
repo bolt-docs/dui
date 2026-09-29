@@ -36,11 +36,23 @@ const action = await palette('Run command', {
 | Key | Action |
 | --- | --- |
 | Type | Fuzzy filter by label **and** keywords |
-| `↑` / `↓` | Move the cursor |
+| `↑` / `↓` | Move the cursor (skips `disabled` items) |
 | `Enter` | Run the selected action (resolves with its `value`) |
 | `Backspace` | Edit the query |
 | `Escape` | Clear the query; a second Escape cancels |
 | `Ctrl+C` | Exit with code 130 |
+
+## Mouse
+
+When the terminal supports SGR mouse reporting, the palette is interactive:
+
+| Input | Action |
+| --- | --- |
+| Click a row | Run that action |
+| Scroll up / down | Move the cursor (wheel `wheelSensitivity` rows per tick) |
+| Hover a row | Highlight it without moving the cursor |
+
+Clicking a `disabled` row is ignored; wheel and arrow navigation always skip `disabled` items.
 
 ## Items
 
@@ -51,7 +63,7 @@ const action = await palette('Run command', {
 | `description` | `string` | Dim detail shown after the label |
 | `keywords` | `string[]` | Extra fuzzy-match terms (e.g. aliases, acronyms) |
 | `shortcut` | `string` | Right-aligned key hint (e.g. `"⌘K"`) |
-| `disabled` | `boolean` | Not selectable |
+| `disabled` | `boolean` | Not selectable; skipped by keyboard, wheel, and clicks |
 
 ## Options
 
@@ -59,6 +71,7 @@ const action = await palette('Run command', {
 | --- | --- | --- | --- |
 | `items` | `PaletteItem<T>[]` | — | Actions to pick from (required) |
 | `pageSize` | `number` | `8` | Visible rows before scrolling |
+| `wheelSensitivity` | `number` | `1` | Rows scrolled per wheel tick |
 | `placeholder` | `string` | `"Type to search…"` | Dim hint in the search line |
 | `onCancel` | `() => void` | — | Called once when the palette is cancelled (Escape with empty query, or Ctrl+C) |
 | `colors.*` | `ColorStyle` | theme slots | Per-part color overrides |
@@ -72,6 +85,9 @@ const action = await palette('Run command', {
 | `palette.match` | `cyan` | Fuzzy-matched characters |
 | `palette.description` | `gray` | Descriptions |
 | `palette.shortcut` | `gray` | Shortcut hints |
+
+Mouse tracking is enabled for the duration of the prompt via SGR sequences
+(`?1000h`/`?1006h`/`?1003h`) and disabled again on finalize/cancel.
 
 ## Non-TTY fallback
 

@@ -191,13 +191,17 @@ function probeColorDepth(): TerminalCapabilities["colorDepth"] {
 
 	const term = env("TERM") ?? "";
 	if (term.includes("256color") || term.includes("256")) return 256;
-	if (term.includes("color") || term.includes("xterm") || term.includes("rxvt")) return 16;
 
-	// Modern terminals that default to true color
+	// Modern terminals that default to true color. `termProgram()` falls
+	// back to TERM, so this also covers `TERM=xterm-kitty` and friends.
+	// This check has to run before the 16-color fallback: a plain
+	// `TERM` test for "xterm"/"color" matches those same values and
+	// would report 16 colors.
 	const tp = termProgram();
 	const trueColorTerms = ["kitty", "alacritty", "foot", "ghostty", "wezterm", "contour"];
 	if (trueColorTerms.some((t) => tp.includes(t))) return 16777216;
 
+	// Everything else is the safe 16-color baseline.
 	return 16;
 }
 

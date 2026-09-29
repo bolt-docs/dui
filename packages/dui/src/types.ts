@@ -96,9 +96,15 @@ export interface MouseWheelEvent {
  */
 export type MouseEvent = MouseEventBase | MouseWheelEvent;
 
+/**
+ * Identifies the interactive widget that registered a clickable/hoverable
+ * area, so a shared mouse handler can tell which prompt an event belongs to.
+ */
+export type MouseAreaType = "select" | "multiselect" | "input" | "tree" | "palette";
+
 export interface ClickableArea {
 	id: string;
-	type: "select" | "multiselect" | "input" | "tree";
+	type: MouseAreaType;
 	bounds: {
 		top: number;
 		left: number;
@@ -110,7 +116,7 @@ export interface ClickableArea {
 
 export interface HoverableArea {
 	id: string;
-	type: "select" | "multiselect" | "input" | "tree";
+	type: MouseAreaType;
 	bounds: {
 		top: number;
 		left: number;

@@ -169,23 +169,37 @@ const SGR_DEFAULT: SgrState = {
 	return `\x1b[${parts.join(";")}m`;
 }
 
+// Parsed-hex cache for the SGR hot path. Real apps use a handful of theme
+// colors, so this hits ~100% — but `write()` accepts arbitrary caller-supplied
+// `fg`/`bg` strings, so a long-running TUI that generates a fresh color per
+// frame (gradients, per-row heatmaps) would otherwise grow this map without
+// bound. Cap it and drop the whole cache on overflow: the working set is tiny,
+// so a full reset costs one re-parse per distinct color and is far cheaper
+// than the retained memory.
+const RGB_CACHE_MAX = 1024;
+const rgbCache = new Map<string, { r: number; g: number; b: number } | null>();
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+	const cached = rgbCache.get(hex);
+	if (cached !== undefined) return cached;
 	const h = hex.replace(/^#/, "");
+	let result: { r: number; g: number; b: number } | null = null;
 	if (h.length === 3) {
-		return {
+		result = {
 			r: Number.parseInt(h[0] + h[0], 16),
 			g: Number.parseInt(h[1] + h[1], 16),
 			b: Number.parseInt(h[2] + h[2], 16),
 		};
-	}
-	if (h.length === 6) {
-		return {
+	} else if (h.length === 6) {
+		result = {
 			r: Number.parseInt(h.slice(0, 2), 16),
 			g: Number.parseInt(h.slice(2, 4), 16),
 			b: Number.parseInt(h.slice(4, 6), 16),
 		};
 	}
-	return null;
+	if (rgbCache.size >= RGB_CACHE_MAX) rgbCache.clear();
+	rgbCache.set(hex, result);
+	return result;
 }
 
 /* ── Main class ──────────────────────────────────────────────── */	export class RenderSurface {
@@ -245,6 +259,11 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 		const row = this.grid[y];
 		if (!row) return;
 
+		// ASCII fast path: printable ASCII is exactly one 1×1 grapheme
+		// per byte, so we skip the (much slower) `splitGraphemes` /
+		// `visibleLength` calls on the common all-ASCII hot path.
+		const asciiOnly = /^[\u0020-\u007e]*$/.test(clean);
+
 		// Walk grapheme clusters (not UTF-16 units) so surrogate-pair
 		// emoji stay whole, and advance the cursor by each cluster's
 		// CELL width. A 2-cell CJK ideograph occupies two columns: the
@@ -255,8 +274,10 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 		// wide chars entirely, so every following character landed one
 		// cell early and the rest of the row misaligned.
 		let cx = x;
-		for (const grapheme of splitGraphemes(clean)) {
-			const w = Math.max(1, visibleLength(grapheme));
+		for (const grapheme of asciiOnly
+			? Array.from(clean)
+			: splitGraphemes(clean)) {
+			const w = asciiOnly ? 1 : Math.max(1, visibleLength(grapheme));
 			if (cx >= this.opts.width) break;
 			if (cx < 0) {
 				cx += w;
@@ -402,6 +423,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 	flush(): string {
 		const buf: string[] = [];
 		const emitSgr = this.opts.emitCursorMoves;
+		const delta: Partial<SgrState> = {};
 
 		for (let y = 0; y < this.opts.height; y++) {
 			const row = this.grid[y];
@@ -426,15 +448,18 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 					buf.push(`\x1b[${y + 1};${x + 1}H`);
 				}
 
-				// Compute SGR delta vs current state
-				const delta: Partial<SgrState> = {};
-				if (cell.fg !== this.sgr.fg) delta.fg = cell.fg;
-				if (cell.bg !== this.sgr.bg) delta.bg = cell.bg;
-				if (cell.bold !== this.sgr.bold) delta.bold = cell.bold;
-				if (cell.italic !== this.sgr.italic) delta.italic = cell.italic;
-				if (cell.underline !== this.sgr.underline) delta.underline = cell.underline;
-				if (cell.dim !== this.sgr.dim) delta.dim = cell.dim;
-				if (cell.inverse !== this.sgr.inverse) delta.inverse = cell.inverse;
+				// Compute SGR delta vs current state (rebind the shared
+				// `delta` object — see `render()`).
+				delta.fg = cell.fg !== this.sgr.fg ? cell.fg : undefined;
+				delta.bg = cell.bg !== this.sgr.bg ? cell.bg : undefined;
+				delta.bold = cell.bold !== this.sgr.bold ? cell.bold : undefined;
+				delta.italic =
+					cell.italic !== this.sgr.italic ? cell.italic : undefined;
+				delta.underline =
+					cell.underline !== this.sgr.underline ? cell.underline : undefined;
+				delta.dim = cell.dim !== this.sgr.dim ? cell.dim : undefined;
+				delta.inverse =
+					cell.inverse !== this.sgr.inverse ? cell.inverse : undefined;
 
 				const seq = sgrSequence(delta, this.sgr);
 				if (seq) buf.push(seq);
@@ -472,6 +497,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 	render(): string {
 		const buf: string[] = [];
 		const sgr = { ...SGR_DEFAULT };
+		const delta: Partial<SgrState> = {};
 
 		for (let y = 0; y < this.opts.height; y++) {
 			if (y > 0) buf.push("\n");
@@ -482,14 +508,18 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 				const cell = row[x];
 				if (!cell) continue;
 
-				const delta: Partial<SgrState> = {};
-				if (cell.fg !== sgr.fg) delta.fg = cell.fg;
-				if (cell.bg !== sgr.bg) delta.bg = cell.bg;
-				if (cell.bold !== sgr.bold) delta.bold = cell.bold;
-				if (cell.italic !== sgr.italic) delta.italic = cell.italic;
-				if (cell.underline !== sgr.underline) delta.underline = cell.underline;
-				if (cell.dim !== sgr.dim) delta.dim = cell.dim;
-				if (cell.inverse !== sgr.inverse) delta.inverse = cell.inverse;
+				// Rebound a single `delta` object instead of allocating one
+				// per cell — hot-path GC pressure was dominating full-redraw
+				// cost. Each field is explicitly reset so no stale values
+				// survive from the previous cell.
+				delta.fg = cell.fg !== sgr.fg ? cell.fg : undefined;
+				delta.bg = cell.bg !== sgr.bg ? cell.bg : undefined;
+				delta.bold = cell.bold !== sgr.bold ? cell.bold : undefined;
+				delta.italic = cell.italic !== sgr.italic ? cell.italic : undefined;
+				delta.underline =
+					cell.underline !== sgr.underline ? cell.underline : undefined;
+				delta.dim = cell.dim !== sgr.dim ? cell.dim : undefined;
+				delta.inverse = cell.inverse !== sgr.inverse ? cell.inverse : undefined;
 
 				const seq = sgrSequence(delta, sgr);
 				if (seq) buf.push(seq);

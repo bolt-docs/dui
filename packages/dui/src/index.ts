@@ -214,6 +214,7 @@ export { tree } from "./tree";
 export type {
 	ClickableArea,
 	HoverableArea,
+	MouseAreaType,
 	MouseEvent,
 	MouseEventBase,
 	MouseWheelEvent,

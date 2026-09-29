@@ -32,6 +32,19 @@ import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
 import { filterFuzzy, highlightFuzzy } from "./fuzzy";
+import {
+	disableMouse,
+	enableMouse,
+	enableMouseMove,
+	getClickedItem,
+	getHoveredItem,
+	parseSGRMouseDataAll,
+	registerClickableArea,
+	registerHoverableArea,
+	unregisterClickableArea,
+	unregisterHoverableArea,
+} from "./mouse";
+import { applyClass } from "./style";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { computeLinesRendered, terminalWidth, visibleLength } from "./utils";
@@ -50,6 +63,13 @@ export interface PaletteItem<T = string> {
 export interface PaletteOptions<T = string> {
 	items: PaletteItem<T>[];
 	pageSize?: number;
+	/**
+	 * How many rows the cursor advances per wheel tick. Defaults
+	 * to 1 (one tick = one row). Values `< 1` are coerced to 1,
+	 * so 3 means one tick moves the cursor three rows. Useful
+	 * for long action lists where a single tick feels too granular.
+	 */
+	wheelSensitivity?: number;
 	placeholder?: string;
 	/**
 	 * Called once when the palette is cancelled — Escape with an empty
@@ -79,7 +99,13 @@ export async function palette<T = string>(
 	message: string,
 	options: PaletteOptions<T>,
 ): Promise<T> {
-	const { items, pageSize = 8, placeholder = "Type to search…", onCancel } = options;
+	const {
+		items,
+		pageSize = 8,
+		placeholder = "Type to search…",
+		onCancel,
+		wheelSensitivity: wheelSensitivityOption,
+	} = options;
 
 	if (!items.length) {
 		throw new Error("Palette requires at least one item");
@@ -89,6 +115,7 @@ export async function palette<T = string>(
 		return nonInteractivePalette(message, items);
 	}
 
+	const wheelSensitivity = Math.max(1, Math.floor(wheelSensitivityOption ?? 1));
 	return interactivePalette(
 		message,
 		items,
@@ -96,6 +123,7 @@ export async function palette<T = string>(
 		placeholder,
 		onCancel,
 		options.colors,
+		wheelSensitivity,
 	);
 }
 
@@ -137,6 +165,7 @@ function interactivePalette<T>(
 	placeholder: string,
 	onCancel: (() => void) | undefined,
 	colorsOverride: PaletteOptions["colors"],
+	wheelSensitivity: number,
 ): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		const stdin = process.stdin;
@@ -175,6 +204,12 @@ function interactivePalette<T>(
 		let done = false;
 		let linesRendered = 0;
 		let buf = "";
+		let hoveredIndex: number | null = null;
+		const clickableAreaIds = new Set<string>();
+		const hoverableAreaIds = new Set<string>();
+
+		enableMouse();
+		enableMouseMove();
 
 		// Cached filtered results: positions in `items`.
 		let filteredPositions: number[] | null = null;
@@ -185,8 +220,14 @@ function interactivePalette<T>(
 				const hits = filterFuzzy(query, items, searchText);
 				filteredPositions = hits ? hits.map((h) => items.indexOf(h.item)) : [];
 			}
+			// Land on the first *enabled* hit. Resetting to 0 unconditionally
+			// would leave the cursor parked on a disabled row whenever the
+			// top match is disabled, making Enter a no-op until the user
+			// discovers they have to arrow around first.
 			cursor = 0;
 			offset = 0;
+			hoveredIndex = null;
+			cursor = clampCursor(0, 1);
 		}
 
 		function totalCount(): number {
@@ -201,10 +242,40 @@ function interactivePalette<T>(
 			return items[pos];
 		}
 
+		/**
+		 * Clamp `pos` to the nearest enabled item, searching in `dir` so
+		 * disabled items are skippable but never selectable. Wraps around
+		 * the list. Falls back to the current cursor when every visible
+		 * item is disabled (nothing selectable).
+		 */
+		function clampCursor(pos: number, dir: 1 | -1): number {
+			const total = totalCount();
+			if (total === 0) return 0;
+			const p = ((pos % total) + total) % total;
+			const item = itemAt(p);
+			if (item && !item.disabled) return p;
+			let next = p;
+			for (let i = 0; i < total; i++) {
+				next = (((next + dir) % total) + total) % total;
+				const candidate = itemAt(next);
+				if (candidate && !candidate.disabled) return next;
+			}
+			return cursor;
+		}
+
 		function render() {
 			if (done) return;
 			const effective = Math.min(pageSize, totalCount());
 			offset = Math.max(0, Math.min(offset, totalCount() - effective));
+
+			for (const id of clickableAreaIds) {
+				unregisterClickableArea(id);
+			}
+			clickableAreaIds.clear();
+			for (const id of hoverableAreaIds) {
+				unregisterHoverableArea(id);
+			}
+			hoverableAreaIds.clear();
 
 			const positions = filteredPositions ?? items.map((_, idx) => idx);
 			const visible = positions
@@ -228,11 +299,20 @@ function interactivePalette<T>(
 			for (let i = 0; i < visible.length; i++) {
 				const { pos, item } = visible[i];
 				const isCursor = pos === cursor;
+				const isHovered = pos === hoveredIndex;
 				const pointer = isCursor ? `${matchColor("\u25c6")} ` : "  ";
 
 				let label: string;
 				if (item.disabled) {
 					label = colors.dim(item.label);
+				} else if (isHovered) {
+					label =
+						filteredPositions && query
+							? applyClass(
+									"hover",
+									highlightFuzzy(query, item.label, (ch) => matchColor(ch)),
+								)
+							: applyClass("hover", labelColor(item.label));
 				} else if (filteredPositions && query) {
 					label = highlightFuzzy(query, item.label, (ch) => matchColor(ch));
 				} else if (isCursor) {
@@ -250,6 +330,23 @@ function interactivePalette<T>(
 
 				const row = `${pointer}${label}${desc}${shortcut}`;
 				lines.push(isCursor ? `${labelColor(row)}` : row);
+
+				const areaId = `palette-${i}`;
+				registerClickableArea({
+					id: areaId,
+					type: "palette",
+					bounds: { left: 0, top: listTop + 1 + i, width: 999, height: 1 },
+					data: { itemPos: pos },
+				});
+				clickableAreaIds.add(areaId);
+
+				registerHoverableArea({
+					id: `hover-${areaId}`,
+					type: "palette",
+					bounds: { left: 0, top: listTop + 1 + i, width: 999, height: 1 },
+					data: { itemPos: pos },
+				});
+				hoverableAreaIds.add(`hover-${areaId}`);
 			}
 
 			const output = lines.join("\n");
@@ -274,6 +371,9 @@ function interactivePalette<T>(
 			done = true;
 			stdin.setRawMode(false);
 			stdin.removeListener("data", onData);
+			for (const id of clickableAreaIds) unregisterClickableArea(id);
+			for (const id of hoverableAreaIds) unregisterHoverableArea(id);
+			disableMouse();
 		}
 
 		function finalize() {
@@ -306,7 +406,7 @@ function interactivePalette<T>(
 			if (buf.includes("\x1b[A")) {
 				buf = "";
 				if (cursor > 0) {
-					cursor--;
+					cursor = clampCursor(cursor - 1, -1);
 					if (cursor < offset) offset = cursor;
 				}
 				render();
@@ -315,10 +415,78 @@ function interactivePalette<T>(
 			if (buf.includes("\x1b[B")) {
 				buf = "";
 				if (cursor < totalCount() - 1) {
-					cursor++;
+					cursor = clampCursor(cursor + 1, 1);
 					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
 				}
 				render();
+				return;
+			}
+
+			// ── Mouse events ──────────────────────────────────────────
+			const mouseEvents = parseSGRMouseDataAll(buf);
+			if (mouseEvents.length > 0) {
+				buf = "";
+
+				let wheelUp = 0;
+				let wheelDown = 0;
+				let lastMove: (typeof mouseEvents)[number] | null = null;
+				let lastEnabledClickPos = -1;
+
+				for (const mouseEvent of mouseEvents) {
+					if (mouseEvent.type === "click") {
+						const clickedArea = getClickedItem(mouseEvent.x, mouseEvent.y);
+						if (
+							clickedArea &&
+							clickedArea.type === "palette" &&
+							clickedArea.data
+						) {
+							const pos = clickedArea.data.itemPos as number;
+							const item = itemAt(pos);
+							if (item && !item.disabled) lastEnabledClickPos = pos;
+						}
+					} else if (mouseEvent.type === "move") {
+						lastMove = mouseEvent;
+					} else if (mouseEvent.type === "wheel") {
+						if (mouseEvent.wheel === "up") wheelUp++;
+						else if (mouseEvent.wheel === "down") wheelDown++;
+					}
+				}
+
+				if (lastEnabledClickPos >= 0) {
+					cursor = lastEnabledClickPos;
+					finalize();
+					return;
+				}
+
+				let renderNeeded = false;
+				const wheelNet = wheelDown - wheelUp;
+				if (wheelNet !== 0) {
+					hoveredIndex = null;
+					const magnitude = Math.abs(wheelNet) * wheelSensitivity;
+					const dir: 1 | -1 = wheelNet < 0 ? -1 : 1;
+					for (let i = 0; i < magnitude; i++) {
+						cursor = clampCursor(cursor + dir, dir);
+					}
+					if (cursor < offset) offset = cursor;
+					if (cursor >= offset + pageSize) offset = cursor - pageSize + 1;
+					renderNeeded = true;
+				}
+
+				if (lastMove !== null) {
+					const hoveredArea = getHoveredItem(lastMove.x, lastMove.y);
+					const newHovered =
+						hoveredArea && hoveredArea.data
+							? (hoveredArea.data.itemPos as number)
+							: null;
+					if (newHovered !== hoveredIndex) {
+						hoveredIndex = newHovered;
+						renderNeeded = true;
+					}
+				}
+
+				if (renderNeeded) {
+					render();
+				}
 				return;
 			}
 
@@ -381,6 +549,10 @@ function interactivePalette<T>(
 		stdin.setRawMode(true);
 		stdin.setEncoding("utf8");
 		stdin.on("data", onData);
+		// Same reasoning as `computeFilter`: if the very first item is
+		// disabled, park the cursor on the first enabled one so Enter
+		// works without a preliminary arrow press.
+		cursor = clampCursor(0, 1);
 		render();
 	});
 }

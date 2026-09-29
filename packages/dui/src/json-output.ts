@@ -165,6 +165,17 @@ export interface JsonOutputOptions {
 
 const SGR_RE = /\x1b\[([0-9;]*)m/g;
 
+// Standard bright/dim ANSI colours (30-37 / 40-47 fg/bg, 90-97 / 100-107
+// bright variants). Matches the 16-colour palette used by terminals.
+const ANSI16_BASE = [
+	"#000000", "#800000", "#008000", "#808000",
+	"#000080", "#800080", "#008080", "#c0c0c0",
+];
+const ANSI16_BRIGHT = [
+	"#808080", "#ff0000", "#00ff00", "#ffff00",
+	"#0000ff", "#ff00ff", "#00ffff", "#ffffff",
+];
+
 /**
  * Parse ANSI SGR escape sequences from `text` and return the decomposed
  * segments as an array of `{ content, styles }` tuples. This is the
@@ -251,7 +262,13 @@ export function parseSgr(text: string): Array<{
 				}
 			} else if (p === 39) current.fg = undefined;
 			else if (p === 49) current.bg = undefined;
-			else {
+			else if ((p >= 30 && p <= 37) || (p >= 90 && p <= 97)) {
+				// Basic / bright foreground (30-37 / 90-97)
+				current.fg = p >= 90 ? ANSI16_BRIGHT[p - 90] : ANSI16_BASE[p - 30];
+			} else if ((p >= 40 && p <= 47) || (p >= 100 && p <= 107)) {
+				// Basic / bright background (40-47 / 100-107)
+				current.bg = p >= 100 ? ANSI16_BRIGHT[p - 100] : ANSI16_BASE[p - 40];
+			} else {
 				// Unknown — capture in extra
 				if (!current.extra) current.extra = [];
 				current.extra.push(p);
@@ -350,7 +367,8 @@ function stylesEqual(
 		a.underline === b.underline &&
 		a.inverse === b.inverse &&
 		a.fg === b.fg &&
-		a.bg === b.bg
+		a.bg === b.bg &&
+		(a.extra ?? []).join(",") === (b.extra ?? []).join(",")
 	);
 }
 
@@ -415,11 +433,15 @@ export function ansiToJson(
 	options?: { mergeText?: boolean },
 ): JsonNode[] {
 	const segments = parseSgr(text);
-	const nodes: JsonNode[] = segments.map((seg) => ({
-		type: "text" as const,
-		content: seg.content,
-		styles: Object.keys(seg.styles).length > 0 ? seg.styles : undefined,
-	}));
+	const nodes: JsonNode[] = segments.map((seg) => {
+		const styles = { ...seg.styles };
+		if (!styles.extra?.length) delete styles.extra;
+		return {
+			type: "text" as const,
+			content: seg.content,
+			styles: Object.keys(styles).length > 0 ? styles : undefined,
+		};
+	});
 
 	if (options?.mergeText !== false) {
 		return mergeAdjacentText(nodes);
