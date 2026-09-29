@@ -5,6 +5,7 @@
 		"build": "turbo run build",
 		"dev": "turbo run dev --parallel",
 		"test": "turbo run test",
+		"bench": "turbo run bench",
 		"release": "pnpm build && pnpm changeset publish",
 		"version-packages": "changeset version",
 		"format": "pnpm exec biome format --write .",
