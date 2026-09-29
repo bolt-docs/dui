@@ -1,5 +1,39 @@
 # @dui-toolkit/plugin-diff
 
+## 0.4.0
+
+### Minor Changes
+
+- [`aa97ab7`](https://github.com/bolt-docs/dui/commit/aa97ab76bcfe48d9a23a2ef5b67766685a41214c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Interactive diff review (diff v2)** — review and apply hunks one by one:
+
+  - **`reviewDiff(old, new, options)`** — interactive hunk picker with
+    git-add-p style keys: `j`/`k` (or arrows) navigate hunks, `a`/`y`
+    apply, `d`/`n` discard, `A`/`D` decide every remaining hunk at once,
+    `?` toggles help, `q`/Esc finishes with the current selections, and
+    Ctrl+C cancels (nothing applied). Falls back gracefully to a
+    non-interactive mode when stdin/stdout aren't TTYs (or with
+    `disable: true`), where `defaultApply: true` applies everything.
+  - **`parseDiff(old, new, options)`** — pure hunk parsing with per-hunk
+    stats (old/new start positions, line counts, additions, deletions).
+  - **`applyHunks(oldContent, hunks, applied)`** — apply only the selected
+    hunks to content; delegates to jsdiff's `applyPatch()` so offsets
+    between non-contiguous hunks stay correct, with a deterministic
+    manual-merge fallback.
+  - **`serializeHunk` / `serializeHunks`** — rebuild unified patch text
+    from selected hunks (`0,0` ranges follow jsdiff's own `formatPatch`
+    convention so patches round-trip exactly).
+  - **`applyDiff(entries, options)`** — review a list of files and write
+    the resulting content to the working tree (`dryRun` and an injectable
+    `writeFile` for tests).
+  - **Docs** — the interactive review keymap, non-TTY mode, result shape,
+    building blocks and the apply-to-disk workflow are now documented in
+    the EN + ES plugin guides.
+
+### Patch Changes
+
+- Updated dependencies [[`0204e9c`](https://github.com/bolt-docs/dui/commit/0204e9c806da758b35875b09e6da5154425ea7b6), [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c), [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053), [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c), [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb), [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc), [`b496505`](https://github.com/bolt-docs/dui/commit/b496505ba7c599d084a3ef9b9edb8e949f153328), [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc), [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf), [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0)]:
+  - @bdocs/dui@0.7.0
+
 ## 0.4.0-next.8
 
 ### Patch Changes

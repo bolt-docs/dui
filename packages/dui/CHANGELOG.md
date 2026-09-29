@@ -1,5 +1,221 @@
 # @bdocs/dui
 
+## 0.7.0
+
+### Minor Changes
+
+- [`d5af9a4`](https://github.com/bolt-docs/dui/commit/d5af9a434882efad4b2e766bfdc07acd4934c24c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **New features**
+
+  - **`form()` number fields** — new `type: "number"` field with `min`, `max`,
+    and a typed `validate(value: number)` callback. Input is filtered to
+    digits, minus, and decimal point; the result is returned as a `number`
+    (not a string).
+  - **`form()` textarea fields** — new `type: "textarea"` field with configurable
+    `rows` (default 3). Enter inserts a newline; Tab submits (or advances
+    if not the last field). Up/Down arrows navigate between lines. Inactive
+    fields collapse to a single-line preview. Backspace at line start joins
+    with the previous line.
+  - **Tab submits on the last field** — pressing Tab on the last field now
+    validates all fields and submits instead of wrapping to the first field.
+    This gives textarea-as-last-field a natural submit key.
+
+- [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **v0.7.0 — logger v2, testing utils, tree, presets & accessibility**
+
+  - **Logger v2** — leveled logging with env-based filtering
+    (`getEffectiveLogLevel()` honors `LOG_LEVEL` / `DEBUG` / `NO_COLOR`),
+    timestamps, a file transport, and JSON output; `createLogger()` /
+    `configureLogger()` plus the module-level `debug` / `info` / `success` /
+    `warn` / `error` helpers.
+  - **Lazy tree loading** — `tree()` accepts an async `loadChildren` so nodes
+    expand on demand instead of preloading the full hierarchy.
+  - **Grapheme-aware widths** — `splitGraphemes()` and CJK/ZWJ/emoji-aware
+    measuring (family emoji, flags, skin tones no longer break box/table/grid
+    layout).
+  - **Widget testing utilities** — `createMockTty()`, `withMockTty()`,
+    `snapshotWidget()`, `snapshotStatic()` with `MockTty` for deterministic
+    snapshot tests of interactive widgets.
+  - **New theme presets** — `tokyonight`, `rose-pine`, and `ayu` added to the
+    `presets` registry alongside dracula/nord/solarized/catppuccin/gruvbox.
+  - **Accessibility live announcements** — `announce()`, `flushAnnouncements()`,
+    `clearAnnouncements()`, `getAnnouncementQueue()` for screen-reader live
+    regions, honoring plain mode.
+  - **Banner fixes** — ANSI Shadow figlet rendering hardened (plain-mode `#`
+    fill, trimmed rows, smush layout correctness, accented glyphs); docs
+    previews kept in sync with real output.
+
+- [`7260786`](https://github.com/bolt-docs/dui/commit/72607867c0fadf83b131e668747a9880354b68cc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **v0.7.0 — new widgets and APIs**
+
+  - **`form()`** — full interactive form engine. Declarative field definitions
+    (`FormField`), text + select field types (`FormTextField` / `FormSelectField`),
+    validation, and typed submission.
+  - **`palette()`** — fuzzy-searchable command palette (VS Code/Raycast-style action picker) with keyboard navigation.
+  - **Fuzzy search engine** — `fuzzyMatch()`, `filterFuzzy()`, and
+    `highlightFuzzy()` with `FuzzyResult` scoring; powers type-ahead lists and
+    command palettes.
+  - **OSC 8 hyperlinks** — `link()` / `linkify()` / `hyperlink()` render clickable
+    terminal links with `supportsHyperlinks()` detection (Kitty/iTerm2/WezTerm
+    native support, tmux passthrough-aware).
+  - **OSC 52 clipboard** — `copyToClipboard()` / `copy()` write to the system
+    clipboard with `clipboardSupported()` detection.
+  - **`banner()`** — large terminal banners: embedded ANSI Shadow figlet font with
+    smush layout, kerning, spacing, `#` fill override, `block` style, accented
+    glyphs, and plain-mode fallback.
+  - **`richtext()`** — rich-text rendering with inline styles, `richtextToPlain()`
+    conversion, and full plain-mode support.
+  - **Toast center** — `createToastCenter()` / `toast()` / `dismissAllToasts()`
+    with `ToastType` severities and queueing.
+  - **`createStatusBar()`** — persistent status-bar widget with parts-based layout.
+  - **Alt screen** — `withAltScreen()`, `enterAltScreen()`, `exitAltScreen()`,
+    `saveCursor()` / `restoreCursor()`, `showCursor()` / `hideCursor()`.
+  - **Password input** — masked input mode for secrets.
+  - **`onCancel` hooks on every interactive prompt** (`select`, `multiselect`,
+    `tree`, `form`, `palette`, …) so consumers can distinguish cancel from submit.
+  - **Theme slots** for all new widgets (`form.*`, `palette.*`, `banner.*`,
+    `richtext.*`, `toast.*`, `statusbar.*`) via the existing `configure()` slot
+    system.
+
+- [`b496505`](https://github.com/bolt-docs/dui/commit/b496505ba7c599d084a3ef9b9edb8e949f153328) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Interactive-prompt parity and test coverage for the `next` features:
+
+  - **palette() mouse + skip-disabled** — the palette is now fully mouse-driven like `select`: click a row to run it (clicks on disabled rows are ignored), scroll to move the cursor at `wheelSensitivity` rows per tick, and hover to highlight without moving the cursor. Arrow keys and wheel ticks skip `disabled` items instead of landing on them, the cursor opens on the first _enabled_ item (so Enter always works), and `disableMouse()`/area cleanup happens on finalize/cancel.
+  - **New tests** — first direct coverage for `batch`, `gradient`, `json-output`, `capabilities`, `paginate`, `surface` perf (core) and `detectMoves`/`move.ts` (dui-diff). These caught four real bugs, now fixed:
+    - `json-output` SGR parser did not map ANSI 16-color codes (30-37 / 40-47 / 90-97 / 100-107) to named fg/bg colors, and `stylesEqual` ignored the `extra` fields.
+    - `capabilities` color-depth probing misclassified `TERM=xterm-kitty` (and friends) as 16-color because the generic `xterm` branch matched before the truecolor check.
+    - `ClickableArea`/`HoverableArea` `type` was a closed union that did not include `"palette"`, so the mouse-enabled palette did not typecheck. The union is now the exported `MouseAreaType`.
+    - `surface`'s new `hexToRgb` memo is capped at 1024 entries, because `write()` accepts caller-supplied `fg`/`bg` and a TUI that generates a fresh colour per frame would otherwise grow it without bound.
+  - **surface perf hot path** — `write()` skips the grapheme/width machinery for pure-ASCII text, and `flush()`/`render()` reuse a single per-cell `delta` object instead of allocating one per cell (cached RGB parse). Measured on the `surface-batch` benchmark (median of 3 runs, versus the pre-optimisation code): `surface.write()/fill()` ~16 → ~577 ops/sec and `surface.render()` full→ANSI ~20 → ~227 ops/sec. The `flush()` figures are too noisy on shared hardware to quote, so they are not claimed here.
+  - **`pnpm bench`** — the `surface-batch` micro-benchmark is now wired up as a root script (`turbo run bench`) and is explicitly excluded from the turbo cache, since a cached benchmark just replays stale numbers instead of measuring.
+
+### Patch Changes
+
+- [`0204e9c`](https://github.com/bolt-docs/dui/commit/0204e9c806da758b35875b09e6da5154425ea7b6) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug hunting + TDD fixes**
+
+  Fixed 7 bugs found through systematic code analysis and TDD:
+
+  - **`computeLinesRendered` off-by-one** — Changed `Math.floor` to
+    `Math.ceil` so lines wrapping to an exact terminal-width boundary
+    are counted correctly (e.g. 81 chars on an 80-col terminal now
+    returns 2 rows). Affects cursor positioning in all interactive
+    prompts (form, select, multiselect, palette, tree).
+  - **`truncateByCells` docstring mismatch** — Now returns `"…"` when
+    `maxCells ≤ 0` as the docstring promises, instead of `""`.
+  - **`paginate` CJK counting** — Uses `visibleLength()` (cells)
+    instead of `stripAnsi().length` (codepoints), so CJK content
+    that occupies 2 cells per character is paginated correctly.
+  - **Form `firstLine` dead code** — Removed the unused variable from
+    the non-interactive textarea handler.
+  - **Form number field `-` with negative min** — `finalize()` now
+    treats a bare `-` as empty input, falling back to the field's
+    default value instead of silently submitting `0`.
+  - **Form `initState` unreachable condition** — Removed the dead
+    `selected < 0` branch that could never execute.
+  - **Modal dead code** — Removed unused `row` variable that was
+    computed then discarded; the button row is now computed once.
+
+- [`e6e22ff`](https://github.com/bolt-docs/dui/commit/e6e22ffff8a72dc9426dcfa9d336c8118946269c) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix four more bugs in the `next` features (TDD):
+
+  - **form() up arrow on a `select` field** — the up arrow was a no-op on selects (only down/left/right worked), so you could not return focus to the field above. The select case now moves the pointer back like a text field, and returns immediately so the leftover escape bytes are not typed.
+  - **tree() cursor jumps to the top after collapsing a nested branch** — `rebuildFlat()` positioned the cursor onto the collapsed ancestor via `resetFilter()` after positioning, which unconditionally reset `cursor` back to `0`. The filter reset now runs first and the cursor is pinned to the collapsed branch afterwards.
+  - **NotifyQueue stale priority after debounce merge** — merging a higher `level` into a queued item updated `opts.level` but left `levelPriority` stale, so the upgraded item drained late and could even be evicted by overflow protection as the "lowest" item.
+  - **NotifyQueue `flush()` still throttled** — `flush()` drained a single batch and let the rest wait for the throttle interval despite documenting that it bypasses the throttle. It now drains every queued item immediately.
+
+- [`5e185dc`](https://github.com/bolt-docs/dui/commit/5e185dce40d4bbf824743e34aeb4ec2e09b26053) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug fixes**
+
+  - **Toast box alignment** — the top border of rendered toasts was two
+    columns wider than the body and bottom borders (the header's
+    trailing space stacked with the template's leading `┌─ ` gap), so
+    stacked toasts looked misaligned. The dash run now accounts for both
+    and every row renders at the same width.
+  - **Solarized preset** — `markdown.heading6` used `#6c71c4` (typo);
+    the official Solarized violet is `#6c71c6`. The heading now matches
+    the rest of the palette.
+  - **`richtext()` link color** — the `richtext.link` theme slot was
+    force-cast to a string before painting, so `{ fg, bg }` color
+    objects (and any non-string `ColorStyle`) silently misbehaved. Link
+    painting now resolves through `resolveColor` like every other slot.
+  - **Fuzzy docs** — the `fuzzyMatch("fb", "file-browser")` examples in
+    the JSDoc claimed a score of 12; the real subsequence scorer returns 3. Examples updated to the actual values so the shipped `.d.ts`
+    matches behavior.
+  - **`palette()` description** — the feature is a fuzzy-searchable
+    command palette (VS Code/Raycast-style action picker), not a color
+    picker; the release notes now describe it accurately.
+
+- [`09d1b68`](https://github.com/bolt-docs/dui/commit/09d1b6863b519a8d123f6eb347fff276a1d41ddb) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug fixes**
+
+  - **`form()` stray characters from escape sequences** — pressing Delete
+    (`\x1b[3~`), Page Up/Down, Home, or End keys caused the trailing
+    character (`~`, `H`, `F`) to leak into the text field. Unrecognized
+    escape sequences are now consumed and discarded.
+  - **`form()` dead Ctrl+D handler** — the `else if` branch for
+    `\x04` (Ctrl+D) was unreachable because the preceding backspace
+    condition already matched. Ctrl+D is now explicitly handled
+    (silently ignored in text fields).
+  - **`richtext()` stack overflow on deep nesting** — `parseNodes`
+    recursed without a depth cap, so crafted input like 200 levels of
+    `****…****` could blow the call stack. A `MAX_PARSE_DEPTH` (32)
+    limit now truncates further nesting gracefully.
+  - **`richtext()` crash on invalid color specs** — a `{notaColor:text}`
+    span called `parseColor` which threw, crashing the entire render.
+    Invalid color specs now fall back to unstyled text.
+
+- [`ff65706`](https://github.com/bolt-docs/dui/commit/ff65706732f19f4fc86418ab3267cd4472702c3f) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Fix interactive `input()` caret drift on CJK text**
+
+  The prompt caret was positioned with UTF‑16 code-unit lengths
+  (`promptPrefix.length` + `buf.slice(0, cursorPos).length`), but
+  `readline.cursorTo` needs terminal **columns**. Each CJK ideograph in
+  the typed value — or in the prompt message itself — is 2 cells wide
+  but only 1 code unit, so the caret landed one column too far left for
+  every CJK character before it, appearing mid-text. The prefix and the
+  text before the caret are now measured with `visibleLength()`;
+  password fields keep the unit-index path since each code unit is
+  masked as a single `•` bullet. `confirm()`/`prompt.ts` is unaffected —
+  it delegates caret rendering to `readline.question`, which is already
+  fullwidth-aware.
+
+- [`41422af`](https://github.com/bolt-docs/dui/commit/41422af5e5ebd94d71b9bcd3705c6b09f8d2c0bc) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Fix three rendering bugs in the `next` features (TDD):
+
+  - **RenderSurface wide-character alignment** — `write()` skipped CJK/emoji glyphs without reserving their terminal cells, so every following character in the row landed one cell early. Glyphs are now written whole (grapheme-aware) and their continuation cells reserved.
+  - **RenderSurface dim attribute lost on bold→dim transitions** — the SGR delta emitter closed both bold and dim with `22` but never re-opened dim; the pair is now enumerated so `22;2` is emitted and dim survives.
+  - **form() caret drift with CJK values** — the caret column inside a text field's value box counted UTF-16 code units instead of visible cells, drifting the caret into the middle of typed CJK text (the same class of bug fixed for `input()` earlier). Password fields keep the unit-index path because bullets mask one per code unit.
+
+- [`4e6dc1d`](https://github.com/bolt-docs/dui/commit/4e6dc1d1863002bc06841136e89d133bf9b3becf) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug hunting round 3 — toast border geometry, `grey` alias, grapheme-safe fuzzy highlight**
+
+  - **`toast` top border overhangs when the title is wider than the message** —
+    The box content width was derived from `title.length` (UTF‑16 units)
+    and ignored the badge + separator cells, so any title longer than the
+    message (or any CJK title, 2 cells per character) rendered a top row
+    wider than the body and bottom rows. The box is now sized from the
+    whole header line's `visibleLength`, keeping every row the same width.
+  - **`colorize` / `applyStyle` / `toAnsiFg` / `toAnsiBg` threw on the
+    `"grey"` alias** — The chainable `colors.grey`, `colorMap.grey` and
+    theme slots all accept `"grey"`, but the string color entry points
+    routed it into `parseColor` and crashed with
+    `Unsupported color format: "grey"`. `"grey"` now aliases to
+    `"gray"` (SGR 90 / bg 100) everywhere a named fg/bg color is accepted.
+  - **`highlightFuzzy` sliced multi-codepoint graphemes in half** —
+    Matched codepoint indices were applied against `Array.from(text)`, so
+    a query matching a member emoji inside a ZWJ family sequence (e.g.
+    👩 inside 👨‍👩‍👧‍👦) or the base letter of a combining-mark cluster wrapped
+    only part of the grapheme, breaking the sequence into fragment glyphs
+    on terminals. Matched indices are now mapped onto whole graphemes
+    (`splitGraphemes`) before highlighting.
+
+- [`fefc85e`](https://github.com/bolt-docs/dui/commit/fefc85edb5a388b636a9d797ea5dffb4c2051ae0) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - **Bug fixes**
+
+  - **`truncateAnsi()` OSC leak** — the TUI helper only handled CSI escape
+    sequences (`\x1b[...m`). OSC sequences like hyperlinks
+    (`\x1b]8;;url\x1b\\`) were partially consumed: the `\x1b` was
+    swallowed as zero-width and the remainder leaked as visible garbage in
+    truncated output. Added `escapeLength()` that correctly scans past CSI,
+    OSC (BEL and ST terminators), and two-byte escapes.
+  - **`SelectList` empty-filter crash** — ArrowUp/Down/Home/End navigation
+    called `onSelect` unconditionally, passing `undefined` to the callback
+    when the active filter yielded zero results. All navigation paths now
+    guard against an empty items list.
+  - **`form()` non-interactive textarea default** — the non-interactive
+    textarea path always collected fresh input, ignoring `field.default`.
+    Submitting an empty first line now falls back to the default value,
+    matching the behavior of text and number fields.
+
 ## 0.7.0-next.8
 
 ### Patch Changes
