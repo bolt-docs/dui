@@ -402,3 +402,28 @@ separate changesets so a slipping wave does not hold the release.
 
 The `node:fs` import is now gone from all 7 toolkit dists. The core keeps
 its own because `logger.ts` genuinely reads files.
+
+### Known flake: 5s timeouts under CPU contention
+
+Found while verifying this branch. **Pre-existing — it reproduces on
+`master` too**, so it is not a regression from 0.7.x.
+
+Under saturating CPU load (`yes` × 8 on 8 cores), 1–8 core tests fail with
+`Test timed out in 5000ms`. The set varies per run, which is what marks it
+as contention rather than a real defect:
+
+| Branch | Runs | Failing files |
+| --- | --- | --- |
+| `master` | 2 | `banner`, `bug-hunting`, `logger-v2`, `tree-lazy` |
+| `fix/v0.7.x` | 2 | `banner`, `bug-hunting-v3`, `form`, `grid`, `multi-progress`, `steps`, `tabs` |
+
+Not one file overlaps consistently, and every failure is a timeout rather
+than an assertion mismatch. The 5s default is simply not enough headroom
+when 8 vitest workers share 8 already-busy cores.
+
+Unverified: whether these are all the same root cause. The fix is probably
+raising `testTimeout` in `packages/dui/vitest.config.ts`, or replacing the
+sleep-and-poll patterns with condition-based waits — the same treatment
+the `dui-notify` queue tests already received (see the "queue flake —
+FIXED" entry above). Worth doing before it eats a real CI run, but it is
+its own task rather than part of this patch line.
