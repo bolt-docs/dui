@@ -1,6 +1,7 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
+import { createPromptInterface, readAnswer } from "./readline-prompt";
 import {
 	disableMouse,
 	enableMouse,
@@ -149,10 +150,7 @@ function nonInteractiveMultiselect<T>(
 	choices: MultiselectChoice<T>[],
 	required: boolean,
 ): Promise<T[]> {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
+	const rl = createPromptInterface();
 
 	return new Promise<T[]>((resolve) => {
 		console.log(`\n${message}:`);
@@ -162,7 +160,8 @@ function nonInteractiveMultiselect<T>(
 			console.log(`  ${i + 1}. ${c.label}${d}`);
 		}
 
-		rl.question(
+		readAnswer(
+			rl,
 			`Enter numbers separated by commas (1-${choices.length}): `,
 			(answer) => {
 				rl.close();

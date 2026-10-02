@@ -1,6 +1,7 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
+import { createPromptInterface, readAnswer } from "./readline-prompt";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { computeLinesRendered, stripAnsi, visibleLength } from "./utils";
@@ -45,14 +46,11 @@ export async function input(
 	const isPassword = inputType === "password";
 
 	if (!process.stdin.isTTY || !process.stdout.isTTY) {
-		const rl = readline.createInterface({
-			input: process.stdin,
-			output: process.stdout,
-		});
+		const rl = createPromptInterface();
 
 		return new Promise<string>((resolve) => {
 			const hint = defaultValue !== undefined ? ` (${defaultValue})` : "";
-			rl.question(`${message}${hint}: `, (answer) => {
+			readAnswer(rl, `${message}${hint}: `, (answer) => {
 				rl.close();
 				const value = answer.trim() || defaultValue || "";
 				if (validate) {

@@ -1,6 +1,7 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
+import { createPromptInterface, readAnswer } from "./readline-prompt";
 import {
 	disableMouse,
 	enableMouse,
@@ -96,10 +97,7 @@ function nonInteractiveSelect<T>(
 	message: string,
 	choices: SelectChoice<T>[],
 ): Promise<T> {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
+	const rl = createPromptInterface();
 
 	return new Promise<T>((resolve) => {
 		console.log(`\n${message}:`);
@@ -109,7 +107,7 @@ function nonInteractiveSelect<T>(
 			console.log(`  ${i + 1}. ${c.label}${d}`);
 		}
 
-		rl.question(`Enter number (1-${choices.length}): `, (answer) => {
+		readAnswer(rl, `Enter number (1-${choices.length}): `, (answer) => {
 			rl.close();
 			const idx = parseInt(answer.trim(), 10) - 1;
 			if (idx >= 0 && idx < choices.length && !choices[idx].disabled) {

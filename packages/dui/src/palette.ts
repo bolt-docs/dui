@@ -32,6 +32,7 @@ import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
 import { filterFuzzy, highlightFuzzy } from "./fuzzy";
+import { createPromptInterface, readAnswer } from "./readline-prompt";
 import {
 	disableMouse,
 	enableMouse,
@@ -131,10 +132,7 @@ function nonInteractivePalette<T>(
 	message: string,
 	items: PaletteItem<T>[],
 ): Promise<T> {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
+	const rl = createPromptInterface();
 
 	return new Promise<T>((resolve) => {
 		console.log(`\n${message}:`);
@@ -145,7 +143,7 @@ function nonInteractivePalette<T>(
 			console.log(`  ${i + 1}. ${it.label}${desc}${d}`);
 		}
 
-		rl.question(`Enter number (1-${items.length}): `, (answer) => {
+		readAnswer(rl, `Enter number (1-${items.length}): `, (answer) => {
 			rl.close();
 			const idx = Number.parseInt(answer.trim(), 10) - 1;
 			if (idx >= 0 && idx < items.length && !items[idx].disabled) {

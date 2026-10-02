@@ -39,6 +39,11 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
+import {
+	createPromptInterface,
+	readAnswer,
+	readLinesUntilBlank,
+} from "./readline-prompt";
 import type { ColorStyle } from "./theme";
 import { resolveColor } from "./theme";
 import { computeLinesRendered, visibleLength } from "./utils";
@@ -318,10 +323,7 @@ async function nonInteractiveForm(
 ): Promise<Record<string, unknown>> {
 	const result: Record<string, unknown> = {};
 	for (const field of fields) {
-		const rl = readline.createInterface({
-			input: process.stdin,
-			output: process.stdout,
-		});
+		const rl = createPromptInterface();
 		if (isSelectField(field)) {
 			await new Promise<void>((resolve) => {
 				console.log(`${field.label}:`);
@@ -330,7 +332,8 @@ async function nonInteractiveForm(
 					const d = c.disabled ? ` ${colors.dim("(disabled)")}` : "";
 					console.log(`  ${i + 1}. ${c.label}${d}`);
 				}
-				rl.question(
+				readAnswer(
+					rl,
 					`Enter number (1-${field.choices.length}): `,
 					(answer) => {
 						rl.close();
@@ -356,28 +359,20 @@ async function nonInteractiveForm(
 				console.log(
 					`${field.label}${hint} — enter text, finish with an empty line:`,
 				);
-				const lines: string[] = [];
-				const onLine = (line: string) => {
-					if (line === "") {
-						rl.removeListener("line", onLine);
-						rl.close();
-						// Apply default when no input was provided.
-						const value =
-							lines.length === 0 && field.default !== undefined
-								? field.default
-								: lines.join("\n");
-						if (field.validate) {
-							const v = field.validate(value);
-							if (v !== true)
-								console.log(colors.red(`  ✖ ${v}`));
-						}
-						result[field.id] = value;
-						resolve();
-						return;
+				readLinesUntilBlank(rl, (lines) => {
+					rl.close();
+					// Apply default when no input was provided.
+					const value =
+						lines.length === 0 && field.default !== undefined
+							? field.default
+							: lines.join("\n");
+					if (field.validate) {
+						const v = field.validate(value);
+						if (v !== true) console.log(colors.red(`  ✖ ${v}`));
 					}
-					lines.push(line);
-				};
-				rl.on("line", onLine);
+					result[field.id] = value;
+					resolve();
+				});
 			});
 		} else {
 			await new Promise<void>((resolve) => {
@@ -385,7 +380,7 @@ async function nonInteractiveForm(
 					field.default !== undefined
 						? ` (${field.default})`
 						: "";
-				rl.question(`${field.label}${hint}: `, (answer) => {
+				readAnswer(rl, `${field.label}${hint}: `, (answer) => {
 					rl.close();
 					if (isNumberField(field)) {
 						const raw = answer.trim();

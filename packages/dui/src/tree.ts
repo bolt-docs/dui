@@ -1,6 +1,7 @@
 import * as readline from "node:readline";
 import { colors } from "./color";
 import { getConfig } from "./config";
+import { createPromptInterface, readAnswer } from "./readline-prompt";
 import {
 	disableMouse,
 	enableMouse,
@@ -273,10 +274,7 @@ function nonInteractiveTree<T>(
 	treeData: TreeNode<T>[],
 ): Promise<T | undefined> {
 	const leaves = getAllLeaves(treeData);
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
+	const rl = createPromptInterface();
 
 	return new Promise<T | undefined>((resolve) => {
 		console.log(`\n${message}:`);
@@ -286,7 +284,7 @@ function nonInteractiveTree<T>(
 			console.log(`  ${i + 1}. ${c.label}${d}`);
 		}
 
-		rl.question(`Enter number (1-${leaves.length}): `, (answer) => {
+		readAnswer(rl, `Enter number (1-${leaves.length}): `, (answer) => {
 			rl.close();
 			const idx = parseInt(answer.trim(), 10) - 1;
 			if (idx >= 0 && idx < leaves.length && !leaves[idx].disabled) {
