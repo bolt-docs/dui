@@ -139,7 +139,9 @@ export const AUTHOR = "Bolt Docs";`;
 	section("Available palette");
 
 	const palette = getPalette();
-	const slots = [
+	// Annotate the tuple: without it the array widens to
+	// `(string | ((s: string) => string))[]`, so `fn` is not callable.
+	const slots: [string, (s: string) => string][] = [
 		["add", palette.add],
 		["del", palette.del],
 		["context", palette.context],

@@ -314,6 +314,20 @@ export interface DuiTheme {
 	statusbar?: StatusBarTheme;
 	form?: FormTheme;
 	palette?: PaletteTheme;
+	/**
+	 * Namespaces registered by plugins, e.g. `diff`, `notify`, `chart`,
+	 * `qrcode`, `image`.
+	 *
+	 * `getFromTheme` walks an arbitrary dotted path, and the plugin API
+	 * exposes `registerThemeSlot`, so a plugin's namespace cannot be known
+	 * here at compile time. Declared so `configure({ theme: { diff: { add:
+	 * "#88ff88" } } })` typechecks — which the docs document and the
+	 * examples use.
+	 *
+	 * Declared properties above still win over this index signature, so a
+	 * typo in a built-in slot is still caught.
+	 */
+	[key: string]: unknown;
 }
 
 type ColorFn = (s: string) => string;

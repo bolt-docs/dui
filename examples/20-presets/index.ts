@@ -54,11 +54,9 @@ function renderDashboard(): void {
 
 	console.log(
 		tabs({
-			items: [
-				{ value: "open", label: "Open" },
-				{ value: "closed", label: "Closed" },
-				{ value: "drafts", label: "Drafts" },
-			],
+			// `tabs()` takes plain labels, not `{ value, label }` objects —
+			// unlike `select()` / `palette()`, which resolve to a value.
+			items: ["Open", "Closed", "Drafts"],
 			active: 1,
 		}),
 	);
