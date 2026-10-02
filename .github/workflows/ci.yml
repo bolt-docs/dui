@@ -11,6 +11,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Runs per package, not on the built output: `tsc --noEmit` reads
+      # src/ directly, so it catches a broken build config too. Every
+      # package in packages/ has a tsconfig.json, so a new one cannot
+      # silently skip the gate.
+      - name: Typecheck (all packages)
+        run: pnpm typecheck
+
   test:
     name: Test
     runs-on: ubuntu-latest
