@@ -331,13 +331,33 @@ test already exists in `packages/dui/tests/plugin.test.ts:89` to update.
 
 ### Remaining 0.7.x items
 
-| # | Change | Notes |
+| # | Change | Status |
 | | --- | --- |
-| 0.4 | `turbo.json`: `"test": { "dependsOn": ["^build"] }` | `pnpm test` fails on a fresh clone today — every plugin suite dies with `Failed to resolve entry for package "@bdocs/dui"`. The workflows hide this by running `pnpm build` first. |
-| 0.5 | Fix the 3 `sharp` type errors in `dui-image`; add the missing `dui-tui/tsconfig.json` | `gif.ts(84)` `Cannot find namespace 'sharp'`, `load.ts(40)` and `load.ts(266)`. `dui-tui` is the only package with no `tsconfig.json`, so it cannot be typechecked at all. |
-| 0.6 | Fix the 7 real type errors in `examples/` | `12-diff`, `16-plugin-stack`, `19-notify`, `20-presets`. These are the first code anyone copies. |
-| 0.7 | Add a `tsc --noEmit` CI gate | Must land *after* 0.5 or it fails on `dui-image`. |
-| 0.8 | Close the already-resolved ROADMAP items | The 8 website `tsc` errors and the "67 broken cross-references" are **both already fixed** — `npx tsc --noEmit` and `npx boltdocs build` in `website/` both exit clean. Stop re-litigating them. |
+| 0.4 | `turbo.json`: `"test": { "dependsOn": ["^build"] }` | **done** — `pnpm test` used to die on a fresh clone with `Failed to resolve entry for package "@bdocs/dui"`; the workflows hid it by running `pnpm build` first. Verified with every `dist` and the turbo cache removed: 1,498 tests pass from a cold start. |
+| 0.5 | Fix the `sharp` type errors in `dui-image`; add the missing `dui-tui/tsconfig.json` | **done** — 7 errors, not 3, all from one root cause: `sharp` typed as `typeof import("sharp")` (the module namespace) where the callable default export was needed. Added a `SharpModule` alias. `dui-tui` also needed `TData extends object`, which `setData()`'s `Object.assign` has always required. |
+| 0.6 | Fix the real type errors in `examples/` | **done** — 4 of the 7 traced back to `DuiTheme` rejecting plugin namespaces (`diff`, `notify`), which the diff docs page documents as supported. See 0.6 below. |
+| 0.7 | Add a `tsc --noEmit` CI gate | **done** — `scripts/typecheck.mjs`, run per package against `src/`. Fails loudly if a package has no `tsconfig.json`, since a skip would recreate the `dui-tui` bug. Both failure paths verified by hand. |
+| 0.8 | Close the already-resolved ROADMAP items | **done** — the 8 website `tsc` errors and the "67 broken cross-references" were both already fixed; `npx tsc --noEmit` and `npx boltdocs build` in `website/` exit clean. |
+
+### 0.6 in detail — plugin theme namespaces
+
+`DuiTheme` declared only the core slots, but `getFromTheme` walks an
+arbitrary dotted path and the plugin API exposes `registerThemeSlot`, so a
+plugin's namespace cannot be known at compile time. The documented form
+
+```ts
+configure({ theme: { diff: { add: "#88ff88" } } });
+```
+
+was a type error even though it worked at runtime — which is why three
+examples failed with `'diff' does not exist in type 'DuiTheme'`. **The
+types were contradicting the docs.**
+
+Adding `[key: string]: unknown` fixes it without weakening the built-in
+slots: `theme: { box: { borderr: "red" } }` still fails with `TS2561`
+against `BoxTheme`, because declared properties win over an index
+signature. Only a misspelled *namespace* slips through, which is the
+unavoidable cost of supporting plugin namespaces at all.
 
 **Deliberately excluded from 0.7.x:** the npm publish credentials
 (`release.yml` has no `registry-url`, and `.npmrc` has no
@@ -347,18 +367,20 @@ is not blocking.
 
 ## Next steps
 
-Execution order for the 0.7.x branch, so each step leaves the repo
-publishable and the CI gate is never red:
+Order they were landed in on `fix/v0.7.x`, so each commit leaves the repo
+publishable and the CI gate never goes red:
 
-1. **0.5** — unblock typechecking.
-2. **0.7** — add the `tsc --noEmit` gate.
-3. **0.1** — the P0 non-TTY hang + regression tests.
-4. **0.2** — inline `DUI_VERSION`, update the parity test.
-5. **0.4** — make `pnpm test` self-sufficient.
-6. **0.6** — fix the examples.
-7. **0.8** — update this file, add the `0.7.1` changeset.
-8. Verify: full suite (1,483 tests) + `tsc --noEmit` across all 8 packages
-   + `pnpm build` + `pnpm bench` before cutting the changeset.
+1. **0.5** — unblock typechecking. (`b7aa880`)
+2. **0.7** — add the `tsc --noEmit` gate. (`0fa9eeb`)
+3. **0.1** — the P0 non-TTY deadlock + regression tests. (`b0e8d61`)
+4. **0.2** — inline the package versions at build time. (`8ac316a`)
+5. **0.4** — make `pnpm test` self-sufficient. (in `8ac316a`)
+6. **0.6** — plugin theme namespaces + the examples. (`d314bf9`)
+
+**Remaining before cutting the changeset:**
+
+- `pnpm bench` has not been re-run since these changes.
+- The changeset itself, then `changeset version`.
 
 ⚠️ Watch the 0.7.0 `plugin-tui` incident: a duplicated `peerDependency`
 silently escalated a patch to `1.0.0`. Inspect the changeset diff before
@@ -366,3 +388,17 @@ running `changeset version`.
 
 Then, back on `master` for 0.8.0: Wave 1 → Wave 2 → Wave 3, as four
 separate changesets so a slipping wave does not hold the release.
+
+### Verification state at the end of 0.7.x
+
+| Check | Result |
+| --- | --- |
+| `pnpm test` (all 8 packages, cold) | 1,498 passing — 1,024 core in 62 files + 474 across 7 plugins |
+| `pnpm typecheck` | clean in all 8 packages |
+| `pnpm build` | clean, 8 versions inlined |
+| `examples/ tsc --noEmit` | 0 errors (was 7) |
+| Non-TTY deadlock | fixed, 11 regression tests |
+| Binary import (no `package.json`) | loads and reports the right version |
+
+The `node:fs` import is now gone from all 7 toolkit dists. The core keeps
+its own because `logger.ts` genuinely reads files.
