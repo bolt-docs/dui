@@ -86,6 +86,54 @@ button,
 	}
 }
 
+/* ── Block banner (BlockBanner.tsx) ────────────────────────── */
+/* One box per ASCII cell. Painting cells instead of rendering `█` glyphs is
+   what makes the grid exact — glyphs leave a ~1px lighter seam at every cell
+   boundary because the glyph doesn't fill its advance width. Cell aspect
+   follows the terminal grid the ANSI Shadow font was cut for. */
+.block-banner {
+	/* Mirrors the sizing the banner had as a `<pre class="text-[4.5vw]
+	   sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl">`. `round()` snaps
+	   the cell to whole pixels so box edges land on the pixel grid; the plain
+	   value stays as the fallback for engines without `round()`. */
+	--banner-cell-h: 4.5vw;
+	--banner-cell-w: calc(var(--banner-cell-h) * 0.62);
+	display: grid;
+	/* Cells are blocks, not inline text — no gap can open between them. */
+	line-height: 0;
+}
+@supports (width: round(nearest, 1px, 1px)) {
+	.block-banner {
+		--banner-cell-h: round(nearest, 4.5vw, 1px);
+	}
+}
+@media (min-width: 640px) {
+	.block-banner {
+		--banner-cell-h: 3vw;
+	}
+}
+@media (min-width: 768px) {
+	.block-banner {
+		--banner-cell-h: 30px;
+	}
+}
+@media (min-width: 1024px) {
+	.block-banner {
+		--banner-cell-h: 36px;
+	}
+}
+@media (min-width: 1280px) {
+	.block-banner {
+		--banner-cell-h: 48px;
+	}
+}
+.block-banner > span {
+	display: block;
+}
+.block-banner > span[data-on="1"] {
+	background-color: currentColor;
+}
+
 /* ── Code block / terminal window ─────────────────────────── */
 pre {
 	position: relative;

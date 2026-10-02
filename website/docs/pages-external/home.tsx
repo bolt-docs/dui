@@ -2,6 +2,7 @@ import { type BoltdocsLocale, useI18n } from "boltdocs/client";
 import { Link } from "boltdocs/primitives";
 import { lazy, Suspense } from "react";
 import { Card } from "../../components/mdx/Card";
+import BlockBanner from "../../components/BlockBanner";
 import PackageManager from "../../components/PackageManager";
 import LazySection from "../../components/LazySection";
 import TerminalPreview from "../../components/TerminalPreview/TerminalPreview";
@@ -184,11 +185,18 @@ export function HomePage() {
 						<span className="text-dim">pnpm</span> add @bdocs/dui
 						<span className="text-terminal-green ml-1">▍</span>
 					</div>
-					<pre className="font-mono font-bold leading-none select-none text-terminal-green text-[4.5vw] sm:text-[3vw] md:text-3xl lg:text-4xl xl:text-5xl mb-6">
-						{
-							"██████╗ ██╗   ██╗██╗\n██╔══██╗██║   ██║██║\n██║  ██║██║   ██║██║\n██║  ██║██║   ██║██║\n██████╔╝╚██████╔╝██║\n╚═════╝  ╚═════╝ ╚═╝"
+					{/* `banner('DUI', { fill: '█', gap: ' ' })` — see BlockBanner for why
+					    the art is painted as boxes rather than rendered as glyphs.
+					    `gap` keeps D|U|I from fusing into one blob; `fill` drops the
+					    `╔ ═ ╗ ║ ╚ ╝` accents, which are drawn inset to 25%/75% of the
+					    cell and never line up with the block edges. */}
+					<BlockBanner
+						art={
+							"███████  ███   ███ ███\n████████ ███   ███ ███\n███  ███ ███   ███ ███\n███  ███ ███   ███ ███\n████████ █████████ ███\n███████   ███████  ███"
 						}
-					</pre>
+						label="DUI"
+						className="mb-6 text-terminal-green"
+					/>
 					<p className="mt-4 text-base md:text-lg text-muted max-w-2xl leading-relaxed">
 						{txt("subtitle")}
 					</p>
