@@ -18,6 +18,10 @@
  * ```
  */
 
+// Type-only: fully erased at compile time, so this adds no runtime edge to
+// `sharp`. We need the *callable* default export, not the module namespace —
+// `typeof import("sharp")` is the namespace object and has no call signature.
+import type SharpStatic from "sharp";
 import { applyDither } from "./ansi";
 
 /* ── Public types ────────────────────────────────────────────── */
@@ -28,13 +32,21 @@ export interface LoadResult {
 	height: number;
 }
 
+/**
+ * The callable `sharp(input, options?)` factory.
+ *
+ * `null` when the native binary is not installed, which is the normal
+ * case for consumers who never decode a raster image.
+ */
+export type SharpModule = typeof SharpStatic;
+
 /* ── Sharp loader (primary) ──────────────────────────────────── */
 
 /**
  * Attempt to load the `sharp` module. Returns `null` when the native
  * binary is not installed (ENOENT / MODULE_NOT_FOUND).
  */
-async function tryLoadSharp(): Promise<typeof import("sharp") | null> {
+async function tryLoadSharp(): Promise<SharpModule | null> {
 	try {
 		const mod = await import("sharp");
 		return mod.default;
@@ -43,9 +55,9 @@ async function tryLoadSharp(): Promise<typeof import("sharp") | null> {
 	}
 }
 
-let sharpModule: typeof import("sharp") | null | undefined;
+let sharpModule: SharpModule | null | undefined;
 
-export async function getSharp(): Promise<typeof import("sharp") | null> {
+export async function getSharp(): Promise<SharpModule | null> {
 	if (sharpModule === undefined) {
 		sharpModule = await tryLoadSharp();
 	}
@@ -89,7 +101,10 @@ function readPpm(buffer: Buffer): PpmImage | null {
 
 	// Header ends after maxval line
 	const maxvalLineEnd = header.indexOf("\n", pos);
-	const dataStart = (maxvalLineEnd !== -1 ? maxvalLineEnd + 1 : pos) + header.slice(pos).indexOf("\n") + 1;
+	const dataStart =
+		(maxvalLineEnd !== -1 ? maxvalLineEnd + 1 : pos) +
+		header.slice(pos).indexOf("\n") +
+		1;
 	const dataEnd = 2 + buffer.length;
 
 	const pixelCount = width * height * 3;
@@ -144,7 +159,8 @@ function readPbm(buffer: Buffer): PpmImage | null {
 		for (let y = 0; y < height; y++) {
 			for (let x = 0; x < width; x++) {
 				const byteIdx = dataStart + y * rowBytes + Math.floor(x / 8);
-				const bit = byteIdx < buffer.length ? (buffer[byteIdx] >> (7 - (x % 8))) & 1 : 0;
+				const bit =
+					byteIdx < buffer.length ? (buffer[byteIdx] >> (7 - (x % 8))) & 1 : 0;
 				const val = bit ? 255 : 0;
 				const idx = (y * width + x) * 4;
 				rgba[idx] = val;
@@ -180,7 +196,9 @@ async function getFs(): Promise<typeof import("fs")> {
  * Try to load an image with the pure-JS fallback.
  * Supports: PPM (P6), PGM (P5), PBM (P4).
  */
-async function tryLoadFallback(imagePath: string | Buffer): Promise<PpmImage | null> {
+async function tryLoadFallback(
+	imagePath: string | Buffer,
+): Promise<PpmImage | null> {
 	if (typeof imagePath !== "string") return null; // Buffer requires sharp
 	try {
 		const fs = await getFs();
@@ -262,9 +280,7 @@ export async function loadPixels(
 	if (sharp) {
 		// Sharp path — fast and supports all formats
 		const img =
-			page !== undefined
-				? sharp(imagePath, { page })
-				: sharp(imagePath);
+			page !== undefined ? sharp(imagePath, { page }) : sharp(imagePath);
 
 		const { data, info } = await img
 			.resize(width, height, { fit: "fill", withoutEnlargement: true })

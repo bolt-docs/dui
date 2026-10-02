@@ -16,6 +16,7 @@
 import { terminalWidth } from "@bdocs/dui";
 import type { AnsiImageOptions } from "./ansi";
 import { detectTerminal } from "./detect";
+import type { SharpModule } from "./load";
 import { loadResizedPixels, resolveDimensions } from "./utils";
 
 /* ── tmux passthrough ────────────────────────────────────────── */
@@ -159,7 +160,9 @@ export async function renderSixel(
 ): Promise<string> {
 	const caps = detectTerminal();
 	const dims = resolveDimensions(caps.columns, options.width, options.height);
-	const cols = options.maxWidth ? Math.min(dims.width, options.maxWidth) : dims.width;
+	const cols = options.maxWidth
+		? Math.min(dims.width, options.maxWidth)
+		: dims.width;
 	const rows = options.maxHeight
 		? Math.min(dims.height, options.maxHeight)
 		: dims.height;
@@ -199,7 +202,7 @@ export async function renderIterm2(
 	imagePath: string | Buffer,
 	options: Iterm2RenderOptions = {},
 ): Promise<string> {
-	let sharp: typeof import("sharp") | null = null;
+	let sharp: SharpModule | null = null;
 	try {
 		const mod = await import("sharp");
 		sharp = mod.default;
@@ -216,7 +219,8 @@ export async function renderIterm2(
 	const srcH = metadata.height ?? 1;
 	const targetWidth =
 		options.width ?? Math.min(Math.max(1, terminalWidth()) * 8, 1280);
-	const targetHeight = options.height ?? Math.round(targetWidth * (srcH / srcW));
+	const targetHeight =
+		options.height ?? Math.round(targetWidth * (srcH / srcW));
 
 	const resized = await img
 		.resize(targetWidth, targetHeight, {
@@ -234,8 +238,6 @@ export async function renderIterm2(
 		`height=${targetHeight}`,
 		"preserveAspectRatio=1",
 	];
-	const name = options.name
-		? `;name=${encodeURIComponent(options.name)}`
-		: "";
+	const name = options.name ? `;name=${encodeURIComponent(options.name)}` : "";
 	return `\x1b]1337;File=${args.join(";")}${name}:${b64}\x07\n`;
 }

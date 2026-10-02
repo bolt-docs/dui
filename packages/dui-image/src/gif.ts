@@ -6,6 +6,9 @@
  */
 
 import { terminalWidth } from "@bdocs/dui";
+// `sharp` is a default *value* import here, so it cannot be used as a
+// namespace for types. Import the metadata type by name instead.
+import type { Metadata } from "sharp";
 import sharp from "sharp";
 import { type AnsiImageOptions, pixelsToAnsi } from "./ansi";
 import { loadResizedPixels, resolveDimensions } from "./utils";
@@ -81,7 +84,7 @@ export interface GifOptions extends AnsiImageOptions {
  * Extract frame delays from GIF metadata.
  * sharp exposes page delay via `metadata.delay` (array of centiseconds).
  */
-function extractDelays(metadata: sharp.Metadata, pages: number): number[] {
+function extractDelays(metadata: Metadata, pages: number): number[] {
 	if (metadata.delay && Array.isArray(metadata.delay)) {
 		return metadata.delay.map((d: number) => d * 10); // centiseconds → ms
 	}
