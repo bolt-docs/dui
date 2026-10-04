@@ -1,5 +1,101 @@
 # @bdocs/dui
 
+## 0.7.1
+
+### Patch Changes
+
+- [`104eeb8`](https://github.com/bolt-docs/dui/commit/104eeb8fa73b9aee5b27635cf67b4ef39f1f9eef) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Stop `input()`, `select()`, `multiselect()`, `tree()`, `palette()` and
+  `form()` from deadlocking when stdin is not a TTY.
+
+  Each of those prompts falls back to a readline question when stdin or
+  stdout is not a TTY, so a CLI stays usable in a pipeline or in CI. Every
+  fallback was built on `rl.question()` with no `close` handler.
+
+  readline invokes the `question` callback only when a full line arrives. On
+  stdin EOF it emits `close` and never calls the callback, so the promise
+  around it never settled and the process hung with no output and no error:
+
+  ```bash
+  printf '' | mycli
+  # hangs forever
+  ```
+
+  `confirm()` was unaffected — it resolves its default without reading.
+
+  The six fallbacks now share one EOF-safe helper, so the path cannot drift
+  apart again. A textarea keeps the lines it already received when stdin
+  closes instead of discarding a half-typed value for the default, and the
+  non-TTY interface is created with `terminal: false` so readline cannot emit
+  line-editor escapes into a captured stream.
+
+  A pipe that stays open and later delivers a line still reads that line, so
+  interactive use is untouched.
+
+- [`104eeb8`](https://github.com/bolt-docs/dui/commit/104eeb8fa73b9aee5b27635cf67b4ef39f1f9eef) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Resolve each package's version at build time instead of reading
+  `package.json` at import time.
+
+  Every package read its own version in a module-level side effect:
+
+  ```ts
+  export const DUI_VERSION: string = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8")
+  ).version;
+  ```
+
+  Correct as a source of truth, but it broke single-file binaries:
+  `new URL("../package.json", …)` resolves against the module's file URL, and
+  under `bun build --compile`, `node --experimental-sea`, `pkg` or
+  `deno compile` there is no such path. The read threw at _import_ time,
+  which took down the whole CLI rather than just the plugin. It was also an
+  unremovable side effect whose result escaped into an exported binding, so no
+  bundler could drop the module, and it dragged `node:fs` into the graph.
+
+  The source still reads `package.json`; the build now rewrites the emitted
+  bundle to a literal. The advertised version is still whatever changesets
+  wrote to `package.json` — it is just resolved at build time rather than at
+  import time. `node:fs` is no longer reachable from any toolkit plugin's
+  build output; the core keeps its own because its logger genuinely reads
+  files.
+
+- [`104eeb8`](https://github.com/bolt-docs/dui/commit/104eeb8fa73b9aee5b27635cf67b4ef39f1f9eef) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Allow plugin theme namespaces in `DuiTheme`, so the documented
+  `configure({ theme: { diff: { add: "#88ff88" } } })` form typechecks.
+
+  `DuiTheme` declared only the core slots, but `getFromTheme` walks an
+  arbitrary dotted path and the plugin API exposes `registerThemeSlot`, so a
+  plugin's namespace cannot be known at compile time. The form above worked
+  at runtime and is documented on the plugin pages, but was a type error —
+  which is why three of the bundled examples failed `tsc --noEmit` with
+  `'diff' does not exist in type 'DuiTheme'`.
+
+  Typing is unchanged for anyone who was already correct: it is a permissive
+  target that accepts more, never a different result. Built-in slots keep
+  their exact types — `theme: { box: { borderr: "red" } }` still fails with
+  `TS2561` against `BoxTheme`, since declared properties take precedence over
+  an index signature. Only a misspelled _namespace_ is now accepted, which is
+  the unavoidable cost of letting plugins contribute namespaces at all.
+
+- [`104eeb8`](https://github.com/bolt-docs/dui/commit/104eeb8fa73b9aee5b27635cf67b4ef39f1f9eef) Thanks [@jesusalcaladev](https://github.com/jesusalcaladev)! - Repository hygiene, no runtime behaviour change.
+
+  - `pnpm test` no longer fails on a fresh clone. The plugin suites import the
+    core through its build output, so the turbo `test` task now depends on
+    `^build`; previously every plugin suite died with `Failed to resolve entry
+for package "@bdocs/dui"` and the CI workflows only hid it by building
+    first.
+  - `pnpm typecheck` runs `tsc --noEmit` across all 8 packages, and CI gates
+    on it. vitest transpiles without typechecking, so a type error could pass
+    the entire test suite. The script fails when a package has no
+    `tsconfig.json` rather than skipping it, because a package without one is
+    silently exempt from the gate — `dui-tui` shipped for several releases in
+    that state.
+  - Fixed `dui-image`'s `sharp` types (7 errors from one root cause: sharp
+    typed as the module namespace where the callable default export was
+    needed) and added `dui-tui`'s missing `tsconfig.json`, so both packages
+    can be typechecked at all.
+  - Fixed 7 type errors in the bundled `examples/`. Four were the
+    plugin-namespace issue above; the rest were `tabs()` being given
+    `{ value, label }` objects where it takes plain string labels, and an
+    array that widened to a non-callable union.
+
 ## 0.7.0
 
 ### Minor Changes
